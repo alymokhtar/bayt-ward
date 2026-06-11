@@ -1,0 +1,389 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { prisma } from "@/lib/prisma";
+import { requireAuth, requireRole } from "@/lib/auth";
+
+type ActionResult<T = void> =
+  | { success: true; data: T }
+  | { success: false; error: string };
+
+export type VariantInput = {
+  sku: string;
+  barcode?: string;
+  size: string;
+  color: string;
+  colorHex?: string;
+  costPrice: number;
+  sellingPrice: number;
+  stockQuantity?: number;
+  minStockLevel?: number;
+};
+
+function handleActionError(error: unknown): ActionResult<never> {
+  if (error instanceof Error) {
+    if (error.message === "UNAUTHORIZED") {
+      return { success: false, error: "يجب تسجيل الدخول أولاً" };
+    }
+    if (error.message === "FORBIDDEN") {
+      return { success: false, error: "ليس لديك صلاحية لهذا الإجراء" };
+    }
+    if (error.message.includes("Unique constraint")) {
+      return { success: false, error: "رمز SKU أو الباركود مستخدم بالفعل" };
+    }
+    return { success: false, error: error.message };
+  }
+  return { success: false, error: "حدث خطأ غير متوقع" };
+}
+
+function revalidateProductPaths() {
+  revalidatePath("/products");
+  revalidatePath("/inventory");
+  revalidatePath("/pos");
+  revalidatePath("/dashboard");
+}
+
+export async function getProducts(options?: {
+  search?: string;
+  categoryId?: string;
+  includeInactive?: boolean;
+}) {
+  await requireRole(["ADMIN", "MANAGER"]);
+
+  const where: Record<string, unknown> = {};
+
+  if (!options?.includeInactive) {
+    where.isActive = true;
+  }
+
+  if (options?.categoryId) {
+    where.categoryId = options.categoryId;
+  }
+
+  if (options?.search?.trim()) {
+    const search = options.search.trim();
+    where.OR = [
+      { name: { contains: search } },
+      { nameAr: { contains: search } },
+      { brand: { contains: search } },
+      {
+        variants: {
+          some: {
+            OR: [
+              { sku: { contains: search } },
+              { barcode: { contains: search } },
+            ],
+          },
+        },
+      },
+    ];
+  }
+
+  return prisma.product.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    include: {
+      category: true,
+      variants: {
+        where: options?.includeInactive ? undefined : { isActive: true },
+        orderBy: [{ size: "asc" }, { color: "asc" }],
+      },
+    },
+  });
+}
+
+export async function getProduct(id: string) {
+  await requireRole(["ADMIN", "MANAGER"]);
+
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      category: true,
+      variants: { orderBy: [{ size: "asc" }, { color: "asc" }] },
+    },
+  });
+
+  if (!product) {
+    throw new Error("المنتج غير موجود");
+  }
+
+  return product;
+}
+
+export async function createProduct(data: {
+  name: string;
+  nameAr?: string;
+  description?: string;
+  brand?: string;
+  categoryId: string;
+  imageUrl?: string;
+  variants: VariantInput[];
+}) {
+  try {
+    const user = await requireRole(["ADMIN", "MANAGER"]);
+
+    if (!data.name?.trim()) {
+      return { success: false, error: "اسم المنتج مطلوب" };
+    }
+
+    if (!data.categoryId) {
+      return { success: false, error: "التصنيف مطلوب" };
+    }
+
+    if (!data.variants?.length) {
+      return { success: false, error: "يجب إضافة متغير واحد على الأقل" };
+    }
+
+    const category = await prisma.category.findUnique({
+      where: { id: data.categoryId },
+    });
+    if (!category) {
+      return { success: false, error: "التصنيف غير موجود" };
+    }
+
+    const product = await prisma.$transaction(async (tx) => {
+      const created = await tx.product.create({
+        data: {
+          name: data.name.trim(),
+          nameAr: data.nameAr?.trim(),
+          description: data.description?.trim(),
+          brand: data.brand?.trim(),
+          categoryId: data.categoryId,
+          imageUrl: data.imageUrl,
+          variants: {
+            create: data.variants.map((v) => ({
+              sku: v.sku.trim(),
+              barcode: v.barcode?.trim() || null,
+              size: v.size,
+              color: v.color,
+              colorHex: v.colorHex,
+              costPrice: v.costPrice,
+              sellingPrice: v.sellingPrice,
+              stockQuantity: v.stockQuantity ?? 0,
+              minStockLevel: v.minStockLevel ?? 5,
+            })),
+          },
+        },
+        include: { variants: true, category: true },
+      });
+
+      for (const variant of created.variants) {
+        if (variant.stockQuantity > 0) {
+          await tx.stockMovement.create({
+            data: {
+              variantId: variant.id,
+              userId: user.id,
+              type: "ADJUSTMENT",
+              quantity: variant.stockQuantity,
+              previousQty: 0,
+              newQty: variant.stockQuantity,
+              reference: "INITIAL_STOCK",
+              notes: "رصيد افتتاحي عند إنشاء المنتج",
+            },
+          });
+        }
+      }
+
+      return created;
+    });
+
+    revalidateProductPaths();
+    return { success: true, data: product };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function updateProduct(
+  id: string,
+  data: {
+    name?: string;
+    nameAr?: string;
+    description?: string;
+    brand?: string;
+    categoryId?: string;
+    imageUrl?: string;
+    isActive?: boolean;
+    variants?: (VariantInput & { id?: string; isActive?: boolean })[];
+  }
+) {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+
+    const existing = await prisma.product.findUnique({
+      where: { id },
+      include: { variants: true },
+    });
+
+    if (!existing) {
+      return { success: false, error: "المنتج غير موجود" };
+    }
+
+    if (data.categoryId) {
+      const category = await prisma.category.findUnique({
+        where: { id: data.categoryId },
+      });
+      if (!category) {
+        return { success: false, error: "التصنيف غير موجود" };
+      }
+    }
+
+    const product = await prisma.$transaction(async (tx) => {
+      await tx.product.update({
+        where: { id },
+        data: {
+          name: data.name?.trim(),
+          nameAr: data.nameAr?.trim(),
+          description: data.description?.trim(),
+          brand: data.brand?.trim(),
+          categoryId: data.categoryId,
+          imageUrl: data.imageUrl,
+          isActive: data.isActive,
+        },
+      });
+
+      if (data.variants) {
+        const existingIds = new Set(existing.variants.map((v) => v.id));
+        const incomingIds = new Set(
+          data.variants.filter((v) => v.id).map((v) => v.id!)
+        );
+
+        const toDelete = [...existingIds].filter((vid) => !incomingIds.has(vid));
+        if (toDelete.length > 0) {
+          await tx.productVariant.updateMany({
+            where: { id: { in: toDelete } },
+            data: { isActive: false },
+          });
+        }
+
+        for (const variant of data.variants) {
+          if (variant.id && existingIds.has(variant.id)) {
+            await tx.productVariant.update({
+              where: { id: variant.id },
+              data: {
+                sku: variant.sku.trim(),
+                barcode: variant.barcode?.trim() || null,
+                size: variant.size,
+                color: variant.color,
+                colorHex: variant.colorHex,
+                costPrice: variant.costPrice,
+                sellingPrice: variant.sellingPrice,
+                minStockLevel: variant.minStockLevel ?? 5,
+                isActive: variant.isActive ?? true,
+              },
+            });
+          } else if (!variant.id) {
+            await tx.productVariant.create({
+              data: {
+                productId: id,
+                sku: variant.sku.trim(),
+                barcode: variant.barcode?.trim() || null,
+                size: variant.size,
+                color: variant.color,
+                colorHex: variant.colorHex,
+                costPrice: variant.costPrice,
+                sellingPrice: variant.sellingPrice,
+                stockQuantity: variant.stockQuantity ?? 0,
+                minStockLevel: variant.minStockLevel ?? 5,
+              },
+            });
+          }
+        }
+      }
+
+      return tx.product.findUnique({
+        where: { id },
+        include: {
+          category: true,
+          variants: { orderBy: [{ size: "asc" }, { color: "asc" }] },
+        },
+      });
+    });
+
+    revalidateProductPaths();
+    return { success: true, data: product! };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function deleteProduct(id: string) {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+
+    const existing = await prisma.product.findUnique({ where: { id } });
+    if (!existing) {
+      return { success: false, error: "المنتج غير موجود" };
+    }
+
+    await prisma.$transaction([
+      prisma.productVariant.updateMany({
+        where: { productId: id },
+        data: { isActive: false },
+      }),
+      prisma.product.update({
+        where: { id },
+        data: { isActive: false },
+      }),
+    ]);
+
+    revalidateProductPaths();
+    return { success: true, data: undefined };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function searchVariants(query: string) {
+  await requireAuth();
+
+  const q = query?.trim();
+  if (!q) return [];
+
+  return prisma.productVariant.findMany({
+    where: {
+      isActive: true,
+      product: { isActive: true },
+      OR: [
+        { sku: { contains: q } },
+        { barcode: { contains: q } },
+        { product: { name: { contains: q } } },
+        { product: { nameAr: { contains: q } } },
+      ],
+    },
+    take: 20,
+    include: {
+      product: {
+        include: { category: true },
+      },
+    },
+    orderBy: { sku: "asc" },
+  });
+}
+
+export async function getAllVariantsForBarcodes(search?: string) {
+  await requireRole(["ADMIN", "MANAGER"]);
+
+  const where: Record<string, unknown> = {
+    isActive: true,
+    product: { isActive: true },
+  };
+
+  if (search?.trim()) {
+    const q = search.trim();
+    where.OR = [
+      { sku: { contains: q } },
+      { barcode: { contains: q } },
+      { product: { name: { contains: q } } },
+      { product: { nameAr: { contains: q } } },
+    ];
+  }
+
+  return prisma.productVariant.findMany({
+    where,
+    include: {
+      product: { include: { category: true } },
+    },
+    orderBy: [{ product: { name: "asc" } }, { sku: "asc" }],
+  });
+}

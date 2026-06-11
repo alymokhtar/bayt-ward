@@ -1,36 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bayt Ward - نظام إدارة محل ملابس حريمي
 
-## Getting Started
+نظام إدارة متكامل وشامل لمحل **Bayt Ward (بيت ورد)** — يغطي كل احتياجات إدارة نشاط بيع الملابس النسائية من المخزون إلى المبيعات والتقارير.
 
-First, run the development server:
+## المميزات
+
+| الوحدة | الوصف |
+|--------|-------|
+| **لوحة التحكم** | إحصائيات يومية وشهرية، رسم بياني للمبيعات، تنبيهات المخزون المنخفض |
+| **نقطة البيع (POS)** | بيع سريع، بحث بالباركود/SKU، خصومات، اختيار العميل، طرق دفع متعددة |
+| **المنتجات** | إدارة المنتجات مع متغيرات (مقاس، لون، SKU، باركود، أسعار) |
+| **التصنيفات** | تصنيف المنتجات (فساتين، عبايات، بلوزات...) |
+| **المخزون** | متابعة الكميات، تعديل المخزون، سجل الحركات |
+| **المبيعات** | سجل الفواتير مع تفاصيل كاملة وطباعة |
+| **المرتجعات** | معالجة المرتجعات واسترداد المبالغ |
+| **العملاء** | قاعدة بيانات العملاء وسجل المشتريات |
+| **الموردين** | إدارة الموردين |
+| **المشتريات** | أوامر شراء واستلام البضاعة |
+| **المصروفات** | تتبع مصروفات المحل (إيجار، رواتب، مرافق...) |
+| **التقارير** | تقارير المبيعات، المخزون، الأرباح، أفضل المنتجات |
+| **الموظفين** | إدارة المستخدمين والصلاحيات |
+| **الإعدادات** | إعدادات المحل (الاسم، الهاتف، العنوان...) |
+
+## التشغيل
 
 ```bash
+# تثبيت الحزم
+npm install
+
+# إنشاء قاعدة البيانات
+npx prisma migrate dev
+
+# إدخال بيانات تجريبية
+npm run db:seed
+
+# تشغيل النظام
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+افتح المتصفح على: **http://localhost:3000**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## حسابات الدخول التجريبية
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| الدور | البريد | كلمة المرور |
+|-------|--------|-------------|
+| مدير | admin@baytward.com | admin123 |
+| مدير فرع | manager@baytward.com | manager123 |
+| كاشير | cashier@baytward.com | cashier123 |
 
-## Learn More
+## الصلاحيات
 
-To learn more about Next.js, take a look at the following resources:
+- **مدير (ADMIN)**: صلاحيات كاملة — موظفين، إعدادات، كل الوحدات
+- **مدير فرع (MANAGER)**: منتجات، مخزون، مشتريات، تقارير، مصروفات
+- **كاشير (CASHIER)**: نقطة البيع، المبيعات، العملاء، لوحة التحكم
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## التقنيات
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Next.js 16** — React framework
+- **Prisma + SQLite** — قاعدة بيانات محلية (لا تحتاج سيرفر خارجي)
+- **Tailwind CSS** — تصميم متجاوب بهوية Bayt Ward
+- **Recharts** — رسوم بيانية
+- **JWT** — مصادقة آمنة
 
-## Deploy on Vercel
+## الهيكل
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+├── app/                    # صفحات التطبيق
+│   ├── (dashboard)/        # صفحات لوحة التحكم
+│   ├── login/              # تسجيل الدخول
+│   └── api/auth/           # API المصادقة
+├── components/             # مكونات UI
+├── lib/
+│   ├── actions/            # Server Actions
+│   ├── auth.ts             # المصادقة
+│   └── prisma.ts           # قاعدة البيانات
+└── generated/prisma/       # Prisma Client
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## المميزات الجديدة
+
+### طباعة الباركود
+- صفحة **طباعة الباركود** (`/barcodes`) — اختيار المنتجات وطباعة ملصقات CODE128
+- رابط سريع من صفحة المنتجات
+
+### إشعارات واتساب
+- **مركز واتساب** (`/whatsapp`) — إرسال عروض ورسائل شكر لعملاء متعددين
+- إرسال الفاتورة بعد البيع من نقطة البيع
+- زر واتساب في تفاصيل الفاتورة وقائمة العملاء
+- يعمل عبر wa.me (لا يحتاج API مدفوع)
+
+### النسخ الاحتياطي
+- نسخ احتياطي **يدوي** من الإعدادات
+- نسخ **تلقائي** كل 24 ساعة (قابل للتعديل)
+- تحميل، استعادة، وحذف النسخ
+- حفظ في مجلد `backups/`
+
+### تطبيق موبايل (PWA)
+- تثبيت النظام كتطبيق على الهاتف
+- شريط تنقل سفلي للموبايل (رئيسية، بيع، مبيعات، عملاء، المزيد)
+- يعمل بدون اتصال جزئياً (واجهة أساسية)
+
+---
+
+## Bayt Ward Brand
+
+- **الألوان**: كريمي `#FDF5E6` | بني `#4B3621` | ذهبي `#B8860B`
+- **الخط**: Cairo
+- **الاتجاه**: RTL (عربي)
+
+---
+
+© 2026 Bayt Ward — بيت ورد

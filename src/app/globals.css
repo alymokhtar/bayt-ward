@@ -1,26 +1,179 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-cream: #fdf5e6;
+  --color-cream-dark: #f5ead6;
+  --color-brown: #4b3621;
+  --color-brown-light: #6b4f3a;
+  --color-gold: #b8860b;
+  --color-gold-light: #d4af37;
+  --color-gold-dark: #96700a;
+  --color-dark: #1a1a1a;
+  --color-white: #ffffff;
+  --color-muted: #8b7355;
+  --color-border: #e8dcc8;
+  --color-danger: #b91c1c;
+  --color-success: #15803d;
+  --color-warning: #ca8a04;
+
+  --background: var(--color-cream);
+  --foreground: var(--color-brown);
+  --primary: var(--color-gold);
+  --primary-foreground: var(--color-white);
+  --secondary: var(--color-brown);
+  --secondary-foreground: var(--color-cream);
+  --muted: var(--color-muted);
+  --muted-foreground: var(--color-muted);
+  --border: var(--color-border);
+  --ring: var(--color-gold);
+  --card: var(--color-white);
+  --card-foreground: var(--color-brown);
+  --sidebar: var(--color-brown);
+  --sidebar-foreground: var(--color-cream);
+  --sidebar-active: var(--color-gold);
+  --radius: 0.625rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-cream: #fdf5e6;
+  --color-cream-dark: #f5ead6;
+  --color-brown: #4b3621;
+  --color-brown-light: #6b4f3a;
+  --color-gold: #b8860b;
+  --color-gold-light: #d4af37;
+  --color-gold-dark: #96700a;
+  --color-danger: #b91c1c;
+  --color-success: #15803d;
+  --color-warning: #ca8a04;
+  --font-sans: var(--font-cairo);
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  direction: rtl;
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: color-mix(in srgb, var(--color-gold) 30%, transparent);
+  color: var(--color-brown);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-cream-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-brown-light);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold);
+}
+
+/* Table utilities */
+.table-container {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+}
+
+/* Login page decorative pattern */
+.bayt-ward-pattern {
+  background-color: var(--color-brown);
+  background-image:
+    radial-gradient(
+      circle at 25% 25%,
+      color-mix(in srgb, var(--color-gold) 15%, transparent) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 75% 75%,
+      color-mix(in srgb, var(--color-gold) 10%, transparent) 0%,
+      transparent 50%
+    );
+}
+
+/* Mobile safe area for bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Barcode print styles */
+@media print {
+  body {
+    background: white !important;
+  }
+
+  aside,
+  header,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .barcode-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .barcode-label {
+    page-break-inside: avoid;
+    border: 1px solid #ccc !important;
+    padding: 8px !important;
+  }
 }
