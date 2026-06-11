@@ -13,13 +13,14 @@ export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isInstalled, setIsInstalled] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(display-mode: standalone)").matches
+  );
 
   useEffect(() => {
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setIsInstalled(true);
-      return;
-    }
+    if (isInstalled) return;
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -32,7 +33,7 @@ export default function InstallPrompt() {
 
     window.addEventListener("beforeinstallprompt", handler);
     return () => window.removeEventListener("beforeinstallprompt", handler);
-  }, []);
+  }, [isInstalled]);
 
   async function handleInstall() {
     if (!deferredPrompt) return;

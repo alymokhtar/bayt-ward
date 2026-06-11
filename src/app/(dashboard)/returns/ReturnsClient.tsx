@@ -101,7 +101,7 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
         delete next[variantId];
         return next;
       }
-      return { ...prev, [variantId]: 1 };
+      return { ...prev, [variantId]: Math.min(1, maxQty) };
     });
   }
 

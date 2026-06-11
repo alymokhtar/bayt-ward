@@ -41,7 +41,7 @@ export default async function CustomersPage({
 
           {customers.length === 0 ? (
             <EmptyState
-              icon={Users}
+              icon={<Users className="h-8 w-8 text-gold" strokeWidth={1.5} />}
               title="لا يوجد عملاء"
               description="أضف عملاء جدد لتتبع مشترياتهم"
             />

@@ -2,7 +2,6 @@
 
 import WhatsAppButton from "@/components/whatsapp/WhatsAppButton";
 import { buildWhatsAppMessage } from "@/lib/whatsapp";
-import { formatCurrency } from "@/lib/utils";
 
 interface SaleWhatsAppButtonProps {
   customerName: string;

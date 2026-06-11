@@ -65,7 +65,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
           {products.length === 0 ? (
             <EmptyState
-              icon={Package}
+              icon={<Package className="h-8 w-8 text-gold" strokeWidth={1.5} />}
               title="لا توجد منتجات"
               description="ابدأ بإضافة منتجات جديدة للمتجر"
               action={{ label: "إضافة منتج", href: "/products/new" }}

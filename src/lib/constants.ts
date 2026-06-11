@@ -4,7 +4,6 @@ import {
   Tags,
   Warehouse,
   ShoppingCart,
-  Receipt,
   Users,
   Truck,
   ShoppingBag,

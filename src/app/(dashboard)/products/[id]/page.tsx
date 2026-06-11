@@ -10,13 +10,18 @@ interface EditProductPageProps {
 export default async function EditProductPage({ params }: EditProductPageProps) {
   const { id } = await params;
 
+  let product;
+  let categories;
   try {
-    const [product, categories] = await Promise.all([
+    [product, categories] = await Promise.all([
       getProduct(id),
       getCategories(true),
     ]);
+  } catch {
+    notFound();
+  }
 
-    return (
+  return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-brown">تعديل المنتج</h1>
@@ -27,7 +32,4 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
         <ProductForm categories={categories} product={product} />
       </div>
     );
-  } catch {
-    notFound();
-  }
 }

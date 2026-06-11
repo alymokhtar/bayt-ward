@@ -10,7 +10,6 @@ import { PAYMENT_METHODS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp";
 import {
-  MessageCircle,
   Minus,
   Plus,
   Search,
@@ -92,11 +91,11 @@ export default function POSClient({
   }, [query, doSearch]);
 
   useEffect(() => {
-    if (!customerQuery.trim()) {
-      setCustomerResults([]);
-      return;
-    }
     const timer = setTimeout(async () => {
+      if (!customerQuery.trim()) {
+        setCustomerResults([]);
+        return;
+      }
       const data = await searchCustomers(customerQuery);
       setCustomerResults(data);
     }, 300);

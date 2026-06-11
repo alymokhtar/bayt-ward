@@ -24,10 +24,14 @@ export default async function CustomerDetailPage({
 }: CustomerDetailPageProps) {
   const { id } = await params;
 
+  let customer;
   try {
-    const customer = await getCustomer(id);
+    customer = await getCustomer(id);
+  } catch {
+    notFound();
+  }
 
-    return (
+  return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
           <Link href="/customers">
@@ -146,7 +150,4 @@ export default async function CustomerDetailPage({
         </Card>
       </div>
     );
-  } catch {
-    notFound();
-  }
 }

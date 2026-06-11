@@ -37,18 +37,22 @@ interface SaleDetailPageProps {
 export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
   const { id } = await params;
 
+  let sale;
+  let settings;
   try {
-    const sale = await getSale(id);
-    const settings = await getStoreSettings();
+    [sale, settings] = await Promise.all([getSale(id), getStoreSettings()]);
+  } catch {
+    notFound();
+  }
 
-    const itemsText = sale.items
+  const itemsText = sale.items
       .map(
         (item) =>
           `• ${item.variant.product.nameAr || item.variant.product.name} (${item.variant.size}/${item.variant.color}) × ${item.quantity}`
       )
       .join("\n");
 
-    return (
+  return (
       <div className="space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 print:hidden">
           <div className="flex items-center gap-3">
@@ -202,7 +206,4 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
         </Card>
       </div>
     );
-  } catch {
-    notFound();
-  }
 }

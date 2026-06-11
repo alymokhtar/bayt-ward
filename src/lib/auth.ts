@@ -65,17 +65,46 @@ export async function getSession(): Promise<SessionUser | null> {
   }
 }
 
+/** Validates JWT against the database; clears stale sessions after DB migration. */
+export async function resolveSession(): Promise<SessionUser | null> {
+  const session = await getSession();
+  if (!session) return null;
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [{ id: session.id }, { email: session.email }],
+      isActive: true,
+    },
+    select: { id: true, name: true, email: true, role: true },
+  });
+
+  if (!user) {
+    await destroySession();
+    return null;
+  }
+
+  if (
+    user.id !== session.id ||
+    user.role !== session.role ||
+    user.name !== session.name
+  ) {
+    await createSession(user);
+  }
+
+  return user;
+}
+
 export async function destroySession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete("session");
 }
 
 export async function requireAuth(): Promise<SessionUser> {
-  const session = await getSession();
-  if (!session) {
+  const user = await resolveSession();
+  if (!user) {
     throw new Error("UNAUTHORIZED");
   }
-  return session;
+  return user;
 }
 
 export async function requireRole(

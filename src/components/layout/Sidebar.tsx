@@ -26,6 +26,7 @@ export default function Sidebar({ role }: SidebarProps) {
             src="/images/logo-light.png"
             alt={STORE_NAME}
             fill
+            sizes="56px"
             className="object-contain p-1.5"
             priority
           />

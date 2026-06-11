@@ -2,11 +2,11 @@
 
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
-import { type LucideIcon, Inbox } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { type ReactNode } from "react";
 
 export interface EmptyStateProps {
-  icon?: LucideIcon;
+  icon?: ReactNode;
   title: string;
   description?: string;
   action?: {
@@ -19,7 +19,7 @@ export interface EmptyStateProps {
 }
 
 export default function EmptyState({
-  icon: Icon = Inbox,
+  icon,
   title,
   description,
   action,
@@ -35,7 +35,7 @@ export default function EmptyState({
       )}
     >
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gold/10">
-        <Icon className="h-8 w-8 text-gold" strokeWidth={1.5} />
+        {icon ?? <Inbox className="h-8 w-8 text-gold" strokeWidth={1.5} />}
       </div>
       <h3 className="text-lg font-semibold text-brown">{title}</h3>
       {description && (

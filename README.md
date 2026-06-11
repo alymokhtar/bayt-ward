@@ -27,8 +27,9 @@
 # تثبيت الحزم
 npm install
 
-# إنشاء قاعدة البيانات
-npx prisma migrate dev
+# إعداد قاعدة البيانات (Neon PostgreSQL)
+# تأكد من وجود DATABASE_URL في ملف .env
+npx prisma db push
 
 # إدخال بيانات تجريبية
 npm run db:seed
@@ -56,7 +57,7 @@ npm run dev
 ## التقنيات
 
 - **Next.js 16** — React framework
-- **Prisma + SQLite** — قاعدة بيانات محلية (لا تحتاج سيرفر خارجي)
+- **Prisma + PostgreSQL (Neon)** — قاعدة بيانات سحابية
 - **Tailwind CSS** — تصميم متجاوب بهوية Bayt Ward
 - **Recharts** — رسوم بيانية
 - **JWT** — مصادقة آمنة
@@ -74,7 +75,6 @@ src/
 │   ├── actions/            # Server Actions
 │   ├── auth.ts             # المصادقة
 │   └── prisma.ts           # قاعدة البيانات
-└── generated/prisma/       # Prisma Client
 ```
 
 ## المميزات الجديدة

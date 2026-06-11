@@ -22,6 +22,7 @@ export default function LoginPage() {
               src="/images/logo-light.png"
               alt={STORE_NAME}
               fill
+              sizes="128px"
               className="object-contain p-2"
               priority
             />
@@ -50,6 +51,7 @@ export default function LoginPage() {
                 src="/images/logo-light.png"
                 alt={STORE_NAME}
                 fill
+                sizes="80px"
                 className="object-contain p-1"
                 priority
               />
