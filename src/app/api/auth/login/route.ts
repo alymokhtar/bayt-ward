@@ -3,11 +3,14 @@ import {
   SESSION_COOKIE_OPTIONS,
   signSessionToken,
 } from "@/lib/auth";
+import { isDatabaseConfigured } from "@/lib/env";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  if (!process.env.DATABASE_URL) {
-    console.error("LOGIN ERROR: DATABASE_URL is not configured");
+  if (!isDatabaseConfigured()) {
+    console.error(
+      "LOGIN ERROR: No database URL found. Set DATABASE_URL (or POSTGRES_URL) on Vercel."
+    );
     return NextResponse.json(
       { error: "قاعدة البيانات غير مُعدّة على الخادم" },
       { status: 500 }

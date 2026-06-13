@@ -11,6 +11,7 @@
     "db:push": "npx prisma db push",
     "db:deploy": "npx prisma migrate deploy",
     "db:reset": "npx prisma migrate reset --force",
+    "vercel:env": "scripts\\sync-vercel-env.bat",
     "postinstall": "prisma generate"
   },
   "prisma": {

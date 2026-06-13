@@ -3,9 +3,9 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "bayt-ward-secret-key-2024"
-);
+import { getJwtSecret } from "./env";
+
+const JWT_SECRET = new TextEncoder().encode(getJwtSecret());
 
 export interface SessionUser {
   id: string;
