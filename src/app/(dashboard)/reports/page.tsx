@@ -32,10 +32,16 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   const [salesReport, inventoryReport, profitReport, topProducts] =
     await Promise.all([
-      getSalesReport(fromDate, toDate),
-      getInventoryReport(),
-      getProfitReport(fromDate, toDate),
-      getTopProducts(fromDate, toDate),
+      activeTab === "sales"
+        ? getSalesReport(fromDate, toDate)
+        : Promise.resolve(null),
+      activeTab === "inventory" ? getInventoryReport() : Promise.resolve(null),
+      activeTab === "profit"
+        ? getProfitReport(fromDate, toDate)
+        : Promise.resolve(null),
+      activeTab === "top"
+        ? getTopProducts(fromDate, toDate)
+        : Promise.resolve(null),
     ]);
 
   return (
@@ -50,10 +56,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             activeTab={activeTab}
             from={from}
             to={to}
-            salesReport={salesReport!}
-            inventoryReport={inventoryReport!}
-            profitReport={profitReport!}
-            topProducts={topProducts!}
+            salesReport={salesReport}
+            inventoryReport={inventoryReport}
+            profitReport={profitReport}
+            topProducts={topProducts}
           />
         </CardContent>
       </Card>

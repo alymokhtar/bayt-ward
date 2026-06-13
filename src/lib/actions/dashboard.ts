@@ -83,15 +83,13 @@ export async function getDashboardStats() {
       }),
     ]);
 
-    const lowStockVariants = await prisma.productVariant.findMany({
-      where: {
-        isActive: true,
-      },
-      select: { stockQuantity: true, minStockLevel: true },
-    });
-    const actualLowStockCount = lowStockVariants.filter(
-      (v) => v.stockQuantity <= v.minStockLevel
-    ).length;
+    const lowStockResult = await prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*)::int AS count
+      FROM "ProductVariant"
+      WHERE "isActive" = true
+        AND "stockQuantity" <= "minStockLevel"
+    `;
+    const actualLowStockCount = Number(lowStockResult[0]?.count ?? 0);
 
     const salesChartData: { date: string; total: number; count: number }[] =
       [];

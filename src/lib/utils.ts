@@ -54,6 +54,16 @@ export function getPaymentMethodLabel(method: string): string {
   return labels[method] || method;
 }
 
+export function getSaleStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    COMPLETED: "مكتملة",
+    PENDING: "قيد الانتظار",
+    CANCELLED: "ملغاة",
+    REFUNDED: "مستردة",
+  };
+  return labels[status] || status;
+}
+
 export function getStatusBadgeColor(status: string): string {
   const colors: Record<string, string> = {
     COMPLETED: "bg-green-100 text-green-800",

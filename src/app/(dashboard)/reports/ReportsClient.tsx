@@ -30,10 +30,10 @@ interface ReportsClientProps {
   activeTab: string;
   from: string;
   to: string;
-  salesReport: SalesReport;
-  inventoryReport: InventoryReport;
-  profitReport: ProfitReport;
-  topProducts: TopProduct[];
+  salesReport: SalesReport | null;
+  inventoryReport: InventoryReport | null;
+  profitReport: ProfitReport | null;
+  topProducts: TopProduct[] | null;
 }
 
 const tabs = [
@@ -218,7 +218,7 @@ export default function ReportsClient({
         </div>
       )}
 
-      {activeTab === "top" && (
+      {activeTab === "top" && topProducts && (
         <Card>
           <CardHeader>
             <CardTitle>أفضل المنتجات مبيعاً</CardTitle>

@@ -10,7 +10,8 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { getCustomer } from "@/lib/actions/customers";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatCurrency, formatDateTime, getSaleStatusLabel } from "@/lib/utils";
+import CustomerWhatsAppButton from "@/components/whatsapp/CustomerWhatsAppButton";
 import { ArrowRight, Mail, MapPin, Phone, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -39,10 +40,14 @@ export default async function CustomerDetailPage({
               <ArrowRight className="h-5 w-5" />
             </Button>
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="text-2xl font-bold text-brown">{customer.name}</h1>
             <p className="text-sm text-muted">تفاصيل العميل وسجل المشتريات</p>
           </div>
+          <CustomerWhatsAppButton
+            customerName={customer.name}
+            customerPhone={customer.phone}
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -136,7 +141,9 @@ export default async function CustomerDetailPage({
                         {formatCurrency(sale.totalAmount)}
                       </TableCell>
                       <TableCell>
-                        <Badge status={sale.status}>{sale.status}</Badge>
+                        <Badge status={sale.status}>
+                          {getSaleStatusLabel(sale.status)}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted">
                         {formatDateTime(sale.createdAt)}

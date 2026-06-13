@@ -1,8 +1,10 @@
 "use client";
 
 import Button from "@/components/ui/Button";
+import EmptyState from "@/components/ui/EmptyState";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
+import { Card, CardContent } from "@/components/ui/Card";
 import {
   Table,
   TableBody,
@@ -18,7 +20,7 @@ import {
 } from "@/lib/actions/customers";
 import { formatCurrency } from "@/lib/utils";
 import CustomerWhatsAppButton from "@/components/whatsapp/CustomerWhatsAppButton";
-import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -37,10 +39,14 @@ type Customer = {
 
 interface CustomersClientProps {
   customers: Customer[];
+  search?: string;
+  canManage?: boolean;
 }
 
 export default function CustomersClient({
-  customers: initial,
+  customers,
+  search,
+  canManage = false,
 }: CustomersClientProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
@@ -52,6 +58,8 @@ export default function CustomersClient({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const hasSearch = Boolean(search?.trim());
 
   function openCreate() {
     setEditing(null);
@@ -102,64 +110,112 @@ export default function CustomersClient({
   }
 
   return (
-    <>
-      <div className="flex justify-end mb-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-brown">العملاء</h1>
+          <p className="text-sm text-muted mt-1">{customers.length} عميل</p>
+        </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
           عميل جديد
         </Button>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>الاسم</TableHead>
-            <TableHead>الهاتف</TableHead>
-            <TableHead>المبيعات</TableHead>
-            <TableHead>إجمالي الإنفاق</TableHead>
-            <TableHead>الزيارات</TableHead>
-            <TableHead>الإجراءات</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {initial.map((c) => (
-            <TableRow key={c.id}>
-              <TableCell className="font-medium">{c.name}</TableCell>
-              <TableCell dir="ltr" className="text-start">
-                {c.phone}
-              </TableCell>
-              <TableCell>{c._count.sales}</TableCell>
-              <TableCell className="text-gold font-medium">
-                {formatCurrency(c.totalSpent)}
-              </TableCell>
-              <TableCell>{c.visitCount}</TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <CustomerWhatsAppButton
-                    customerName={c.name}
-                    customerPhone={c.phone}
-                  />
-                  <Link href={`/customers/${c.id}`}>
-                    <Button variant="ghost" size="icon">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(c)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(c.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-danger" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <Card>
+        <CardContent className="pt-6">
+          <form className="flex gap-3 mb-6">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+              <input
+                name="search"
+                defaultValue={search}
+                placeholder="بحث بالاسم أو الهاتف..."
+                className="w-full h-10 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
+              />
+            </div>
+            <Button type="submit" variant="secondary">
+              بحث
+            </Button>
+          </form>
+
+          {customers.length === 0 ? (
+            <EmptyState
+              icon={<Users className="h-8 w-8 text-gold" strokeWidth={1.5} />}
+              title={hasSearch ? "لا توجد نتائج" : "لا يوجد عملاء"}
+              description={
+                hasSearch
+                  ? "جرّب كلمات بحث مختلفة"
+                  : "أضف عملاء جدد لتتبع مشترياتهم"
+              }
+              action={
+                hasSearch
+                  ? undefined
+                  : { label: "عميل جديد", onClick: openCreate }
+              }
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>الاسم</TableHead>
+                  <TableHead>الهاتف</TableHead>
+                  <TableHead>المبيعات</TableHead>
+                  <TableHead>إجمالي الإنفاق</TableHead>
+                  <TableHead>الزيارات</TableHead>
+                  <TableHead>الإجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {customers.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell dir="ltr" className="text-start">
+                      {c.phone}
+                    </TableCell>
+                    <TableCell>{c._count.sales}</TableCell>
+                    <TableCell className="text-gold font-medium">
+                      {formatCurrency(c.totalSpent)}
+                    </TableCell>
+                    <TableCell>{c.visitCount}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <CustomerWhatsAppButton
+                          customerName={c.name}
+                          customerPhone={c.phone}
+                        />
+                        <Link href={`/customers/${c.id}`}>
+                          <Button variant="ghost" size="icon">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        {canManage && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEdit(c)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(c.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-danger" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <Modal
         isOpen={modalOpen}
@@ -172,7 +228,12 @@ export default function CustomersClient({
               {error}
             </div>
           )}
-          <Input label="الاسم" value={name} onChange={(e) => setName(e.target.value)} required />
+          <Input
+            label="الاسم"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
           <Input
             label="الهاتف"
             value={phone}
@@ -187,10 +248,22 @@ export default function CustomersClient({
             onChange={(e) => setEmail(e.target.value)}
             dir="ltr"
           />
-          <Input label="العنوان" value={address} onChange={(e) => setAddress(e.target.value)} />
-          <Input label="ملاحظات" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Input
+            label="العنوان"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+          />
+          <Input
+            label="ملاحظات"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
           <div className="flex gap-2 justify-end">
-            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+            >
               إلغاء
             </Button>
             <Button type="submit" loading={loading}>
@@ -199,6 +272,6 @@ export default function CustomersClient({
           </div>
         </form>
       </Modal>
-    </>
+    </div>
   );
 }

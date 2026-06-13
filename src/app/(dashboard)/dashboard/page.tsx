@@ -1,4 +1,4 @@
-import SalesChart from "@/app/(dashboard)/dashboard/SalesChart";
+import dynamic from "next/dynamic";
 import Badge from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
@@ -25,6 +25,15 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+
+const SalesChart = dynamic(
+  () => import("@/app/(dashboard)/dashboard/SalesChart"),
+  {
+    loading: () => (
+      <div className="h-[280px] animate-pulse rounded-lg bg-brown/5" />
+    ),
+  }
+);
 
 export default async function DashboardPage() {
   const [stats, session] = await Promise.all([getDashboardStats(), getSession()]);

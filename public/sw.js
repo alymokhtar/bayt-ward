@@ -30,6 +30,9 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api/")) return;
 
+  // Let the browser handle page navigations normally for faster, fresh routing.
+  if (event.request.mode === "navigate") return;
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {

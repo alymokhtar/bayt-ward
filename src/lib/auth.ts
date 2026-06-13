@@ -1,6 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
+import { cache } from "react";
 import { prisma } from "./prisma";
 
 import { getJwtSecret } from "./env";
@@ -71,7 +72,7 @@ export async function getSession(): Promise<SessionUser | null> {
 }
 
 /** Validates JWT against the database; clears stale sessions after DB migration. */
-export async function resolveSession(): Promise<SessionUser | null> {
+export const resolveSession = cache(async (): Promise<SessionUser | null> => {
   const session = await getSession();
   if (!session) return null;
 
@@ -97,7 +98,7 @@ export async function resolveSession(): Promise<SessionUser | null> {
   }
 
   return user;
-}
+});
 
 export async function destroySession(): Promise<void> {
   const cookieStore = await cookies();
