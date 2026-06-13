@@ -28,7 +28,9 @@ export async function POST(request: Request) {
       success: true,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
-  } catch {
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
+  
     return NextResponse.json(
       { error: "حدث خطأ في الخادم" },
       { status: 500 }
