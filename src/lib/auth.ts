@@ -25,8 +25,8 @@ export async function verifyPassword(
   return bcrypt.compare(password, hashedPassword);
 }
 
-export async function createSession(user: SessionUser): Promise<void> {
-  const token = await new SignJWT({
+export async function signSessionToken(user: SessionUser): Promise<string> {
+  return new SignJWT({
     id: user.id,
     name: user.name,
     email: user.email,
@@ -36,15 +36,20 @@ export async function createSession(user: SessionUser): Promise<void> {
     .setExpirationTime("7d")
     .setIssuedAt()
     .sign(JWT_SECRET);
+}
 
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  maxAge: 60 * 60 * 24 * 7,
+  path: "/",
+};
+
+export async function createSession(user: SessionUser): Promise<void> {
+  const token = await signSessionToken(user);
   const cookieStore = await cookies();
-  cookieStore.set("session", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
-    path: "/",
-  });
+  cookieStore.set("session", token, SESSION_COOKIE_OPTIONS);
 }
 
 export async function getSession(): Promise<SessionUser | null> {
