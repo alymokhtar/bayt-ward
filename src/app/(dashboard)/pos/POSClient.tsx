@@ -77,6 +77,22 @@ export default function POSClient({
   const paid = parseFloat(paidAmount) || 0;
   const changeAmount = Math.max(0, paid - totalAmount);
 
+  function looksLikePhoneNumber(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    const digits = trimmed.replace(/\D/g, "");
+    return digits.length >= 7;
+  }
+
+  function openNewCustomerForm() {
+    const query = customerQuery.trim();
+    setNewCustomerName("");
+    setNewCustomerPhone(looksLikePhoneNumber(query) ? query : "");
+    setCustomerQuery("");
+    setCustomerResults([]);
+    setShowNewCustomer(true);
+  }
+
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
       setResults([]);
@@ -416,6 +432,7 @@ export default function POSClient({
                   label="الاسم"
                   value={newCustomerName}
                   onChange={(e) => setNewCustomerName(e.target.value)}
+                  autoFocus={!!newCustomerPhone}
                 />
                 <Input
                   label="الهاتف"
@@ -441,9 +458,14 @@ export default function POSClient({
                 <input
                   value={customerQuery}
                   onChange={(e) => setCustomerQuery(e.target.value)}
-                  placeholder="ابحث عن عميل..."
+                  placeholder="ابحث بالاسم أو رقم الهاتف..."
                   className="w-full h-9 rounded-lg border border-border px-3 text-sm"
                 />
+                {customerQuery.trim() && customerResults.length === 0 && (
+                  <p className="text-xs text-muted">
+                    لم يُعثر على عميل — يمكنك إضافة عميل جديد
+                  </p>
+                )}
                 {customerResults.length > 0 && (
                   <ul className="border border-border rounded-lg divide-y max-h-32 overflow-y-auto">
                     {customerResults.map((c) => (
@@ -466,7 +488,7 @@ export default function POSClient({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowNewCustomer(true)}
+                  onClick={openNewCustomerForm}
                 >
                   <UserPlus className="h-4 w-4" />
                   عميل جديد
