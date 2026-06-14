@@ -3,8 +3,11 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import type { StockMovementType } from "@prisma/client";
-import { resolvePagination, toPaginatedResult } from "@/lib/utils";
-import { getCachedLowStockPreview } from "@/lib/cached-queries";
+import {
+  getCachedLowStockPreview,
+  getCachedInventoryPage,
+  getCachedStockMovementsPage,
+} from "@/lib/cached-queries";
 import { invalidateInventoryData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
@@ -28,51 +31,6 @@ function revalidateInventoryPaths() {
   invalidateInventoryData();
 }
 
-const inventoryVariantSelect = {
-  id: true,
-  sku: true,
-  size: true,
-  color: true,
-  stockQuantity: true,
-  minStockLevel: true,
-  costPrice: true,
-  sellingPrice: true,
-  product: {
-    select: {
-      name: true,
-      nameAr: true,
-      category: { select: { name: true, nameAr: true } },
-    },
-  },
-} as const;
-
-function buildInventoryWhere(options?: {
-  search?: string;
-  lowStockOnly?: boolean;
-}) {
-  const search = options?.search?.trim();
-
-  return {
-    isActive: true,
-    product: { isActive: true },
-    ...(search
-      ? {
-          OR: [
-            { sku: { contains: search } },
-            { barcode: { contains: search } },
-            { product: { name: { contains: search } } },
-            { product: { nameAr: { contains: search } } },
-          ],
-        }
-      : {}),
-    ...(options?.lowStockOnly
-      ? {
-          stockQuantity: { lte: prisma.productVariant.fields.minStockLevel },
-        }
-      : {}),
-  };
-}
-
 export async function getLowStockPreview(limit = 8) {
   await requireRole(["ADMIN", "MANAGER"]);
   return getCachedLowStockPreview(limit);
@@ -85,25 +43,7 @@ export async function getInventory(options?: {
   pageSize?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
-
-  const where = buildInventoryWhere(options);
-  const { take, skip, page, pageSize } = resolvePagination(
-    options?.page,
-    options?.pageSize
-  );
-
-  const [items, total] = await Promise.all([
-    prisma.productVariant.findMany({
-      where,
-      select: inventoryVariantSelect,
-      orderBy: [{ product: { name: "asc" } }, { size: "asc" }, { color: "asc" }],
-      take,
-      skip,
-    }),
-    prisma.productVariant.count({ where }),
-  ]);
-
-  return toPaginatedResult(items, total, page, pageSize);
+  return getCachedInventoryPage(JSON.stringify(options ?? {}));
 }
 
 export async function adjustStock(data: {
@@ -195,43 +135,12 @@ export async function getStockMovements(options?: {
   pageSize?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
-
-  const where = {
-    ...(options?.variantId ? { variantId: options.variantId } : {}),
-    ...(options?.type ? { type: options.type } : {}),
-  };
-
-  const { take, skip, page, pageSize } = resolvePagination(
-    options?.page,
-    options?.pageSize ?? options?.limit ?? 50
+  return getCachedStockMovementsPage(
+    JSON.stringify({
+      variantId: options?.variantId,
+      type: options?.type,
+      page: options?.page,
+      pageSize: options?.pageSize ?? options?.limit ?? 50,
+    })
   );
-
-  const [items, total] = await Promise.all([
-    prisma.stockMovement.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take,
-      skip,
-      select: {
-        id: true,
-        type: true,
-        quantity: true,
-        previousQty: true,
-        newQty: true,
-        reference: true,
-        notes: true,
-        createdAt: true,
-        variant: {
-          select: {
-            sku: true,
-            product: { select: { id: true, name: true, nameAr: true } },
-          },
-        },
-        user: { select: { id: true, name: true } },
-      },
-    }),
-    prisma.stockMovement.count({ where }),
-  ]);
-
-  return toPaginatedResult(items, total, page, pageSize);
 }

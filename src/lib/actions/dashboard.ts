@@ -1,7 +1,12 @@
 "use server";
 
 import { requireAuth } from "@/lib/auth";
-import { getCachedDashboardStats } from "@/lib/cached-queries";
+import {
+  getCachedDashboardKpis,
+  getCachedDashboardStats,
+  getCachedRecentSales,
+  getCachedSalesChartData,
+} from "@/lib/cached-queries";
 
 function handleError(error: unknown): never {
   if (error instanceof Error) {
@@ -17,6 +22,33 @@ export async function getDashboardStats() {
   try {
     await requireAuth();
     return getCachedDashboardStats();
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+export async function getDashboardKpis() {
+  try {
+    await requireAuth();
+    return getCachedDashboardKpis();
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+export async function getDashboardChartData() {
+  try {
+    await requireAuth();
+    return getCachedSalesChartData();
+  } catch (error) {
+    handleError(error);
+  }
+}
+
+export async function getDashboardRecentSales() {
+  try {
+    await requireAuth();
+    return getCachedRecentSales();
   } catch (error) {
     handleError(error);
   }
