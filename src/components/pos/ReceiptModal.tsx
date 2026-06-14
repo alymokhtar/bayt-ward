@@ -2,6 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import ReceiptInvoice, { type ReceiptData } from "@/components/pos/ReceiptInvoice";
+import { printReceipt } from "@/lib/print-receipt";
 import { Printer, X } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 
@@ -14,9 +15,9 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
   const hasAutoPrinted = useRef(false);
 
   const handlePrint = useCallback(() => {
-    document.body.classList.add("pos-receipt-printing");
-    window.print();
-  }, []);
+    if (!receipt) return;
+    printReceipt(receipt);
+  }, [receipt]);
 
   useEffect(() => {
     if (!receipt) {
@@ -28,23 +29,11 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
     hasAutoPrinted.current = true;
 
     const timer = window.setTimeout(() => {
-      handlePrint();
+      printReceipt(receipt);
     }, 350);
 
     return () => window.clearTimeout(timer);
-  }, [receipt, handlePrint]);
-
-  useEffect(() => {
-    function cleanupPrintClass() {
-      document.body.classList.remove("pos-receipt-printing");
-    }
-
-    window.addEventListener("afterprint", cleanupPrintClass);
-    return () => {
-      window.removeEventListener("afterprint", cleanupPrintClass);
-      cleanupPrintClass();
-    };
-  }, []);
+  }, [receipt]);
 
   useEffect(() => {
     if (!receipt) return;
@@ -60,7 +49,7 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
   if (!receipt) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 no-print">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="relative w-full max-w-md rounded-2xl bg-cream shadow-xl">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
