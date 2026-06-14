@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { invalidatePurchasesData } from "@/lib/revalidate-tags";
+import { getCachedPurchasesList } from "@/lib/cached-queries";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -39,20 +40,7 @@ export async function getPurchases(options?: {
   limit?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
-
-  return prisma.purchase.findMany({
-    where: {
-      ...(options?.status ? { status: options.status as "PENDING" | "RECEIVED" | "CANCELLED" } : {}),
-      ...(options?.supplierId ? { supplierId: options.supplierId } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: options?.limit ?? 50,
-    include: {
-      supplier: { select: { id: true, name: true, phone: true } },
-      user: { select: { id: true, name: true } },
-      _count: { select: { items: true } },
-    },
-  });
+  return getCachedPurchasesList(JSON.stringify(options ?? {}));
 }
 
 export async function createPurchase(data: {

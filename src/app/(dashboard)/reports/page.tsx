@@ -1,11 +1,7 @@
-import ReportsClient from "@/app/(dashboard)/reports/ReportsClient";
+import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/Card";
-import {
-  getSalesReport,
-  getInventoryReport,
-  getProfitReport,
-  getTopProducts,
-} from "@/lib/actions/reports";
+import ReportsTabsClient from "@/app/(dashboard)/reports/ReportsTabsClient";
+import ReportsContentSection from "@/app/(dashboard)/reports/ReportsContentSection";
 
 interface ReportsPageProps {
   searchParams: Promise<{
@@ -13,6 +9,19 @@ interface ReportsPageProps {
     from?: string;
     to?: string;
   }>;
+}
+
+function ContentSkeleton() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 rounded-xl bg-brown/5" />
+        ))}
+      </div>
+      <div className="h-64 rounded-xl bg-brown/5" />
+    </div>
+  );
 }
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
@@ -27,23 +36,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const from = params.from || defaultFrom;
   const to = params.to || defaultTo;
 
-  const fromDate = new Date(from);
-  const toDate = new Date(to + "T23:59:59");
-
-  const [salesReport, inventoryReport, profitReport, topProducts] =
-    await Promise.all([
-      activeTab === "sales"
-        ? getSalesReport(fromDate, toDate)
-        : Promise.resolve(null),
-      activeTab === "inventory" ? getInventoryReport() : Promise.resolve(null),
-      activeTab === "profit"
-        ? getProfitReport(fromDate, toDate)
-        : Promise.resolve(null),
-      activeTab === "top"
-        ? getTopProducts(fromDate, toDate)
-        : Promise.resolve(null),
-    ]);
-
   return (
     <div className="space-y-6">
       <div>
@@ -51,16 +43,18 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         <p className="text-sm text-muted mt-1">تحليلات وإحصائيات المتجر</p>
       </div>
       <Card>
-        <CardContent className="pt-6">
-          <ReportsClient
-            activeTab={activeTab}
-            from={from}
-            to={to}
-            salesReport={salesReport}
-            inventoryReport={inventoryReport}
-            profitReport={profitReport}
-            topProducts={topProducts}
-          />
+        <CardContent className="pt-6 space-y-6">
+          <ReportsTabsClient activeTab={activeTab} from={from} to={to} />
+          <Suspense
+            key={`${activeTab}-${from}-${to}`}
+            fallback={<ContentSkeleton />}
+          >
+            <ReportsContentSection
+              activeTab={activeTab}
+              from={from}
+              to={to}
+            />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { invalidateReturnsData } from "@/lib/revalidate-tags";
+import { getCachedReturnsList } from "@/lib/cached-queries";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -39,21 +40,7 @@ export async function getReturns(options?: {
   limit?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
-
-  return prisma.return.findMany({
-    where: {
-      ...(options?.saleId ? { saleId: options.saleId } : {}),
-      ...(options?.customerId ? { customerId: options.customerId } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: options?.limit ?? 50,
-    include: {
-      sale: { select: { id: true, invoiceNumber: true, totalAmount: true } },
-      customer: { select: { id: true, name: true, phone: true } },
-      user: { select: { id: true, name: true } },
-      _count: { select: { items: true } },
-    },
-  });
+  return getCachedReturnsList(JSON.stringify(options ?? {}));
 }
 
 export async function createReturn(data: {

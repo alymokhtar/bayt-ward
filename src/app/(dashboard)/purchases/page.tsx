@@ -1,14 +1,9 @@
-import PurchasesClient from "@/app/(dashboard)/purchases/PurchasesClient";
+import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/Card";
-import { getPurchases } from "@/lib/actions/purchases";
-import { getSuppliers } from "@/lib/actions/suppliers";
+import PurchasesSection from "@/app/(dashboard)/purchases/PurchasesSection";
+import TablePageLoading from "@/components/ui/TablePageLoading";
 
-export default async function PurchasesPage() {
-  const [purchases, suppliers] = await Promise.all([
-    getPurchases(),
-    getSuppliers(),
-  ]);
-
+export default function PurchasesPage() {
   return (
     <div className="space-y-6">
       <div>
@@ -17,10 +12,9 @@ export default async function PurchasesPage() {
       </div>
       <Card>
         <CardContent className="pt-6">
-          <PurchasesClient
-            purchases={purchases}
-            suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
-          />
+          <Suspense fallback={<TablePageLoading />}>
+            <PurchasesSection />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

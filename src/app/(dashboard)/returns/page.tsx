@@ -1,10 +1,9 @@
-import ReturnsClient from "@/app/(dashboard)/returns/ReturnsClient";
+import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/Card";
-import { getReturns } from "@/lib/actions/returns";
+import ReturnsSection from "@/app/(dashboard)/returns/ReturnsSection";
+import TablePageLoading from "@/components/ui/TablePageLoading";
 
-export default async function ReturnsPage() {
-  const returns = await getReturns();
-
+export default function ReturnsPage() {
   return (
     <div className="space-y-6">
       <div>
@@ -13,7 +12,9 @@ export default async function ReturnsPage() {
       </div>
       <Card>
         <CardContent className="pt-6">
-          <ReturnsClient returns={returns} />
+          <Suspense fallback={<TablePageLoading />}>
+            <ReturnsSection />
+          </Suspense>
         </CardContent>
       </Card>
     </div>

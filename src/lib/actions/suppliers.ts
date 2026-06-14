@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { invalidateSuppliersData } from "@/lib/revalidate-tags";
+import { getCachedSuppliersList } from "@/lib/cached-queries";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -27,24 +28,7 @@ function revalidateSupplierPaths() {
 
 export async function getSuppliers(includeInactive = false) {
   await requireRole(["ADMIN", "MANAGER"]);
-
-  return prisma.supplier.findMany({
-    where: includeInactive ? undefined : { isActive: true },
-    orderBy: { name: "asc" },
-    take: 500,
-    select: {
-      id: true,
-      name: true,
-      phone: true,
-      email: true,
-      address: true,
-      notes: true,
-      isActive: true,
-      createdAt: true,
-      updatedAt: true,
-      _count: { select: { purchases: true } },
-    },
-  });
+  return getCachedSuppliersList(JSON.stringify({ includeInactive }));
 }
 
 export async function createSupplier(data: {

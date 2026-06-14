@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import type { ExpenseCategory } from "@prisma/client";
 import { invalidateExpensesData } from "@/lib/revalidate-tags";
+import { getCachedExpensesList } from "@/lib/cached-queries";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -33,25 +34,14 @@ export async function getExpenses(options?: {
   limit?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
-
-  return prisma.expense.findMany({
-    where: {
-      ...(options?.category ? { category: options.category } : {}),
-      ...(options?.from || options?.to
-        ? {
-            expenseDate: {
-              ...(options.from ? { gte: options.from } : {}),
-              ...(options.to ? { lte: options.to } : {}),
-            },
-          }
-        : {}),
-    },
-    orderBy: { expenseDate: "desc" },
-    take: options?.limit ?? 100,
-    include: {
-      user: { select: { id: true, name: true } },
-    },
-  });
+  return getCachedExpensesList(
+    JSON.stringify({
+      category: options?.category,
+      from: options?.from?.toISOString(),
+      to: options?.to?.toISOString(),
+      limit: options?.limit,
+    })
+  );
 }
 
 export async function createExpense(data: {

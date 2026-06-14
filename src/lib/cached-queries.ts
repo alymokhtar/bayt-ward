@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { Prisma } from "@prisma/client";
+import { Prisma, type ExpenseCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
@@ -574,4 +574,435 @@ export const getCachedStockMovementsPage = unstable_cache(
   },
   ["stock-movements-page"],
   { tags: [CACHE_TAG.stockMovements], revalidate: READ_CACHE_SECONDS }
+);
+
+function getReportDateRange(from?: string, to?: string) {
+  const start = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  start.setHours(0, 0, 0, 0);
+
+  const end = to ? new Date(to) : new Date();
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
+export const getCachedPurchasesList = unstable_cache(
+  async (paramsJson: string) => {
+    const options = JSON.parse(paramsJson) as {
+      status?: string;
+      supplierId?: string;
+      limit?: number;
+    };
+
+    return prisma.purchase.findMany({
+      where: {
+        ...(options.status
+          ? { status: options.status as "PENDING" | "RECEIVED" | "CANCELLED" }
+          : {}),
+        ...(options.supplierId ? { supplierId: options.supplierId } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: options.limit ?? 50,
+      include: {
+        supplier: { select: { id: true, name: true, phone: true } },
+        user: { select: { id: true, name: true } },
+        _count: { select: { items: true } },
+      },
+    });
+  },
+  ["purchases-list"],
+  { tags: [CACHE_TAG.purchases], revalidate: READ_CACHE_SECONDS }
+);
+
+export const getCachedSuppliersList = unstable_cache(
+  async (paramsJson: string) => {
+    const { includeInactive } = JSON.parse(paramsJson) as {
+      includeInactive?: boolean;
+    };
+
+    return prisma.supplier.findMany({
+      where: includeInactive ? undefined : { isActive: true },
+      orderBy: { name: "asc" },
+      take: 500,
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        address: true,
+        notes: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: { select: { purchases: true } },
+      },
+    });
+  },
+  ["suppliers-list"],
+  { tags: [CACHE_TAG.suppliers], revalidate: READ_CACHE_SECONDS }
+);
+
+export const getCachedSalesReport = unstable_cache(
+  async (paramsJson: string) => {
+    const { from, to } = JSON.parse(paramsJson) as {
+      from?: string;
+      to?: string;
+    };
+    const { start, end } = getReportDateRange(from, to);
+
+    const [sales, returns, byPaymentMethod] = await Promise.all([
+      prisma.sale.aggregate({
+        where: {
+          status: "COMPLETED",
+          createdAt: { gte: start, lte: end },
+        },
+        _sum: {
+          totalAmount: true,
+          subtotal: true,
+          discountAmount: true,
+          taxAmount: true,
+        },
+        _count: true,
+        _avg: { totalAmount: true },
+      }),
+      prisma.return.aggregate({
+        where: {
+          status: "APPROVED",
+          createdAt: { gte: start, lte: end },
+        },
+        _sum: { refundAmount: true, totalAmount: true },
+        _count: true,
+      }),
+      prisma.sale.groupBy({
+        by: ["paymentMethod"],
+        where: {
+          status: "COMPLETED",
+          createdAt: { gte: start, lte: end },
+        },
+        _sum: { totalAmount: true },
+        _count: true,
+      }),
+    ]);
+
+    const grossSales = sales._sum.totalAmount ?? 0;
+    const totalReturns = returns._sum.refundAmount ?? 0;
+
+    return {
+      period: { from: start, to: end },
+      totalSales: grossSales,
+      salesCount: sales._count,
+      averageSale: sales._avg.totalAmount ?? 0,
+      totalDiscount: sales._sum.discountAmount ?? 0,
+      totalTax: sales._sum.taxAmount ?? 0,
+      netSales: grossSales - totalReturns,
+      returnsCount: returns._count,
+      totalReturns,
+      byPaymentMethod: byPaymentMethod.map((item) => ({
+        method: item.paymentMethod,
+        total: item._sum.totalAmount ?? 0,
+        count: item._count,
+      })),
+    };
+  },
+  ["sales-report"],
+  {
+    tags: [CACHE_TAG.reports, CACHE_TAG.sales, CACHE_TAG.returns],
+    revalidate: READ_CACHE_SECONDS,
+  }
+);
+
+export const getCachedInventoryReport = unstable_cache(
+  async () => {
+    const [summaryRows, lowStockCountRows, lowStockItems, byCategoryRows] =
+      await Promise.all([
+        prisma.$queryRaw<
+          [
+            {
+              totalVariants: number;
+              totalItems: number;
+              totalCostValue: number;
+              totalRetailValue: number;
+              outOfStockCount: number;
+            },
+          ]
+        >`
+          SELECT
+            COUNT(*)::int AS "totalVariants",
+            COALESCE(SUM(pv."stockQuantity"), 0)::int AS "totalItems",
+            COALESCE(SUM(pv."stockQuantity" * pv."costPrice"), 0)::float AS "totalCostValue",
+            COALESCE(SUM(pv."stockQuantity" * pv."sellingPrice"), 0)::float AS "totalRetailValue",
+            COUNT(*) FILTER (WHERE pv."stockQuantity" = 0)::int AS "outOfStockCount"
+          FROM "ProductVariant" pv
+          INNER JOIN "Product" p ON pv."productId" = p.id
+          WHERE pv."isActive" = true AND p."isActive" = true
+        `,
+        prisma.$queryRaw<[{ count: number }]>`
+          SELECT COUNT(*)::int AS count
+          FROM "ProductVariant" pv
+          INNER JOIN "Product" p ON pv."productId" = p.id
+          WHERE pv."isActive" = true
+            AND p."isActive" = true
+            AND pv."stockQuantity" <= pv."minStockLevel"
+        `,
+        prisma.$queryRaw<
+          {
+            id: string;
+            sku: string;
+            productName: string;
+            size: string;
+            color: string;
+            stockQuantity: number;
+            minStockLevel: number;
+            category: string;
+          }[]
+        >`
+          SELECT
+            pv.id,
+            pv.sku,
+            COALESCE(p."nameAr", p.name) AS "productName",
+            pv.size,
+            pv.color,
+            pv."stockQuantity" AS "stockQuantity",
+            pv."minStockLevel" AS "minStockLevel",
+            COALESCE(c."nameAr", c.name) AS category
+          FROM "ProductVariant" pv
+          INNER JOIN "Product" p ON pv."productId" = p.id
+          INNER JOIN "Category" c ON p."categoryId" = c.id
+          WHERE pv."isActive" = true
+            AND p."isActive" = true
+            AND pv."stockQuantity" <= pv."minStockLevel"
+          ORDER BY pv."stockQuantity" ASC
+          LIMIT 200
+        `,
+        prisma.$queryRaw<
+          {
+            category: string;
+            quantity: number;
+            costValue: number;
+            retailValue: number;
+          }[]
+        >`
+          SELECT
+            COALESCE(c."nameAr", c.name) AS category,
+            COALESCE(SUM(pv."stockQuantity"), 0)::int AS quantity,
+            COALESCE(SUM(pv."stockQuantity" * pv."costPrice"), 0)::float AS "costValue",
+            COALESCE(SUM(pv."stockQuantity" * pv."sellingPrice"), 0)::float AS "retailValue"
+          FROM "ProductVariant" pv
+          INNER JOIN "Product" p ON pv."productId" = p.id
+          INNER JOIN "Category" c ON p."categoryId" = c.id
+          WHERE pv."isActive" = true AND p."isActive" = true
+          GROUP BY c.id, c."nameAr", c.name
+          ORDER BY category ASC
+        `,
+      ]);
+
+    const summary = summaryRows[0];
+    const totalCostValue = summary?.totalCostValue ?? 0;
+    const totalRetailValue = summary?.totalRetailValue ?? 0;
+
+    return {
+      totalVariants: summary?.totalVariants ?? 0,
+      totalItems: summary?.totalItems ?? 0,
+      totalCostValue,
+      totalRetailValue,
+      potentialProfit: totalRetailValue - totalCostValue,
+      lowStockCount: lowStockCountRows[0]?.count ?? 0,
+      outOfStockCount: summary?.outOfStockCount ?? 0,
+      lowStockItems,
+      byCategory: byCategoryRows,
+    };
+  },
+  ["inventory-report"],
+  {
+    tags: [CACHE_TAG.reports, CACHE_TAG.inventory],
+    revalidate: READ_CACHE_SECONDS,
+  }
+);
+
+export const getCachedProfitReport = unstable_cache(
+  async (paramsJson: string) => {
+    const { from, to } = JSON.parse(paramsJson) as {
+      from?: string;
+      to?: string;
+    };
+    const { start, end } = getReportDateRange(from, to);
+
+    const [revenueAgg, cogsRows, returns, expenses, purchases] =
+      await Promise.all([
+        prisma.sale.aggregate({
+          where: {
+            status: "COMPLETED",
+            createdAt: { gte: start, lte: end },
+          },
+          _sum: { totalAmount: true },
+        }),
+        prisma.$queryRaw<[{ cogs: number }]>`
+          SELECT COALESCE(SUM(si.quantity * pv."costPrice"), 0)::float AS cogs
+          FROM "SaleItem" si
+          INNER JOIN "Sale" s ON si."saleId" = s.id
+          INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
+          WHERE s.status = 'COMPLETED'
+            AND s."createdAt" >= ${start}
+            AND s."createdAt" <= ${end}
+        `,
+        prisma.return.aggregate({
+          where: {
+            status: "APPROVED",
+            createdAt: { gte: start, lte: end },
+          },
+          _sum: { refundAmount: true },
+        }),
+        prisma.expense.aggregate({
+          where: {
+            expenseDate: { gte: start, lte: end },
+          },
+          _sum: { amount: true },
+          _count: true,
+        }),
+        prisma.purchase.aggregate({
+          where: {
+            status: "RECEIVED",
+            receivedAt: { gte: start, lte: end },
+          },
+          _sum: { totalAmount: true },
+          _count: true,
+        }),
+      ]);
+
+    const revenue = revenueAgg._sum.totalAmount ?? 0;
+    const costOfGoodsSold = cogsRows[0]?.cogs ?? 0;
+    const totalReturns = returns._sum.refundAmount ?? 0;
+    const totalExpenses = expenses._sum.amount ?? 0;
+    const grossProfit = revenue - costOfGoodsSold;
+    const netProfit = grossProfit - totalReturns - totalExpenses;
+
+    return {
+      period: { from: start, to: end },
+      revenue,
+      costOfGoodsSold,
+      grossProfit,
+      totalReturns,
+      totalExpenses,
+      expensesCount: expenses._count,
+      netProfit,
+      profitMargin: revenue > 0 ? (netProfit / revenue) * 100 : 0,
+      purchasesTotal: purchases._sum.totalAmount ?? 0,
+      purchasesCount: purchases._count,
+    };
+  },
+  ["profit-report"],
+  {
+    tags: [
+      CACHE_TAG.reports,
+      CACHE_TAG.sales,
+      CACHE_TAG.returns,
+      CACHE_TAG.expenses,
+      CACHE_TAG.purchases,
+    ],
+    revalidate: READ_CACHE_SECONDS,
+  }
+);
+
+export const getCachedTopProducts = unstable_cache(
+  async (paramsJson: string) => {
+    const { from, to, limit = 10 } = JSON.parse(paramsJson) as {
+      from?: string;
+      to?: string;
+      limit?: number;
+    };
+    const { start, end } = getReportDateRange(from, to);
+
+    return prisma.$queryRaw<
+      {
+        productId: string;
+        productName: string;
+        quantitySold: number;
+        revenue: number;
+        profit: number;
+      }[]
+    >`
+      SELECT
+        p.id AS "productId",
+        COALESCE(p."nameAr", p.name) AS "productName",
+        SUM(si.quantity)::int AS "quantitySold",
+        SUM(si."totalPrice")::float AS revenue,
+        SUM((si."unitPrice" - pv."costPrice") * si.quantity - si."discountAmount")::float AS profit
+      FROM "SaleItem" si
+      INNER JOIN "Sale" s ON si."saleId" = s.id
+      INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
+      INNER JOIN "Product" p ON pv."productId" = p.id
+      WHERE s.status = 'COMPLETED'
+        AND s."createdAt" >= ${start}
+        AND s."createdAt" <= ${end}
+      GROUP BY p.id, p."nameAr", p.name
+      ORDER BY revenue DESC
+      LIMIT ${limit}
+    `;
+  },
+  ["top-products-report"],
+  {
+    tags: [CACHE_TAG.reports, CACHE_TAG.sales],
+    revalidate: READ_CACHE_SECONDS,
+  }
+);
+
+export const getCachedReturnsList = unstable_cache(
+  async (paramsJson: string) => {
+    const options = JSON.parse(paramsJson) as {
+      saleId?: string;
+      customerId?: string;
+      limit?: number;
+    };
+
+    return prisma.return.findMany({
+      where: {
+        ...(options.saleId ? { saleId: options.saleId } : {}),
+        ...(options.customerId ? { customerId: options.customerId } : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      take: options.limit ?? 50,
+      include: {
+        sale: { select: { id: true, invoiceNumber: true, totalAmount: true } },
+        customer: { select: { id: true, name: true, phone: true } },
+        user: { select: { id: true, name: true } },
+        _count: { select: { items: true } },
+      },
+    });
+  },
+  ["returns-list"],
+  { tags: [CACHE_TAG.returns], revalidate: READ_CACHE_SECONDS }
+);
+
+export const getCachedExpensesList = unstable_cache(
+  async (paramsJson: string) => {
+    const options = JSON.parse(paramsJson) as {
+      category?: string;
+      from?: string;
+      to?: string;
+      limit?: number;
+    };
+
+    return prisma.expense.findMany({
+      where: {
+        ...(options.category
+          ? { category: options.category as ExpenseCategory }
+          : {}),
+        ...(options.from || options.to
+          ? {
+              expenseDate: {
+                ...(options.from ? { gte: new Date(options.from) } : {}),
+                ...(options.to ? { lte: new Date(options.to) } : {}),
+              },
+            }
+          : {}),
+      },
+      orderBy: { expenseDate: "desc" },
+      take: options.limit ?? 100,
+      include: {
+        user: { select: { id: true, name: true } },
+      },
+    });
+  },
+  ["expenses-list"],
+  { tags: [CACHE_TAG.expenses], revalidate: READ_CACHE_SECONDS }
 );

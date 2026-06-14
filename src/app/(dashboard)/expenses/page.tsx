@@ -1,8 +1,9 @@
-import ExpensesClient from "@/app/(dashboard)/expenses/ExpensesClient";
+import { Suspense } from "react";
 import Button from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
-import { getExpenses } from "@/lib/actions/expenses";
+import ExpensesSection from "@/app/(dashboard)/expenses/ExpensesSection";
 import { EXPENSE_CATEGORIES } from "@/lib/constants";
+import type { ExpenseCategory } from "@prisma/client";
 
 interface ExpensesPageProps {
   searchParams: Promise<{
@@ -12,23 +13,22 @@ interface ExpensesPageProps {
   }>;
 }
 
+function TableSkeleton() {
+  return (
+    <div className="space-y-3 animate-pulse">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-12 rounded-lg bg-brown/5" />
+      ))}
+    </div>
+  );
+}
+
 export default async function ExpensesPage({
   searchParams,
 }: ExpensesPageProps) {
   const params = await searchParams;
-  const expenses = await getExpenses({
-    category: params.category as
-      | "RENT"
-      | "UTILITIES"
-      | "SALARIES"
-      | "MARKETING"
-      | "SUPPLIES"
-      | "MAINTENANCE"
-      | "OTHER"
-      | undefined,
-    from: params.from ? new Date(params.from) : undefined,
-    to: params.to ? new Date(params.to + "T23:59:59") : undefined,
-  });
+  const category = params.category as ExpenseCategory | undefined;
+  const filterKey = `${params.category ?? ""}-${params.from ?? ""}-${params.to ?? ""}`;
 
   return (
     <div className="space-y-6">
@@ -68,7 +68,14 @@ export default async function ExpensesPage({
               تصفية
             </Button>
           </form>
-          <ExpensesClient expenses={expenses} />
+
+          <Suspense key={filterKey} fallback={<TableSkeleton />}>
+            <ExpensesSection
+              category={category}
+              from={params.from}
+              to={params.to}
+            />
+          </Suspense>
         </CardContent>
       </Card>
     </div>
