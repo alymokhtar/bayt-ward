@@ -4,8 +4,8 @@ import { getStoreSettings } from "@/lib/actions/settings";
 import { MessageCircle } from "lucide-react";
 
 export default async function WhatsAppPage() {
-  const [customers, settings] = await Promise.all([
-    getCustomers(),
+  const [customerResult, settings] = await Promise.all([
+    getCustomers({ pageSize: 500 }),
     getStoreSettings(),
   ]);
 
@@ -24,7 +24,7 @@ export default async function WhatsAppPage() {
       </div>
 
       <WhatsAppPanel
-        customers={customers.map((c) => ({
+        customers={customerResult.items.map((c) => ({
           id: c.id,
           name: c.name,
           phone: c.phone,

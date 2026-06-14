@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { getDashboardStats } from "@/lib/actions/dashboard";
-import { getInventory } from "@/lib/actions/inventory";
+import { getLowStockPreview } from "@/lib/actions/inventory";
 import { getSession } from "@/lib/auth";
 import {
   formatCurrency,
@@ -38,10 +38,10 @@ const SalesChart = dynamic(
 export default async function DashboardPage() {
   const [stats, session] = await Promise.all([getDashboardStats(), getSession()]);
 
-  let lowStockItems: Awaited<ReturnType<typeof getInventory>> = [];
+  let lowStockItems: Awaited<ReturnType<typeof getLowStockPreview>> = [];
   if (session?.role === "ADMIN" || session?.role === "MANAGER") {
     try {
-      lowStockItems = await getInventory({ lowStockOnly: true });
+      lowStockItems = await getLowStockPreview(8);
     } catch {
       lowStockItems = [];
     }
@@ -136,7 +136,7 @@ export default async function DashboardPage() {
             </div>
             {lowStockItems.length > 0 ? (
               <ul className="space-y-2 max-h-52 overflow-y-auto">
-                {lowStockItems.slice(0, 8).map((v) => (
+                {lowStockItems.map((v) => (
                   <li
                     key={v.id}
                     className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0"

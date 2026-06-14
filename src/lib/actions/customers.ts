@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
+import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -30,7 +31,11 @@ function revalidateCustomerPaths() {
   revalidatePath("/dashboard");
 }
 
-export async function getCustomers(options?: { search?: string }) {
+export async function getCustomers(options?: {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}) {
   await requireAuth();
 
   const where = options?.search?.trim()
@@ -43,13 +48,33 @@ export async function getCustomers(options?: { search?: string }) {
       }
     : undefined;
 
-  return prisma.customer.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: {
-      _count: { select: { sales: true, returns: true } },
-    },
-  });
+  const { take, skip, page, pageSize } = resolvePagination(
+    options?.page,
+    options?.pageSize
+  );
+
+  const [items, total] = await Promise.all([
+    prisma.customer.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take,
+      skip,
+      select: {
+        id: true,
+        name: true,
+        phone: true,
+        email: true,
+        address: true,
+        notes: true,
+        totalSpent: true,
+        visitCount: true,
+        _count: { select: { sales: true, returns: true } },
+      },
+    }),
+    prisma.customer.count({ where }),
+  ]);
+
+  return toPaginatedResult(items, total, page, pageSize);
 }
 
 export async function getCustomer(id: string) {

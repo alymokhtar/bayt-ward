@@ -1,14 +1,18 @@
 import BarcodesClient from "@/app/(dashboard)/barcodes/BarcodesClient";
+import PaginationNav from "@/components/ui/PaginationNav";
 import { getAllVariantsForBarcodes } from "@/lib/actions/products";
 import { Barcode } from "lucide-react";
 
 interface BarcodesPageProps {
-  searchParams: Promise<{ search?: string }>;
+  searchParams: Promise<{ search?: string; page?: string }>;
 }
 
 export default async function BarcodesPage({ searchParams }: BarcodesPageProps) {
-  const { search } = await searchParams;
-  const variants = await getAllVariantsForBarcodes(search);
+  const { search, page } = await searchParams;
+  const result = await getAllVariantsForBarcodes({
+    search,
+    page: page ? Number(page) : 1,
+  });
 
   return (
     <div className="space-y-6">
@@ -24,7 +28,13 @@ export default async function BarcodesPage({ searchParams }: BarcodesPageProps) 
         </div>
       </div>
 
-      <BarcodesClient variants={variants} />
+      <BarcodesClient variants={result.items} />
+      <PaginationNav
+        page={result.page}
+        totalPages={result.totalPages}
+        basePath="/barcodes"
+        searchParams={{ search }}
+      />
     </div>
   );
 }

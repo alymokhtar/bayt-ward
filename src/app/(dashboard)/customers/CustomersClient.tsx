@@ -20,6 +20,7 @@ import {
 } from "@/lib/actions/customers";
 import { formatCurrency } from "@/lib/utils";
 import CustomerWhatsAppButton from "@/components/whatsapp/CustomerWhatsAppButton";
+import PaginationNav from "@/components/ui/PaginationNav";
 import { Eye, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -39,12 +40,18 @@ type Customer = {
 
 interface CustomersClientProps {
   customers: Customer[];
+  total: number;
+  page: number;
+  totalPages: number;
   search?: string;
   canManage?: boolean;
 }
 
 export default function CustomersClient({
   customers,
+  total,
+  page,
+  totalPages,
   search,
   canManage = false,
 }: CustomersClientProps) {
@@ -114,7 +121,7 @@ export default function CustomersClient({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-brown">العملاء</h1>
-          <p className="text-sm text-muted mt-1">{customers.length} عميل</p>
+          <p className="text-sm text-muted mt-1">{total} عميل</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
@@ -214,6 +221,12 @@ export default function CustomersClient({
               </TableBody>
             </Table>
           )}
+          <PaginationNav
+            page={page}
+            totalPages={totalPages}
+            basePath="/customers"
+            searchParams={{ search }}
+          />
         </CardContent>
       </Card>
 

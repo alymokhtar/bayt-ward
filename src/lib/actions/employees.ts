@@ -45,6 +45,7 @@ export async function getEmployees() {
 
   return prisma.user.findMany({
     orderBy: { createdAt: "desc" },
+    take: 200,
     select: userSelect,
   });
 }

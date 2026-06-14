@@ -94,74 +94,103 @@ export async function getInventoryReport() {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
 
-    const variants = await prisma.productVariant.findMany({
-      where: {
-        isActive: true,
-        product: { isActive: true },
-      },
-      include: {
-        product: {
-          include: { category: true },
-        },
-      },
-    });
+    const [summaryRows, lowStockCountRows, lowStockItems, byCategoryRows] =
+      await Promise.all([
+      prisma.$queryRaw<
+        [
+          {
+            totalVariants: number;
+            totalItems: number;
+            totalCostValue: number;
+            totalRetailValue: number;
+            outOfStockCount: number;
+          },
+        ]
+      >`
+        SELECT
+          COUNT(*)::int AS "totalVariants",
+          COALESCE(SUM(pv."stockQuantity"), 0)::int AS "totalItems",
+          COALESCE(SUM(pv."stockQuantity" * pv."costPrice"), 0)::float AS "totalCostValue",
+          COALESCE(SUM(pv."stockQuantity" * pv."sellingPrice"), 0)::float AS "totalRetailValue",
+          COUNT(*) FILTER (WHERE pv."stockQuantity" = 0)::int AS "outOfStockCount"
+        FROM "ProductVariant" pv
+        INNER JOIN "Product" p ON pv."productId" = p.id
+        WHERE pv."isActive" = true AND p."isActive" = true
+      `,
+      prisma.$queryRaw<[{ count: number }]>`
+        SELECT COUNT(*)::int AS count
+        FROM "ProductVariant" pv
+        INNER JOIN "Product" p ON pv."productId" = p.id
+        WHERE pv."isActive" = true
+          AND p."isActive" = true
+          AND pv."stockQuantity" <= pv."minStockLevel"
+      `,
+      prisma.$queryRaw<
+        {
+          id: string;
+          sku: string;
+          productName: string;
+          size: string;
+          color: string;
+          stockQuantity: number;
+          minStockLevel: number;
+          category: string;
+        }[]
+      >`
+        SELECT
+          pv.id,
+          pv.sku,
+          COALESCE(p."nameAr", p.name) AS "productName",
+          pv.size,
+          pv.color,
+          pv."stockQuantity" AS "stockQuantity",
+          pv."minStockLevel" AS "minStockLevel",
+          COALESCE(c."nameAr", c.name) AS category
+        FROM "ProductVariant" pv
+        INNER JOIN "Product" p ON pv."productId" = p.id
+        INNER JOIN "Category" c ON p."categoryId" = c.id
+        WHERE pv."isActive" = true
+          AND p."isActive" = true
+          AND pv."stockQuantity" <= pv."minStockLevel"
+        ORDER BY pv."stockQuantity" ASC
+        LIMIT 200
+      `,
+      prisma.$queryRaw<
+        {
+          category: string;
+          quantity: number;
+          costValue: number;
+          retailValue: number;
+        }[]
+      >`
+        SELECT
+          COALESCE(c."nameAr", c.name) AS category,
+          COALESCE(SUM(pv."stockQuantity"), 0)::int AS quantity,
+          COALESCE(SUM(pv."stockQuantity" * pv."costPrice"), 0)::float AS "costValue",
+          COALESCE(SUM(pv."stockQuantity" * pv."sellingPrice"), 0)::float AS "retailValue"
+        FROM "ProductVariant" pv
+        INNER JOIN "Product" p ON pv."productId" = p.id
+        INNER JOIN "Category" c ON p."categoryId" = c.id
+        WHERE pv."isActive" = true AND p."isActive" = true
+        GROUP BY c.id, c."nameAr", c.name
+        ORDER BY category ASC
+      `,
+    ]);
 
-    const totalItems = variants.reduce((sum, v) => sum + v.stockQuantity, 0);
-    const totalCostValue = variants.reduce(
-      (sum, v) => sum + v.stockQuantity * v.costPrice,
-      0
-    );
-    const totalRetailValue = variants.reduce(
-      (sum, v) => sum + v.stockQuantity * v.sellingPrice,
-      0
-    );
-
-    const lowStockItems = variants
-      .filter((v) => v.stockQuantity <= v.minStockLevel)
-      .map((v) => ({
-        id: v.id,
-        sku: v.sku,
-        productName: v.product.nameAr || v.product.name,
-        size: v.size,
-        color: v.color,
-        stockQuantity: v.stockQuantity,
-        minStockLevel: v.minStockLevel,
-        category: v.product.category.nameAr || v.product.category.name,
-      }))
-      .sort((a, b) => a.stockQuantity - b.stockQuantity);
-
-    const outOfStockItems = variants.filter((v) => v.stockQuantity === 0).length;
-
-    const byCategory = variants.reduce(
-      (acc, v) => {
-        const catName = v.product.category.nameAr || v.product.category.name;
-        if (!acc[catName]) {
-          acc[catName] = { quantity: 0, costValue: 0, retailValue: 0 };
-        }
-        acc[catName].quantity += v.stockQuantity;
-        acc[catName].costValue += v.stockQuantity * v.costPrice;
-        acc[catName].retailValue += v.stockQuantity * v.sellingPrice;
-        return acc;
-      },
-      {} as Record<
-        string,
-        { quantity: number; costValue: number; retailValue: number }
-      >
-    );
+    const summary = summaryRows[0];
+    const totalCostValue = summary?.totalCostValue ?? 0;
+    const totalRetailValue = summary?.totalRetailValue ?? 0;
 
     return {
-      totalVariants: variants.length,
-      totalItems,
+      totalVariants: summary?.totalVariants ?? 0,
+      totalItems: summary?.totalItems ?? 0,
       totalCostValue,
       totalRetailValue,
       potentialProfit: totalRetailValue - totalCostValue,
-      lowStockCount: lowStockItems.length,
-      outOfStockCount: outOfStockItems,
+      lowStockCount: lowStockCountRows[0]?.count ?? 0,
+      outOfStockCount: summary?.outOfStockCount ?? 0,
       lowStockItems,
-      byCategory: Object.entries(byCategory).map(([category, data]) => ({
-        category,
-        ...data,
-      })),
+      byCategory: byCategoryRows,
     };
   } catch (error) {
     handleError(error);
@@ -174,57 +203,50 @@ export async function getProfitReport(from?: Date, to?: Date) {
 
     const { start, end } = getDateRange(from, to);
 
-    const completedSales = await prisma.sale.findMany({
-      where: {
-        status: "COMPLETED",
-        createdAt: { gte: start, lte: end },
-      },
-      include: {
-        items: {
-          include: {
-            variant: { select: { costPrice: true } },
+    const [revenueAgg, cogsRows, returns, expenses, purchases] =
+      await Promise.all([
+        prisma.sale.aggregate({
+          where: {
+            status: "COMPLETED",
+            createdAt: { gte: start, lte: end },
           },
-        },
-      },
-    });
+          _sum: { totalAmount: true },
+        }),
+        prisma.$queryRaw<[{ cogs: number }]>`
+          SELECT COALESCE(SUM(si.quantity * pv."costPrice"), 0)::float AS cogs
+          FROM "SaleItem" si
+          INNER JOIN "Sale" s ON si."saleId" = s.id
+          INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
+          WHERE s.status = 'COMPLETED'
+            AND s."createdAt" >= ${start}
+            AND s."createdAt" <= ${end}
+        `,
+        prisma.return.aggregate({
+          where: {
+            status: "APPROVED",
+            createdAt: { gte: start, lte: end },
+          },
+          _sum: { refundAmount: true },
+        }),
+        prisma.expense.aggregate({
+          where: {
+            expenseDate: { gte: start, lte: end },
+          },
+          _sum: { amount: true },
+          _count: true,
+        }),
+        prisma.purchase.aggregate({
+          where: {
+            status: "RECEIVED",
+            receivedAt: { gte: start, lte: end },
+          },
+          _sum: { totalAmount: true },
+          _count: true,
+        }),
+      ]);
 
-    const revenue = completedSales.reduce((sum, s) => sum + s.totalAmount, 0);
-    const costOfGoodsSold = completedSales.reduce(
-      (sum, sale) =>
-        sum +
-        sale.items.reduce(
-          (itemSum, item) =>
-            itemSum + item.quantity * item.variant.costPrice,
-          0
-        ),
-      0
-    );
-
-    const [returns, expenses, purchases] = await Promise.all([
-      prisma.return.aggregate({
-        where: {
-          status: "APPROVED",
-          createdAt: { gte: start, lte: end },
-        },
-        _sum: { refundAmount: true },
-      }),
-      prisma.expense.aggregate({
-        where: {
-          expenseDate: { gte: start, lte: end },
-        },
-        _sum: { amount: true },
-        _count: true,
-      }),
-      prisma.purchase.aggregate({
-        where: {
-          status: "RECEIVED",
-          receivedAt: { gte: start, lte: end },
-        },
-        _sum: { totalAmount: true },
-        _count: true,
-      }),
-    ]);
-
+    const revenue = revenueAgg._sum.totalAmount ?? 0;
+    const costOfGoodsSold = cogsRows[0]?.cogs ?? 0;
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
     const grossProfit = revenue - costOfGoodsSold;
@@ -258,62 +280,34 @@ export async function getTopProducts(
 
     const { start, end } = getDateRange(from, to);
 
-    const saleItems = await prisma.saleItem.findMany({
-      where: {
-        sale: {
-          status: "COMPLETED",
-          createdAt: { gte: start, lte: end },
-        },
-      },
-      include: {
-        variant: {
-          include: {
-            product: {
-              select: { id: true, name: true, nameAr: true },
-            },
-          },
-        },
-      },
-    });
-
-    const productMap = new Map<
-      string,
+    const rows = await prisma.$queryRaw<
       {
         productId: string;
         productName: string;
         quantitySold: number;
         revenue: number;
         profit: number;
-      }
-    >();
+      }[]
+    >`
+      SELECT
+        p.id AS "productId",
+        COALESCE(p."nameAr", p.name) AS "productName",
+        SUM(si.quantity)::int AS "quantitySold",
+        SUM(si."totalPrice")::float AS revenue,
+        SUM((si."unitPrice" - pv."costPrice") * si.quantity - si."discountAmount")::float AS profit
+      FROM "SaleItem" si
+      INNER JOIN "Sale" s ON si."saleId" = s.id
+      INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
+      INNER JOIN "Product" p ON pv."productId" = p.id
+      WHERE s.status = 'COMPLETED'
+        AND s."createdAt" >= ${start}
+        AND s."createdAt" <= ${end}
+      GROUP BY p.id, p."nameAr", p.name
+      ORDER BY revenue DESC
+      LIMIT ${limit}
+    `;
 
-    for (const item of saleItems) {
-      const productId = item.variant.product.id;
-      const productName =
-        item.variant.product.nameAr || item.variant.product.name;
-      const profit =
-        (item.unitPrice - item.variant.costPrice) * item.quantity -
-        item.discountAmount;
-
-      const existing = productMap.get(productId);
-      if (existing) {
-        existing.quantitySold += item.quantity;
-        existing.revenue += item.totalPrice;
-        existing.profit += profit;
-      } else {
-        productMap.set(productId, {
-          productId,
-          productName,
-          quantitySold: item.quantity,
-          revenue: item.totalPrice,
-          profit,
-        });
-      }
-    }
-
-    return [...productMap.values()]
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, limit);
+    return rows;
   } catch (error) {
     handleError(error);
   }

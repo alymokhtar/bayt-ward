@@ -3,16 +3,16 @@ import { getCustomers } from "@/lib/actions/customers";
 import { resolveSession } from "@/lib/auth";
 
 interface CustomersPageProps {
-  searchParams: Promise<{ search?: string }>;
+  searchParams: Promise<{ search?: string; page?: string }>;
 }
 
 export default async function CustomersPage({
   searchParams,
 }: CustomersPageProps) {
-  const { search } = await searchParams;
+  const { search, page } = await searchParams;
 
-  const [customers, session] = await Promise.all([
-    getCustomers({ search }),
+  const [customerResult, session] = await Promise.all([
+    getCustomers({ search, page: page ? Number(page) : 1 }),
     resolveSession(),
   ]);
 
@@ -21,7 +21,10 @@ export default async function CustomersPage({
 
   return (
     <CustomersClient
-      customers={customers}
+      customers={customerResult.items}
+      total={customerResult.total}
+      page={customerResult.page}
+      totalPages={customerResult.totalPages}
       search={search}
       canManage={canManage}
     />

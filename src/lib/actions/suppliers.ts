@@ -32,7 +32,17 @@ export async function getSuppliers(includeInactive = false) {
   return prisma.supplier.findMany({
     where: includeInactive ? undefined : { isActive: true },
     orderBy: { name: "asc" },
-    include: {
+    take: 500,
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
+      address: true,
+      notes: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
       _count: { select: { purchases: true } },
     },
   });

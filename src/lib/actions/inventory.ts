@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import type { StockMovementType } from "@prisma/client";
+import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -29,40 +30,98 @@ function revalidateInventoryPaths() {
   revalidatePath("/reports");
 }
 
-export async function getInventory(options?: {
+const inventoryVariantSelect = {
+  id: true,
+  sku: true,
+  size: true,
+  color: true,
+  stockQuantity: true,
+  minStockLevel: true,
+  costPrice: true,
+  sellingPrice: true,
+  product: {
+    select: {
+      name: true,
+      nameAr: true,
+      category: { select: { name: true, nameAr: true } },
+    },
+  },
+} as const;
+
+function buildInventoryWhere(options?: {
   search?: string;
   lowStockOnly?: boolean;
 }) {
+  const search = options?.search?.trim();
+
+  return {
+    isActive: true,
+    product: { isActive: true },
+    ...(search
+      ? {
+          OR: [
+            { sku: { contains: search } },
+            { barcode: { contains: search } },
+            { product: { name: { contains: search } } },
+            { product: { nameAr: { contains: search } } },
+          ],
+        }
+      : {}),
+    ...(options?.lowStockOnly
+      ? {
+          stockQuantity: { lte: prisma.productVariant.fields.minStockLevel },
+        }
+      : {}),
+  };
+}
+
+export async function getLowStockPreview(limit = 8) {
   await requireRole(["ADMIN", "MANAGER"]);
 
-  const variants = await prisma.productVariant.findMany({
+  return prisma.productVariant.findMany({
     where: {
       isActive: true,
       product: { isActive: true },
-      ...(options?.search?.trim()
-        ? {
-            OR: [
-              { sku: { contains: options.search.trim() } },
-              { barcode: { contains: options.search.trim() } },
-              { product: { name: { contains: options.search.trim() } } },
-              { product: { nameAr: { contains: options.search.trim() } } },
-            ],
-          }
-        : {}),
+      stockQuantity: { lte: prisma.productVariant.fields.minStockLevel },
     },
-    include: {
-      product: {
-        include: { category: true },
-      },
+    orderBy: { stockQuantity: "asc" },
+    take: limit,
+    select: {
+      id: true,
+      size: true,
+      color: true,
+      stockQuantity: true,
+      product: { select: { name: true, nameAr: true } },
     },
-    orderBy: [{ product: { name: "asc" } }, { size: "asc" }, { color: "asc" }],
   });
+}
 
-  if (options?.lowStockOnly) {
-    return variants.filter((v) => v.stockQuantity <= v.minStockLevel);
-  }
+export async function getInventory(options?: {
+  search?: string;
+  lowStockOnly?: boolean;
+  page?: number;
+  pageSize?: number;
+}) {
+  await requireRole(["ADMIN", "MANAGER"]);
 
-  return variants;
+  const where = buildInventoryWhere(options);
+  const { take, skip, page, pageSize } = resolvePagination(
+    options?.page,
+    options?.pageSize
+  );
+
+  const [items, total] = await Promise.all([
+    prisma.productVariant.findMany({
+      where,
+      select: inventoryVariantSelect,
+      orderBy: [{ product: { name: "asc" } }, { size: "asc" }, { color: "asc" }],
+      take,
+      skip,
+    }),
+    prisma.productVariant.count({ where }),
+  ]);
+
+  return toPaginatedResult(items, total, page, pageSize);
 }
 
 export async function adjustStock(data: {
@@ -85,7 +144,12 @@ export async function adjustStock(data: {
     const movement = await prisma.$transaction(async (tx) => {
       const variant = await tx.productVariant.findUnique({
         where: { id: data.variantId },
-        include: { product: true },
+        select: {
+          id: true,
+          isActive: true,
+          stockQuantity: true,
+          product: { select: { isActive: true } },
+        },
       });
 
       if (!variant || !variant.isActive || !variant.product.isActive) {
@@ -114,9 +178,20 @@ export async function adjustStock(data: {
           newQty,
           notes: data.notes,
         },
-        include: {
+        select: {
+          id: true,
+          type: true,
+          quantity: true,
+          previousQty: true,
+          newQty: true,
+          reference: true,
+          notes: true,
+          createdAt: true,
           variant: {
-            include: { product: true },
+            select: {
+              sku: true,
+              product: { select: { name: true, nameAr: true } },
+            },
           },
           user: { select: { id: true, name: true } },
         },
@@ -134,23 +209,47 @@ export async function getStockMovements(options?: {
   variantId?: string;
   type?: StockMovementType;
   limit?: number;
+  page?: number;
+  pageSize?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
 
-  return prisma.stockMovement.findMany({
-    where: {
-      ...(options?.variantId ? { variantId: options.variantId } : {}),
-      ...(options?.type ? { type: options.type } : {}),
-    },
-    orderBy: { createdAt: "desc" },
-    take: options?.limit ?? 100,
-    include: {
-      variant: {
-        include: {
-          product: { select: { id: true, name: true, nameAr: true } },
+  const where = {
+    ...(options?.variantId ? { variantId: options.variantId } : {}),
+    ...(options?.type ? { type: options.type } : {}),
+  };
+
+  const { take, skip, page, pageSize } = resolvePagination(
+    options?.page,
+    options?.pageSize ?? options?.limit ?? 50
+  );
+
+  const [items, total] = await Promise.all([
+    prisma.stockMovement.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take,
+      skip,
+      select: {
+        id: true,
+        type: true,
+        quantity: true,
+        previousQty: true,
+        newQty: true,
+        reference: true,
+        notes: true,
+        createdAt: true,
+        variant: {
+          select: {
+            sku: true,
+            product: { select: { id: true, name: true, nameAr: true } },
+          },
         },
+        user: { select: { id: true, name: true } },
       },
-      user: { select: { id: true, name: true } },
-    },
-  });
+    }),
+    prisma.stockMovement.count({ where }),
+  ]);
+
+  return toPaginatedResult(items, total, page, pageSize);
 }

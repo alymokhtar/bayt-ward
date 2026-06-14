@@ -4,6 +4,57 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
+export const DEFAULT_PAGE_SIZE = 50;
+export const MAX_PAGE_SIZE = 200;
+
+export function resolvePagination(
+  page?: number | string,
+  pageSize?: number | string
+) {
+  const size = Math.min(
+    Math.max(
+      parseInt(String(pageSize ?? DEFAULT_PAGE_SIZE), 10) || DEFAULT_PAGE_SIZE,
+      1
+    ),
+    MAX_PAGE_SIZE
+  );
+  const currentPage = Math.max(parseInt(String(page ?? 1), 10) || 1, 1);
+
+  return {
+    take: size,
+    skip: (currentPage - 1) * size,
+    page: currentPage,
+    pageSize: size,
+  };
+}
+
+export function totalPages(total: number, pageSize: number) {
+  return Math.max(1, Math.ceil(total / pageSize));
+}
+
+export type PaginatedResult<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+};
+
+export function toPaginatedResult<T>(
+  items: T[],
+  total: number,
+  page: number,
+  pageSize: number
+): PaginatedResult<T> {
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    totalPages: totalPages(total, pageSize),
+  };
+}
+
 export function formatCurrency(amount: number, symbol = "ج.م"): string {
   return `${amount.toLocaleString("ar-EG", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${symbol}`;
 }

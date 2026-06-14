@@ -84,13 +84,13 @@ export async function createPurchase(data: {
       return { success: false, error: "المورد غير موجود" };
     }
 
-    for (const item of data.items) {
-      const variant = await prisma.productVariant.findUnique({
-        where: { id: item.variantId },
-      });
-      if (!variant) {
-        return { success: false, error: "أحد المنتجات غير موجود" };
-      }
+    const variantIds = data.items.map((item) => item.variantId);
+    const foundVariants = await prisma.productVariant.findMany({
+      where: { id: { in: variantIds } },
+      select: { id: true },
+    });
+    if (foundVariants.length !== variantIds.length) {
+      return { success: false, error: "أحد المنتجات غير موجود" };
     }
 
     const purchase = await prisma.purchase.create({

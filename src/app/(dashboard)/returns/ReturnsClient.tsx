@@ -75,14 +75,14 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
     if (!invoiceSearch.trim()) return;
 
     try {
-      const sales = await import("@/lib/actions/sales").then((m) =>
-        m.getSales({ search: invoiceSearch.trim(), limit: 1 })
+      const salesResult = await import("@/lib/actions/sales").then((m) =>
+        m.getSales({ search: invoiceSearch.trim(), pageSize: 1 })
       );
-      if (sales.length === 0) {
+      if (salesResult.items.length === 0) {
         setError("لم يتم العثور على الفاتورة");
         return;
       }
-      const fullSale = await getSale(sales[0].id);
+      const fullSale = await getSale(salesResult.items[0].id);
       if (fullSale.status !== "COMPLETED" && fullSale.status !== "REFUNDED") {
         setError("لا يمكن إرجاع منتجات من هذه الفاتورة");
         return;

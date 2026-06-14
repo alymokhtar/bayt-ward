@@ -12,16 +12,18 @@ import {
 } from "@/components/ui/Table";
 import { getProducts } from "@/lib/actions/products";
 import { formatCurrency } from "@/lib/utils";
+import PaginationNav from "@/components/ui/PaginationNav";
 import { Package, Plus, Search } from "lucide-react";
 import Link from "next/link";
 
 interface ProductsPageProps {
-  searchParams: Promise<{ search?: string }>;
+  searchParams: Promise<{ search?: string; page?: string }>;
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
-  const { search } = await searchParams;
-  const products = await getProducts({ search });
+  const { search, page } = await searchParams;
+  const result = await getProducts({ search, page: page ? Number(page) : 1 });
+  const products = result.items;
 
   return (
     <div className="space-y-6">
@@ -29,7 +31,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         <div>
           <h1 className="text-2xl font-bold text-brown">المنتجات</h1>
           <p className="text-sm text-muted mt-1">
-            {products.length} منتج
+            {result.total} منتج
           </p>
         </div>
         <Link href="/products/new">
@@ -154,6 +156,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               </TableBody>
             </Table>
           )}
+          <PaginationNav
+            page={result.page}
+            totalPages={result.totalPages}
+            basePath="/products"
+            searchParams={{ search }}
+          />
         </CardContent>
       </Card>
     </div>

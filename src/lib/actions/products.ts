@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
+import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -47,6 +48,8 @@ export async function getProducts(options?: {
   search?: string;
   categoryId?: string;
   includeInactive?: boolean;
+  page?: number;
+  pageSize?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
 
@@ -79,17 +82,39 @@ export async function getProducts(options?: {
     ];
   }
 
-  return prisma.product.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    include: {
-      category: true,
-      variants: {
-        where: options?.includeInactive ? undefined : { isActive: true },
-        orderBy: [{ size: "asc" }, { color: "asc" }],
+  const { take, skip, page, pageSize } = resolvePagination(
+    options?.page,
+    options?.pageSize
+  );
+
+  const [items, total] = await Promise.all([
+    prisma.product.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take,
+      skip,
+      select: {
+        id: true,
+        name: true,
+        nameAr: true,
+        brand: true,
+        isActive: true,
+        category: { select: { name: true, nameAr: true } },
+        variants: {
+          where: options?.includeInactive ? undefined : { isActive: true },
+          orderBy: [{ size: "asc" }, { color: "asc" }],
+          select: {
+            stockQuantity: true,
+            minStockLevel: true,
+            sellingPrice: true,
+          },
+        },
       },
-    },
-  });
+    }),
+    prisma.product.count({ where }),
+  ]);
+
+  return toPaginatedResult(items, total, page, pageSize);
 }
 
 export async function getProduct(id: string) {
@@ -352,16 +377,28 @@ export async function searchVariants(query: string) {
       ],
     },
     take: 20,
-    include: {
+    select: {
+      id: true,
+      sku: true,
+      barcode: true,
+      size: true,
+      color: true,
+      costPrice: true,
+      sellingPrice: true,
+      stockQuantity: true,
       product: {
-        include: { category: true },
+        select: { id: true, name: true, nameAr: true },
       },
     },
     orderBy: { sku: "asc" },
   });
 }
 
-export async function getAllVariantsForBarcodes(search?: string) {
+export async function getAllVariantsForBarcodes(options?: {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}) {
   await requireRole(["ADMIN", "MANAGER"]);
 
   const where: Record<string, unknown> = {
@@ -369,8 +406,8 @@ export async function getAllVariantsForBarcodes(search?: string) {
     product: { isActive: true },
   };
 
-  if (search?.trim()) {
-    const q = search.trim();
+  if (options?.search?.trim()) {
+    const q = options.search.trim();
     where.OR = [
       { sku: { contains: q } },
       { barcode: { contains: q } },
@@ -379,11 +416,29 @@ export async function getAllVariantsForBarcodes(search?: string) {
     ];
   }
 
-  return prisma.productVariant.findMany({
-    where,
-    include: {
-      product: { include: { category: true } },
-    },
-    orderBy: [{ product: { name: "asc" } }, { sku: "asc" }],
-  });
+  const { take, skip, page, pageSize } = resolvePagination(
+    options?.page,
+    options?.pageSize ?? 100
+  );
+
+  const [items, total] = await Promise.all([
+    prisma.productVariant.findMany({
+      where,
+      take,
+      skip,
+      select: {
+        id: true,
+        sku: true,
+        barcode: true,
+        size: true,
+        color: true,
+        sellingPrice: true,
+        product: { select: { name: true, nameAr: true } },
+      },
+      orderBy: [{ product: { name: "asc" } }, { sku: "asc" }],
+    }),
+    prisma.productVariant.count({ where }),
+  ]);
+
+  return toPaginatedResult(items, total, page, pageSize);
 }

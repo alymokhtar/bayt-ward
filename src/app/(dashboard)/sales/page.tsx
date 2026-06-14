@@ -1,5 +1,6 @@
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import PaginationNav from "@/components/ui/PaginationNav";
 import { Card, CardContent } from "@/components/ui/Card";
 import {
   Table,
@@ -31,24 +32,27 @@ interface SalesPageProps {
     status?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }
 
 export default async function SalesPage({ searchParams }: SalesPageProps) {
   const params = await searchParams;
-  const sales = await getSales({
+  const salesResult = await getSales({
     search: params.search,
     status: params.status,
     from: params.from ? new Date(params.from) : undefined,
     to: params.to ? new Date(params.to + "T23:59:59") : undefined,
-    limit: 100,
+    page: params.page ? Number(params.page) : 1,
+    pageSize: 50,
   });
+  const sales = salesResult.items;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brown">المبيعات</h1>
-        <p className="text-sm text-muted mt-1">{sales.length} فاتورة</p>
+        <p className="text-sm text-muted mt-1">{salesResult.total} فاتورة</p>
       </div>
 
       <Card>
@@ -137,6 +141,17 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
               ))}
             </TableBody>
           </Table>
+          <PaginationNav
+            page={salesResult.page}
+            totalPages={salesResult.totalPages}
+            basePath="/sales"
+            searchParams={{
+              search: params.search,
+              status: params.status,
+              from: params.from,
+              to: params.to,
+            }}
+          />
         </CardContent>
       </Card>
     </div>

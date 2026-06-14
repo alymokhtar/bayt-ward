@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { generateInvoiceNumber } from "@/lib/utils";
+import { generateInvoiceNumber, resolvePagination, toPaginatedResult } from "@/lib/utils";
 import type { PaymentMethod } from "@prisma/client";
 
 type ActionResult<T = void> =
@@ -46,6 +46,8 @@ export async function getSales(options?: {
   from?: Date;
   to?: Date;
   limit?: number;
+  page?: number;
+  pageSize?: number;
 }) {
   await requireAuth();
 
@@ -71,16 +73,33 @@ export async function getSales(options?: {
     ];
   }
 
-  return prisma.sale.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    take: options?.limit ?? 50,
-    include: {
-      customer: { select: { id: true, name: true, phone: true } },
-      user: { select: { id: true, name: true } },
-      _count: { select: { items: true } },
-    },
-  });
+  const { take, skip, page, pageSize } = resolvePagination(
+    options?.page,
+    options?.pageSize ?? options?.limit ?? 50
+  );
+
+  const [items, total] = await Promise.all([
+    prisma.sale.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take,
+      skip,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        totalAmount: true,
+        paymentMethod: true,
+        status: true,
+        createdAt: true,
+        customer: { select: { id: true, name: true, phone: true } },
+        user: { select: { id: true, name: true } },
+        _count: { select: { items: true } },
+      },
+    }),
+    prisma.sale.count({ where }),
+  ]);
+
+  return toPaginatedResult(items, total, page, pageSize);
 }
 
 export async function getSale(id: string) {
@@ -88,19 +107,58 @@ export async function getSale(id: string) {
 
   const sale = await prisma.sale.findUnique({
     where: { id },
-    include: {
-      customer: true,
+    select: {
+      id: true,
+      invoiceNumber: true,
+      customerId: true,
+      subtotal: true,
+      discountAmount: true,
+      discountPercent: true,
+      taxAmount: true,
+      totalAmount: true,
+      paidAmount: true,
+      changeAmount: true,
+      paymentMethod: true,
+      status: true,
+      notes: true,
+      createdAt: true,
+      customer: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          address: true,
+        },
+      },
       user: { select: { id: true, name: true, email: true } },
       items: {
-        include: {
+        select: {
+          id: true,
+          variantId: true,
+          quantity: true,
+          unitPrice: true,
+          discountAmount: true,
+          totalPrice: true,
           variant: {
-            include: {
+            select: {
+              size: true,
+              color: true,
               product: { select: { id: true, name: true, nameAr: true } },
             },
           },
         },
       },
-      returns: true,
+      returns: {
+        select: {
+          id: true,
+          returnNumber: true,
+          totalAmount: true,
+          refundAmount: true,
+          status: true,
+          createdAt: true,
+        },
+      },
     },
   });
 
@@ -149,11 +207,24 @@ export async function createSale(data: {
     }
 
     const sale = await prisma.$transaction(async (tx) => {
+      const variantIds = [...new Set(data.items.map((item) => item.variantId))];
+      const variants = await tx.productVariant.findMany({
+        where: { id: { in: variantIds } },
+        select: {
+          id: true,
+          isActive: true,
+          stockQuantity: true,
+          size: true,
+          color: true,
+          product: {
+            select: { name: true, nameAr: true, isActive: true },
+          },
+        },
+      });
+      const variantMap = new Map(variants.map((v) => [v.id, v]));
+
       for (const item of data.items) {
-        const variant = await tx.productVariant.findUnique({
-          where: { id: item.variantId },
-          include: { product: true },
-        });
+        const variant = variantMap.get(item.variantId);
 
         if (!variant || !variant.isActive || !variant.product.isActive) {
           throw new Error("أحد المنتجات غير موجود أو غير نشط");
@@ -193,28 +264,41 @@ export async function createSale(data: {
             })),
           },
         },
-        include: {
+        select: {
+          id: true,
+          invoiceNumber: true,
+          totalAmount: true,
           items: {
-            include: {
+            select: {
+              id: true,
+              quantity: true,
+              unitPrice: true,
+              totalPrice: true,
               variant: {
-                include: { product: true },
+                select: {
+                  sku: true,
+                  size: true,
+                  color: true,
+                  product: { select: { name: true, nameAr: true } },
+                },
               },
             },
           },
-          customer: true,
+          customer: {
+            select: { id: true, name: true, phone: true },
+          },
           user: { select: { id: true, name: true } },
         },
       });
 
       for (const item of data.items) {
-        const variant = await tx.productVariant.findUnique({
-          where: { id: item.variantId },
-        });
+        const variant = variantMap.get(item.variantId);
 
         if (!variant) continue;
 
         const previousQty = variant.stockQuantity;
         const newQty = previousQty - item.quantity;
+        variant.stockQuantity = newQty;
 
         await tx.productVariant.update({
           where: { id: item.variantId },
@@ -261,7 +345,20 @@ export async function cancelSale(id: string, reason?: string) {
 
     const sale = await prisma.sale.findUnique({
       where: { id },
-      include: { items: true },
+      select: {
+        id: true,
+        invoiceNumber: true,
+        status: true,
+        totalAmount: true,
+        customerId: true,
+        notes: true,
+        items: {
+          select: {
+            variantId: true,
+            quantity: true,
+          },
+        },
+      },
     });
 
     if (!sale) {

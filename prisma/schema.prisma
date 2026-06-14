@@ -103,6 +103,8 @@ model Product {
 
   category Category         @relation(fields: [categoryId], references: [id])
   variants ProductVariant[]
+
+  @@index([categoryId])
 }
 
 model ProductVariant {
@@ -126,6 +128,9 @@ model ProductVariant {
   purchaseItems  PurchaseItem[]
   returnItems    ReturnItem[]
   stockMovements StockMovement[]
+
+  @@index([productId])
+  @@index([isActive, stockQuantity])
 }
 
 model Customer {
@@ -180,6 +185,12 @@ model Sale {
   user     User       @relation(fields: [userId], references: [id])
   items    SaleItem[]
   returns  Return[]
+
+  @@index([customerId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model SaleItem {
@@ -193,6 +204,9 @@ model SaleItem {
 
   sale    Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
   variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([saleId])
+  @@index([variantId])
 }
 
 model Purchase {
@@ -212,6 +226,12 @@ model Purchase {
   supplier Supplier       @relation(fields: [supplierId], references: [id])
   user     User           @relation(fields: [userId], references: [id])
   items    PurchaseItem[]
+
+  @@index([supplierId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([status, createdAt])
 }
 
 model PurchaseItem {
@@ -224,6 +244,9 @@ model PurchaseItem {
 
   purchase Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
   variant  ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([purchaseId])
+  @@index([variantId])
 }
 
 model Return {
@@ -244,6 +267,11 @@ model Return {
   customer Customer?    @relation(fields: [customerId], references: [id])
   user     User         @relation(fields: [userId], references: [id])
   items    ReturnItem[]
+
+  @@index([saleId])
+  @@index([customerId])
+  @@index([userId])
+  @@index([createdAt])
 }
 
 model ReturnItem {
@@ -256,6 +284,9 @@ model ReturnItem {
 
   return  Return         @relation(fields: [returnId], references: [id], onDelete: Cascade)
   variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([returnId])
+  @@index([variantId])
 }
 
 model StockMovement {
@@ -272,6 +303,11 @@ model StockMovement {
 
   variant ProductVariant @relation(fields: [variantId], references: [id])
   user    User           @relation(fields: [userId], references: [id])
+
+  @@index([variantId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([variantId, createdAt])
 }
 
 model Expense {
@@ -286,6 +322,9 @@ model Expense {
   updatedAt   DateTime        @updatedAt
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expenseDate])
 }
 
 model Setting {
