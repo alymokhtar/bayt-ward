@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { invalidateSuppliersData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -22,8 +22,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateSupplierPaths() {
-  revalidatePath("/suppliers");
-  revalidatePath("/purchases");
+  invalidateSuppliersData();
 }
 
 export async function getSuppliers(includeInactive = false) {

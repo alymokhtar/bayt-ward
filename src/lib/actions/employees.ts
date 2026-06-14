@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole, hashPassword } from "@/lib/auth";
 import type { UserRole } from "@prisma/client";
+import { invalidateEmployeesData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -26,7 +26,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateEmployeePaths() {
-  revalidatePath("/employees");
+  invalidateEmployeesData();
 }
 
 const userSelect = {

@@ -21,7 +21,6 @@ export default function Header({ user }: HeaderProps) {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
       router.push("/login");
-      router.refresh();
     } catch {
       setLoading(false);
     }

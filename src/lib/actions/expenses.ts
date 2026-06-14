@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import type { ExpenseCategory } from "@prisma/client";
+import { invalidateExpensesData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -23,9 +23,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateExpensePaths() {
-  revalidatePath("/expenses");
-  revalidatePath("/dashboard");
-  revalidatePath("/reports");
+  invalidateExpensesData();
 }
 
 export async function getExpenses(options?: {

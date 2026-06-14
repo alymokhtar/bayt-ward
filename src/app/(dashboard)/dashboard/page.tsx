@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import Badge from "@/components/ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
@@ -10,15 +11,13 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { getDashboardStats } from "@/lib/actions/dashboard";
-import { getLowStockPreview } from "@/lib/actions/inventory";
-import { getSession } from "@/lib/auth";
+import LowStockPanel from "@/app/(dashboard)/dashboard/LowStockPanel";
 import {
   formatCurrency,
   formatDateTime,
   getPaymentMethodLabel,
 } from "@/lib/utils";
 import {
-  AlertTriangle,
   Package,
   ShoppingCart,
   TrendingUp,
@@ -36,16 +35,7 @@ const SalesChart = dynamic(
 );
 
 export default async function DashboardPage() {
-  const [stats, session] = await Promise.all([getDashboardStats(), getSession()]);
-
-  let lowStockItems: Awaited<ReturnType<typeof getLowStockPreview>> = [];
-  if (session?.role === "ADMIN" || session?.role === "MANAGER") {
-    try {
-      lowStockItems = await getLowStockPreview(8);
-    } catch {
-      lowStockItems = [];
-    }
-  }
+  const stats = await getDashboardStats();
 
   const statCards = [
     {
@@ -121,48 +111,17 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-warning" />
-              تنبيهات المخزون
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4 rounded-lg bg-warning/10 border border-warning/20 px-4 py-3">
-              <p className="text-sm font-medium text-brown">
-                {stats.lowStockCount} منتج بمخزون منخفض
-              </p>
-            </div>
-            {lowStockItems.length > 0 ? (
-              <ul className="space-y-2 max-h-52 overflow-y-auto">
-                {lowStockItems.map((v) => (
-                  <li
-                    key={v.id}
-                    className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0"
-                  >
-                    <span className="text-brown truncate">
-                      {v.product.nameAr || v.product.name} — {v.size}/{v.color}
-                    </span>
-                    <Badge variant="warning">{v.stockQuantity}</Badge>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted text-center py-4">
-                لا توجد تنبيهات حالياً
-              </p>
-            )}
-            {(session?.role === "ADMIN" || session?.role === "MANAGER") && (
-              <Link
-                href="/inventory?lowStock=true"
-                className="mt-4 block text-center text-sm text-gold hover:underline"
-              >
-                عرض المخزون
-              </Link>
-            )}
-          </CardContent>
-        </Card>
+        <Suspense
+          fallback={
+            <Card>
+              <CardContent className="pt-6">
+                <div className="h-48 animate-pulse rounded-lg bg-brown/5" />
+              </CardContent>
+            </Card>
+          }
+        >
+          <LowStockPanel />
+        </Suspense>
       </div>
 
       <Card>

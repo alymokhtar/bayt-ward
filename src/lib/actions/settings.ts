@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { getCachedStoreSettings } from "@/lib/cached-queries";
+import { invalidateSettingsData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -22,9 +23,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateSettingsPaths() {
-  revalidatePath("/settings");
-  revalidatePath("/dashboard");
-  revalidatePath("/pos");
+  invalidateSettingsData();
 }
 
 export async function getSettings() {
@@ -45,27 +44,7 @@ export async function getSettings() {
 
 export async function getStoreSettings() {
   await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
-
-  const keys = [
-    "store_name",
-    "store_name_ar",
-    "store_phone",
-    "store_whatsapp",
-    "currency_symbol",
-    "whatsapp_promotion_default",
-  ];
-
-  const settings = await prisma.setting.findMany({
-    where: { key: { in: keys } },
-  });
-
-  return settings.reduce(
-    (acc, setting) => {
-      acc[setting.key] = setting.value;
-      return acc;
-    },
-    {} as Record<string, string>
-  );
+  return getCachedStoreSettings();
 }
 
 export async function updateSettings(data: Record<string, string>) {

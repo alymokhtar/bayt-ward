@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
-import { resolvePagination, toPaginatedResult } from "@/lib/utils";
+import { getCachedCustomersPage } from "@/lib/cached-queries";
+import { invalidateCustomersData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -26,9 +26,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateCustomerPaths() {
-  revalidatePath("/customers");
-  revalidatePath("/pos");
-  revalidatePath("/dashboard");
+  invalidateCustomersData();
 }
 
 export async function getCustomers(options?: {
@@ -37,44 +35,7 @@ export async function getCustomers(options?: {
   pageSize?: number;
 }) {
   await requireAuth();
-
-  const where = options?.search?.trim()
-    ? {
-        OR: [
-          { name: { contains: options.search.trim() } },
-          { phone: { contains: options.search.trim() } },
-          { email: { contains: options.search.trim() } },
-        ],
-      }
-    : undefined;
-
-  const { take, skip, page, pageSize } = resolvePagination(
-    options?.page,
-    options?.pageSize
-  );
-
-  const [items, total] = await Promise.all([
-    prisma.customer.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take,
-      skip,
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        email: true,
-        address: true,
-        notes: true,
-        totalSpent: true,
-        visitCount: true,
-        _count: { select: { sales: true, returns: true } },
-      },
-    }),
-    prisma.customer.count({ where }),
-  ]);
-
-  return toPaginatedResult(items, total, page, pageSize);
+  return getCachedCustomersPage(JSON.stringify(options ?? {}));
 }
 
 export async function getCustomer(id: string) {

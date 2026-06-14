@@ -1,9 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumber } from "@/lib/utils";
+import { invalidateReturnsData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -30,12 +30,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateReturnPaths() {
-  revalidatePath("/returns");
-  revalidatePath("/sales");
-  revalidatePath("/inventory");
-  revalidatePath("/customers");
-  revalidatePath("/dashboard");
-  revalidatePath("/reports");
+  invalidateReturnsData();
 }
 
 export async function getReturns(options?: {

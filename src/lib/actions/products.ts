@@ -1,8 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
+import {
+  getCachedProductsPage,
+} from "@/lib/cached-queries";
+import { invalidateProductsData } from "@/lib/revalidate-tags";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 type ActionResult<T = void> =
@@ -38,10 +41,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateProductPaths() {
-  revalidatePath("/products");
-  revalidatePath("/inventory");
-  revalidatePath("/pos");
-  revalidatePath("/dashboard");
+  invalidateProductsData();
 }
 
 export async function getProducts(options?: {
@@ -52,69 +52,7 @@ export async function getProducts(options?: {
   pageSize?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
-
-  const where: Record<string, unknown> = {};
-
-  if (!options?.includeInactive) {
-    where.isActive = true;
-  }
-
-  if (options?.categoryId) {
-    where.categoryId = options.categoryId;
-  }
-
-  if (options?.search?.trim()) {
-    const search = options.search.trim();
-    where.OR = [
-      { name: { contains: search } },
-      { nameAr: { contains: search } },
-      { brand: { contains: search } },
-      {
-        variants: {
-          some: {
-            OR: [
-              { sku: { contains: search } },
-              { barcode: { contains: search } },
-            ],
-          },
-        },
-      },
-    ];
-  }
-
-  const { take, skip, page, pageSize } = resolvePagination(
-    options?.page,
-    options?.pageSize
-  );
-
-  const [items, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take,
-      skip,
-      select: {
-        id: true,
-        name: true,
-        nameAr: true,
-        brand: true,
-        isActive: true,
-        category: { select: { name: true, nameAr: true } },
-        variants: {
-          where: options?.includeInactive ? undefined : { isActive: true },
-          orderBy: [{ size: "asc" }, { color: "asc" }],
-          select: {
-            stockQuantity: true,
-            minStockLevel: true,
-            sellingPrice: true,
-          },
-        },
-      },
-    }),
-    prisma.product.count({ where }),
-  ]);
-
-  return toPaginatedResult(items, total, page, pageSize);
+  return getCachedProductsPage(JSON.stringify(options ?? {}));
 }
 
 export async function getProduct(id: string) {

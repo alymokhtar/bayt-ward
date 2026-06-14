@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { invalidateCategoriesData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -22,9 +22,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateCategoryPaths() {
-  revalidatePath("/categories");
-  revalidatePath("/products");
-  revalidatePath("/dashboard");
+  invalidateCategoriesData();
 }
 
 export async function getCategories(includeInactive = false) {

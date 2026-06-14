@@ -1,6 +1,6 @@
 import CustomersClient from "@/app/(dashboard)/customers/CustomersClient";
 import { getCustomers } from "@/lib/actions/customers";
-import { resolveSession } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 
 interface CustomersPageProps {
   searchParams: Promise<{ search?: string; page?: string }>;
@@ -13,7 +13,7 @@ export default async function CustomersPage({
 
   const [customerResult, session] = await Promise.all([
     getCustomers({ search, page: page ? Number(page) : 1 }),
-    resolveSession(),
+    getSession(),
   ]);
 
   const canManage =

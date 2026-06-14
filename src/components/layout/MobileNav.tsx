@@ -47,6 +47,7 @@ export default function MobileNav({ role }: MobileNavProps) {
               <Link
                 key={tab.href}
                 href={tab.href}
+                prefetch={false}
                 className={cn(
                   "flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors min-w-[64px]",
                   isActive ? "text-gold" : "text-cream/60"
@@ -94,6 +95,7 @@ export default function MobileNav({ role }: MobileNavProps) {
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      prefetch={false}
                       onClick={() => setMenuOpen(false)}
                       className={cn(
                         "flex flex-col items-center gap-1.5 rounded-xl p-3 text-center transition-colors",

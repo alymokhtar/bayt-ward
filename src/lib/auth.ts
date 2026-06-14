@@ -2,7 +2,9 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { prisma } from "./prisma";
+import { CACHE_TAG } from "./server-cache";
 
 import { getJwtSecret } from "./env";
 
@@ -71,18 +73,26 @@ export async function getSession(): Promise<SessionUser | null> {
   }
 }
 
+/** DB lookup cached briefly — avoids a Neon round-trip on every navigation/mutation. */
+const getActiveUser = unstable_cache(
+  async (id: string, email: string) =>
+    prisma.user.findFirst({
+      where: {
+        OR: [{ id }, { email }],
+        isActive: true,
+      },
+      select: { id: true, name: true, email: true, role: true },
+    }),
+  ["active-session-user"],
+  { revalidate: 120, tags: [CACHE_TAG.session] }
+);
+
 /** Validates JWT against the database; clears stale sessions after DB migration. */
 export const resolveSession = cache(async (): Promise<SessionUser | null> => {
   const session = await getSession();
   if (!session) return null;
 
-  const user = await prisma.user.findFirst({
-    where: {
-      OR: [{ id: session.id }, { email: session.email }],
-      isActive: true,
-    },
-    select: { id: true, name: true, email: true, role: true },
-  });
+  const user = await getActiveUser(session.id, session.email);
 
   if (!user) {
     await destroySession();

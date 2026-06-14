@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import type { StockMovementType } from "@prisma/client";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
+import { getCachedLowStockPreview } from "@/lib/cached-queries";
+import { invalidateInventoryData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -24,10 +25,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateInventoryPaths() {
-  revalidatePath("/inventory");
-  revalidatePath("/products");
-  revalidatePath("/dashboard");
-  revalidatePath("/reports");
+  invalidateInventoryData();
 }
 
 const inventoryVariantSelect = {
@@ -77,23 +75,7 @@ function buildInventoryWhere(options?: {
 
 export async function getLowStockPreview(limit = 8) {
   await requireRole(["ADMIN", "MANAGER"]);
-
-  return prisma.productVariant.findMany({
-    where: {
-      isActive: true,
-      product: { isActive: true },
-      stockQuantity: { lte: prisma.productVariant.fields.minStockLevel },
-    },
-    orderBy: { stockQuantity: "asc" },
-    take: limit,
-    select: {
-      id: true,
-      size: true,
-      color: true,
-      stockQuantity: true,
-      product: { select: { name: true, nameAr: true } },
-    },
-  });
+  return getCachedLowStockPreview(limit);
 }
 
 export async function getInventory(options?: {

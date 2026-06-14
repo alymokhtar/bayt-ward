@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { generateInvoiceNumber, resolvePagination, toPaginatedResult } from "@/lib/utils";
+import { generateInvoiceNumber } from "@/lib/utils";
+import { getCachedSalesPage } from "@/lib/cached-queries";
+import { invalidateSalesData } from "@/lib/revalidate-tags";
 import type { PaymentMethod } from "@prisma/client";
 
 type ActionResult<T = void> =
@@ -32,12 +33,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 }
 
 function revalidateSalePaths() {
-  revalidatePath("/sales");
-  revalidatePath("/pos");
-  revalidatePath("/dashboard");
-  revalidatePath("/inventory");
-  revalidatePath("/customers");
-  revalidatePath("/reports");
+  invalidateSalesData();
 }
 
 export async function getSales(options?: {
@@ -51,55 +47,16 @@ export async function getSales(options?: {
 }) {
   await requireAuth();
 
-  const where: Record<string, unknown> = {};
-
-  if (options?.status) {
-    where.status = options.status;
-  }
-
-  if (options?.from || options?.to) {
-    where.createdAt = {
-      ...(options.from ? { gte: options.from } : {}),
-      ...(options.to ? { lte: options.to } : {}),
-    };
-  }
-
-  if (options?.search?.trim()) {
-    const search = options.search.trim();
-    where.OR = [
-      { invoiceNumber: { contains: search } },
-      { customer: { name: { contains: search } } },
-      { customer: { phone: { contains: search } } },
-    ];
-  }
-
-  const { take, skip, page, pageSize } = resolvePagination(
-    options?.page,
-    options?.pageSize ?? options?.limit ?? 50
+  const { page, pageSize, limit, from, to, ...rest } = options ?? {};
+  return getCachedSalesPage(
+    JSON.stringify({
+      ...rest,
+      from: from?.toISOString(),
+      to: to?.toISOString(),
+      page,
+      pageSize: pageSize ?? limit ?? 50,
+    })
   );
-
-  const [items, total] = await Promise.all([
-    prisma.sale.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take,
-      skip,
-      select: {
-        id: true,
-        invoiceNumber: true,
-        totalAmount: true,
-        paymentMethod: true,
-        status: true,
-        createdAt: true,
-        customer: { select: { id: true, name: true, phone: true } },
-        user: { select: { id: true, name: true } },
-        _count: { select: { items: true } },
-      },
-    }),
-    prisma.sale.count({ where }),
-  ]);
-
-  return toPaginatedResult(items, total, page, pageSize);
 }
 
 export async function getSale(id: string) {
