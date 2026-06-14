@@ -176,4 +176,26 @@ select {
     border: 1px solid #ccc !important;
     padding: 8px !important;
   }
+
+  body.pos-receipt-printing * {
+    visibility: hidden !important;
+  }
+
+  body.pos-receipt-printing .pos-receipt-print,
+  body.pos-receipt-printing .pos-receipt-print * {
+    visibility: visible !important;
+  }
+
+  body.pos-receipt-printing .pos-receipt-print {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 4mm !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
 }

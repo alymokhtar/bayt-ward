@@ -3,6 +3,8 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
+import ReceiptModal from "@/components/pos/ReceiptModal";
+import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
 import { createSale } from "@/lib/actions/sales";
 import { createCustomer, searchCustomers } from "@/lib/actions/customers";
 import { searchVariants } from "@/lib/actions/products";
@@ -18,7 +20,6 @@ import {
   User,
   UserPlus,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type VariantResult = Awaited<ReturnType<typeof searchVariants>>[number];
@@ -33,14 +34,15 @@ interface CartItem {
 
 interface POSClientProps {
   storeNameAr?: string;
+  storePhone?: string;
   currencySymbol?: string;
 }
 
 export default function POSClient({
   storeNameAr = "بيت ورد",
+  storePhone,
   currencySymbol = "ج.م",
 }: POSClientProps) {
-  const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
@@ -63,6 +65,7 @@ export default function POSClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [receipt, setReceipt] = useState<ReceiptData | null>(null);
 
   const subtotal = cart.reduce(
     (sum, item) => sum + item.unitPrice * item.quantity - item.discountAmount,
@@ -201,9 +204,36 @@ export default function POSClient({
       const customer = selectedCustomer;
       const invoiceNumber = result.data.invoiceNumber;
       const saleTotal = totalAmount;
-      const saleId = result.data.id;
       const soldItems = [...cart];
 
+      const receiptData: ReceiptData = {
+        invoiceNumber,
+        createdAt: new Date(),
+        storeNameAr,
+        storePhone,
+        currencySymbol,
+        cashierName: result.data.user.name,
+        customerName: customer?.name,
+        customerPhone: customer?.phone,
+        paymentMethod,
+        items: soldItems.map((item) => ({
+          name: item.variant.product.nameAr || item.variant.product.name,
+          size: item.variant.size,
+          color: item.variant.color,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice:
+            item.unitPrice * item.quantity - item.discountAmount,
+        })),
+        subtotal,
+        discountAmount: totalDiscount,
+        totalAmount: saleTotal,
+        paidAmount: paid,
+        changeAmount,
+        notes: notes || undefined,
+      };
+
+      setReceipt(receiptData);
       setSuccess(`تمت العملية بنجاح — ${invoiceNumber}`);
       setCart([]);
       setDiscountPercent(0);
@@ -231,15 +261,21 @@ export default function POSClient({
           openWhatsApp(customer.phone, message);
         }
       }
-
-      router.push(`/sales/${saleId}`);
     } else {
       setError(result.success ? "حدث خطأ" : (result.error ?? "حدث خطأ"));
     }
   }
 
+  function handleCloseReceipt() {
+    setReceipt(null);
+    setSuccess("");
+    searchRef.current?.focus();
+  }
+
   return (
-    <div className="grid gap-6 lg:grid-cols-5 min-h-[calc(100vh-10rem)] md:min-h-[calc(100vh-8rem)]">
+    <>
+      <ReceiptModal receipt={receipt} onClose={handleCloseReceipt} />
+      <div className="grid gap-6 lg:grid-cols-5 min-h-[calc(100vh-10rem)] md:min-h-[calc(100vh-8rem)]">
       <div className="lg:col-span-3 flex flex-col gap-4 min-h-0">
         <div className="relative">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
@@ -522,5 +558,6 @@ export default function POSClient({
         </div>
       </div>
     </div>
+    </>
   );
 }

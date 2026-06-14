@@ -18,6 +18,7 @@ export default async function POSPage() {
       </div>
       <POSClient
         storeNameAr={settings.store_name_ar || "بيت ورد"}
+        storePhone={settings.store_phone}
         currencySymbol={settings.currency_symbol || "ج.م"}
       />
     </div>
