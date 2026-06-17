@@ -36,6 +36,7 @@ const userSelect = {
   phone: true,
   role: true,
   salary: true,
+  startDate: true,
   isActive: true,
   createdAt: true,
   updatedAt: true,
@@ -119,6 +120,77 @@ export async function getEmployeePayrollSummary(employeeId: string) {
   };
 }
 
+export async function getEmployeeDetails(employeeId: string) {
+  await requireRole(["ADMIN"]);
+
+  const employee = await prisma.user.findUnique({
+    where: { id: employeeId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      phone: true,
+      role: true,
+      salary: true,
+      startDate: true,
+      isActive: true,
+      createdAt: true,
+      employeeAdjustments: {
+        orderBy: { adjustmentDate: "desc" },
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          title: true,
+          notes: true,
+          adjustmentDate: true,
+          settled: true,
+          settledAt: true,
+        },
+      },
+      salaryExpenses: {
+        where: { category: "SALARIES" },
+        orderBy: { expenseDate: "desc" },
+        select: {
+          id: true,
+          title: true,
+          amount: true,
+          baseSalary: true,
+          deductionsTotal: true,
+          expenseDate: true,
+          description: true,
+        },
+      },
+    },
+  });
+
+  if (!employee) {
+    throw new Error("الموظف غير موجود");
+  }
+
+  const pendingAdjustments = employee.employeeAdjustments.filter(
+    (item) => !item.settled
+  );
+  const pendingDeductions = pendingAdjustments.reduce(
+    (sum, item) => sum + item.amount,
+    0
+  );
+  const totalSalaryReceived = employee.salaryExpenses.reduce(
+    (sum, item) => sum + item.amount,
+    0
+  );
+
+  return {
+    ...employee,
+    pendingAdjustments,
+    pendingDeductions,
+    netSalaryDue: Math.max(0, employee.salary - pendingDeductions),
+    totalSalaryReceived,
+    lastSalary: employee.salaryExpenses[0] ?? null,
+    salaryCount: employee.salaryExpenses.length,
+  };
+}
+
 export async function createEmployee(data: {
   name: string;
   email: string;
@@ -126,6 +198,7 @@ export async function createEmployee(data: {
   phone?: string;
   role?: UserRole;
   salary?: number;
+  startDate?: Date;
 }) {
   try {
     await requireRole(["ADMIN"]);
@@ -152,6 +225,7 @@ export async function createEmployee(data: {
         phone: data.phone?.trim(),
         role: data.role ?? "CASHIER",
         salary: data.salary ?? 0,
+        startDate: data.startDate,
       },
       select: userSelect,
     });
@@ -172,6 +246,7 @@ export async function updateEmployee(
     phone?: string;
     role?: UserRole;
     salary?: number;
+    startDate?: Date | null;
     isActive?: boolean;
   }
 ) {
@@ -197,6 +272,10 @@ export async function updateEmployee(
 
     if (data.salary !== undefined) {
       updateData.salary = Math.max(0, data.salary);
+    }
+
+    if (data.startDate !== undefined) {
+      updateData.startDate = data.startDate;
     }
 
     if (data.password) {

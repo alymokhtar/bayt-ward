@@ -73,6 +73,7 @@ model User {
   phone     String?
   role      UserRole @default(CASHIER)
   salary    Float    @default(0)
+  startDate DateTime?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

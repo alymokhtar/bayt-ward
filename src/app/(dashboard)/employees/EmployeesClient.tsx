@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import EmployeeAdjustmentModal from "@/app/(dashboard)/employees/EmployeeAdjustmentModal";
+import EmployeeDetailsModal from "@/app/(dashboard)/employees/EmployeeDetailsModal";
 import {
   createEmployee,
   updateEmployee,
@@ -32,6 +33,7 @@ type Employee = {
   phone: string | null;
   role: string;
   salary: number;
+  startDate: Date | null;
   pendingDeductions: number;
   isActive: boolean;
   createdAt: Date;
@@ -51,12 +53,16 @@ export default function EmployeesClient({
     id: string;
     name: string;
   } | null>(null);
+  const [detailEmployeeId, setDetailEmployeeId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("CASHIER");
   const [salary, setSalary] = useState("");
+  const [startDate, setStartDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -68,6 +74,7 @@ export default function EmployeesClient({
     setPassword("");
     setRole("CASHIER");
     setSalary("");
+    setStartDate(new Date().toISOString().split("T")[0]);
     setError("");
     setModalOpen(true);
   }
@@ -80,6 +87,11 @@ export default function EmployeesClient({
     setPassword("");
     setRole(emp.role);
     setSalary(emp.salary.toString());
+    setStartDate(
+      emp.startDate
+        ? new Date(emp.startDate).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0]
+    );
     setError("");
     setModalOpen(true);
   }
@@ -90,6 +102,7 @@ export default function EmployeesClient({
     setError("");
 
     const salaryValue = parseFloat(salary) || 0;
+    const startDateValue = startDate ? new Date(startDate) : undefined;
     const result = editing
       ? await updateEmployee(editing.id, {
           name,
@@ -97,6 +110,7 @@ export default function EmployeesClient({
           phone,
           role: role as "ADMIN" | "MANAGER" | "CASHIER",
           salary: salaryValue,
+          startDate: startDateValue ?? null,
           ...(password ? { password } : {}),
         })
       : await createEmployee({
@@ -106,6 +120,7 @@ export default function EmployeesClient({
           phone,
           role: role as "ADMIN" | "MANAGER" | "CASHIER",
           salary: salaryValue,
+          startDate: startDateValue,
         });
 
     setLoading(false);
@@ -149,14 +164,22 @@ export default function EmployeesClient({
             <TableHead>الراتب</TableHead>
             <TableHead>استقطاعات معلقة</TableHead>
             <TableHead>الحالة</TableHead>
-            <TableHead>تاريخ الإنشاء</TableHead>
+            <TableHead>بدء العمل</TableHead>
             <TableHead>الإجراءات</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {initial.map((emp) => (
             <TableRow key={emp.id}>
-              <TableCell className="font-medium">{emp.name}</TableCell>
+              <TableCell>
+                <button
+                  type="button"
+                  onClick={() => setDetailEmployeeId(emp.id)}
+                  className="font-medium text-brown hover:text-gold hover:underline transition-colors text-start"
+                >
+                  {emp.name}
+                </button>
+              </TableCell>
               <TableCell dir="ltr" className="text-start text-sm">
                 {emp.email}
               </TableCell>
@@ -183,7 +206,7 @@ export default function EmployeesClient({
                 </button>
               </TableCell>
               <TableCell className="text-sm text-muted">
-                {formatDate(emp.createdAt)}
+                {emp.startDate ? formatDate(emp.startDate) : "—"}
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
@@ -250,6 +273,13 @@ export default function EmployeesClient({
             required
           />
           <Input
+            label="تاريخ بدء العمل"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            required
+          />
+          <Input
             label={editing ? "كلمة مرور جديدة (اختياري)" : "كلمة المرور"}
             type="password"
             value={password}
@@ -277,6 +307,11 @@ export default function EmployeesClient({
       <EmployeeAdjustmentModal
         employee={adjustmentEmployee}
         onClose={() => setAdjustmentEmployee(null)}
+      />
+
+      <EmployeeDetailsModal
+        employeeId={detailEmployeeId}
+        onClose={() => setDetailEmployeeId(null)}
       />
     </>
   );
