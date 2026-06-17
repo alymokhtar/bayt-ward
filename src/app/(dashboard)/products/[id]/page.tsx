@@ -1,6 +1,6 @@
 import ProductForm from "@/app/(dashboard)/products/ProductForm";
 import { getCategories } from "@/lib/actions/categories";
-import { getProduct } from "@/lib/actions/products";
+import { getProduct, getUsedColors } from "@/lib/actions/products";
 import { notFound } from "next/navigation";
 
 interface EditProductPageProps {
@@ -12,10 +12,12 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
 
   let product;
   let categories;
+  let usedColors: string[];
   try {
-    [product, categories] = await Promise.all([
+    [product, categories, usedColors] = await Promise.all([
       getProduct(id),
       getCategories(true),
+      getUsedColors(),
     ]);
   } catch {
     notFound();
@@ -29,7 +31,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
             {product.nameAr || product.name}
           </p>
         </div>
-        <ProductForm categories={categories} product={product} />
+        <ProductForm
+          categories={categories}
+          product={product}
+          usedColors={usedColors}
+        />
       </div>
     );
 }

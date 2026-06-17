@@ -73,6 +73,19 @@ export async function getProduct(id: string) {
   return product;
 }
 
+export async function getUsedColors(): Promise<string[]> {
+  await requireRole(["ADMIN", "MANAGER"]);
+
+  const rows = await prisma.productVariant.findMany({
+    where: { color: { not: "" } },
+    select: { color: true },
+    distinct: ["color"],
+    orderBy: { color: "asc" },
+  });
+
+  return rows.map((row) => row.color);
+}
+
 export async function createProduct(data: {
   name: string;
   nameAr?: string;

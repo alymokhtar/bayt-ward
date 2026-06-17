@@ -1,9 +1,10 @@
 "use client";
 
 import Button from "@/components/ui/Button";
+import ColorAutocomplete from "@/components/ui/ColorAutocomplete";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
-import { COLORS, SIZES } from "@/lib/constants";
+import { SIZES } from "@/lib/constants";
 import {
   createProduct,
   updateProduct,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/actions/products";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 type Category = { id: string; name: string; nameAr: string | null };
 
@@ -42,23 +43,28 @@ type ProductData = {
 interface ProductFormProps {
   categories: Category[];
   product?: ProductData;
+  usedColors?: string[];
 }
 
 type VariantForm = VariantInput & { id?: string; isActive?: boolean };
 
-const emptyVariant = (): VariantForm => ({
+const emptyVariant = (template?: VariantForm): VariantForm => ({
   sku: "",
   barcode: "",
-  size: "M",
-  color: "أسود",
-  colorHex: "#000000",
-  costPrice: 0,
-  sellingPrice: 0,
+  size: template?.size ?? "M",
+  color: "",
+  colorHex: "",
+  costPrice: template?.costPrice ?? 0,
+  sellingPrice: template?.sellingPrice ?? 0,
   stockQuantity: 0,
-  minStockLevel: 5,
+  minStockLevel: template?.minStockLevel ?? 5,
 });
 
-export default function ProductForm({ categories, product }: ProductFormProps) {
+export default function ProductForm({
+  categories,
+  product,
+  usedColors = [],
+}: ProductFormProps) {
   const router = useRouter();
   const isEdit = !!product;
 
@@ -88,14 +94,36 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  function updateVariant(index: number, field: keyof VariantForm, value: string | number | boolean) {
+  const colorSuggestions = useMemo(() => {
+    const fromForm = variants
+      .map((v) => v.color.trim())
+      .filter(Boolean);
+    return Array.from(new Set([...usedColors, ...fromForm]));
+  }, [usedColors, variants]);
+
+  function updateVariant(
+    index: number,
+    field: keyof VariantForm,
+    value: string | number | boolean
+  ) {
     setVariants((prev) =>
       prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
     );
   }
 
+  function updateVariantColor(index: number, color: string, colorHex?: string) {
+    setVariants((prev) =>
+      prev.map((v, i) =>
+        i === index ? { ...v, color, colorHex: colorHex ?? "" } : v
+      )
+    );
+  }
+
   function addVariant() {
-    setVariants((prev) => [...prev, emptyVariant()]);
+    setVariants((prev) => {
+      const template = prev[0];
+      return [...prev, emptyVariant(template)];
+    });
   }
 
   function removeVariant(index: number) {
@@ -144,7 +172,6 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   }));
 
   const sizeOptions = SIZES.map((s) => ({ value: s, label: s }));
-  const colorOptions = COLORS.map((c) => ({ value: c.name, label: c.name }));
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -247,15 +274,14 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                 value={variant.size}
                 onChange={(e) => updateVariant(index, "size", e.target.value)}
               />
-              <Select
+              <ColorAutocomplete
                 label="اللون"
-                options={colorOptions}
                 value={variant.color}
-                onChange={(e) => {
-                  const color = COLORS.find((c) => c.name === e.target.value);
-                  updateVariant(index, "color", e.target.value);
-                  if (color) updateVariant(index, "colorHex", color.hex);
-                }}
+                usedColors={colorSuggestions}
+                onChange={(color, colorHex) =>
+                  updateVariantColor(index, color, colorHex)
+                }
+                required
               />
               <Input
                 label="سعر التكلفة"
