@@ -24,10 +24,10 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function buildReportElement(
+function buildReportHtml(
   items: LowStockExportItem[],
   options: { categoryLabel: string; generatedAt: Date }
-): HTMLDivElement {
+): string {
   const dateLabel = options.generatedAt.toLocaleDateString("ar-EG", {
     year: "numeric",
     month: "long",
@@ -67,45 +67,108 @@ function buildReportElement(
     })
     .join("");
 
-  const container = document.createElement("div");
-  container.dataset.lowStockPdf = "true";
-  container.dir = "rtl";
-  container.lang = "ar";
-  container.style.cssText =
-    "width:794px;padding:24px;background:#fff;color:#4B3621;font-family:var(--font-cairo),Cairo,sans-serif;visibility:hidden;position:fixed;left:0;top:0;pointer-events:none;";
-
-  container.innerHTML = `
-    <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #C9A84C;">
-      <h1 style="margin:0 0 4px;font-size:22px;color:#4B3621;">بيت ورد — طلب إعادة مخزون</h1>
-      <p style="margin:4px 0;font-size:13px;color:#6B5B4F;">منتجات بمخزون منخفض أو نافد</p>
-    </div>
-    <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:16px;font-size:13px;">
-      <div>التصنيف: <strong>${escapeHtml(options.categoryLabel)}</strong></div>
-      <div>عدد الأصناف: <strong>${items.length}</strong></div>
-      <div>التاريخ: <strong>${dateLabel} — ${timeLabel}</strong></div>
-    </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;">
-      <thead>
-        <tr>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">#</th>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">المنتج</th>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">المقاس / اللون</th>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">SKU</th>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">التصنيف</th>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">الكمية المتاحة</th>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">الحد الأدنى</th>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">كمية مقترحة للطلب</th>
-          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">الحالة</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <p style="margin-top:20px;font-size:11px;color:#6B5B4F;text-align:center;">
-      تم إنشاء التقرير من نظام بيت ورد — للاستخدام الداخلي في إعادة الطلب من الموردين
-    </p>
-  `;
-
-  return container;
+  return `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>طلب إعادة مخزون</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #4B3621;
+      font-family: Tahoma, Arial, sans-serif;
+    }
+    body {
+      width: 794px;
+      padding: 24px;
+      direction: rtl;
+      unicode-bidi: isolate;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #C9A84C;
+    }
+    .header h1 {
+      margin: 0 0 4px;
+      font-size: 22px;
+      color: #4B3621;
+    }
+    .header p {
+      margin: 4px 0 0;
+      font-size: 13px;
+      color: #6B5B4F;
+    }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #E8E0D5;
+      padding: 8px 6px;
+      text-align: right;
+      vertical-align: top;
+    }
+    th {
+      background: #F5F0E8;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 11px;
+      color: #6B5B4F;
+      text-align: center;
+    }
+    .num {
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>بيت ورد — طلب إعادة مخزون</h1>
+    <p>منتجات بمخزون منخفض أو نافد</p>
+  </div>
+  <div class="meta">
+    <div>التصنيف: <strong>${escapeHtml(options.categoryLabel)}</strong></div>
+    <div>عدد الأصناف: <strong>${items.length}</strong></div>
+    <div>التاريخ: <strong>${dateLabel} — ${timeLabel}</strong></div>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>المنتج</th>
+        <th>المقاس / اللون</th>
+        <th class="num">SKU</th>
+        <th>التصنيف</th>
+        <th>الكمية المتاحة</th>
+        <th>الحد الأدنى</th>
+        <th>كمية مقترحة للطلب</th>
+        <th>الحالة</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="footer">
+    تم إنشاء التقرير من نظام بيت ورد — للاستخدام الداخلي في إعادة الطلب من الموردين
+  </div>
+</body>
+</html>`;
 }
 
 function buildPdfFilename(date: Date): string {
@@ -119,18 +182,37 @@ export async function exportLowStockToPdf(
 ): Promise<void> {
   if (items.length === 0) return;
 
-  const container = buildReportElement(items, options);
-  container.style.position = "fixed";
-  container.style.left = "-10000px";
-  container.style.top = "0";
-  container.style.zIndex = "-1";
-  document.body.appendChild(container);
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("aria-hidden", "true");
+  iframe.style.position = "fixed";
+  iframe.style.left = "-10000px";
+  iframe.style.top = "0";
+  iframe.style.width = "794px";
+  iframe.style.height = "1123px";
+  iframe.style.border = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
+  document.body.appendChild(iframe);
 
   try {
-    await document.fonts.ready;
+    const reportHtml = buildReportHtml(items, options);
+
+    await new Promise<void>((resolve, reject) => {
+      iframe.onload = () => resolve();
+      iframe.onerror = () => reject(new Error("FAILED_TO_RENDER_PDF_FRAME"));
+      iframe.srcdoc = reportHtml;
+    });
+
+    const iframeDocument = iframe.contentDocument;
+    if (!iframeDocument) {
+      throw new Error("FAILED_TO_ACCESS_PDF_FRAME");
+    }
+
+    await iframeDocument.fonts.ready;
     await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
 
     const html2pdf = (await import("html2pdf.js")).default;
+    const source = iframeDocument.body;
 
     await html2pdf()
       .set({
@@ -144,30 +226,13 @@ export async function exportLowStockToPdf(
           scrollX: 0,
           scrollY: 0,
           windowWidth: 794,
-          onclone: (clonedDocument: Document) => {
-            const clonedContainer = clonedDocument.querySelector(
-              '[data-low-stock-pdf="true"]'
-            ) as HTMLDivElement | null;
-
-            if (!clonedContainer) return;
-
-            clonedContainer.style.visibility = "visible";
-            clonedContainer.style.position = "relative";
-            clonedContainer.style.left = "0";
-            clonedContainer.style.top = "0";
-            clonedContainer.style.pointerEvents = "auto";
-            clonedContainer.style.zIndex = "auto";
-            clonedContainer.style.margin = "0";
-            clonedDocument.body.style.margin = "0";
-            clonedDocument.body.style.background = "#fff";
-          },
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["css", "legacy"] },
       })
-      .from(container)
+      .from(source)
       .save();
   } finally {
-    document.body.removeChild(container);
+    document.body.removeChild(iframe);
   }
 }
