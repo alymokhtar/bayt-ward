@@ -38,17 +38,57 @@ function buildReportHtml(
     minute: "2-digit",
   });
 
-  const rows = items
-    .map((item, index) => {
+  const groupedItems = Array.from(
+    items
+      .slice()
+      .sort((a, b) => {
+        const productCompare = a.productName.localeCompare(b.productName, "ar");
+        if (productCompare !== 0) return productCompare;
+
+        const colorCompare = a.color.localeCompare(b.color, "ar");
+        if (colorCompare !== 0) return colorCompare;
+
+        return a.size.localeCompare(b.size, "ar");
+      })
+      .reduce((groups, item) => {
+        const group = groups.get(item.productName) ?? [];
+        group.push(item);
+        groups.set(item.productName, group);
+        return groups;
+      }, new Map<string, LowStockExportItem[]>())
+      .entries()
+  );
+
+  const blocks = groupedItems
+    .map(([productName, productItems]) => {
+      const rows = productItems
+        .map((item) => {
+          return `
+            <tr>
+              <td>${escapeHtml(item.color)}</td>
+              <td>${escapeHtml(item.size)}</td>
+              <td>${item.stockQuantity}</td>
+              <td>${item.minStockLevel}</td>
+            </tr>
+          `;
+        })
+        .join("");
+
       return `
-        <tr>
-          <td>${index + 1}</td>
-          <td>${escapeHtml(item.productName)}</td>
-          <td>${escapeHtml(item.color)}</td>
-          <td>${escapeHtml(item.size)}</td>
-          <td>${item.stockQuantity}</td>
-          <td>${item.minStockLevel}</td>
-        </tr>
+        <section class="product-block">
+          <div class="product-title">${escapeHtml(productName)}</div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:28%">اللون</th>
+                <th style="width:28%">المقاس</th>
+                <th style="width:22%">الكمية المتاحة</th>
+                <th style="width:22%">الحد الأدنى</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </section>
       `;
     })
     .join("");
@@ -98,6 +138,23 @@ function buildReportHtml(
       font-size: 13px;
       flex-wrap: wrap;
     }
+    .product-block {
+      margin-bottom: 18px;
+      padding: 14px;
+      border: 1px solid #E8E0D5;
+      border-radius: 12px;
+      background: #fff;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .product-title {
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #E8E0D5;
+      font-size: 15px;
+      font-weight: 700;
+      color: #4B3621;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -117,14 +174,13 @@ function buildReportHtml(
     tbody tr:nth-child(even) {
       background: #FCFAF6;
     }
-    tbody td:nth-child(1),
-    tbody td:nth-child(4),
-    tbody td:nth-child(5) {
+    tbody td:nth-child(3),
+    tbody td:nth-child(4) {
       text-align: center;
       white-space: nowrap;
     }
-    tbody td:nth-child(2),
-    tbody td:nth-child(3) {
+    tbody td:nth-child(1),
+    tbody td:nth-child(2) {
       word-break: break-word;
     }
     .footer {
@@ -149,19 +205,7 @@ function buildReportHtml(
     <div>عدد الأصناف: <strong>${items.length}</strong></div>
     <div>التاريخ: <strong>${dateLabel} — ${timeLabel}</strong></div>
   </div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:7%">#</th>
-        <th style="width:39%">المنتج</th>
-        <th style="width:18%">اللون</th>
-        <th style="width:18%">المقاس</th>
-        <th style="width:9%">الكمية المتاحة</th>
-        <th style="width:9%">الحد الأدنى</th>
-      </tr>
-    </thead>
-    <tbody>${rows}</tbody>
-  </table>
+  ${blocks}
   <div class="footer">
     تم إنشاء التقرير من نظام بيت ورد — للاستخدام الداخلي في إعادة الطلب من الموردين
   </div>
