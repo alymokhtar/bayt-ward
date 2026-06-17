@@ -26,6 +26,8 @@ export type VariantInput = {
   minStockLevel?: number;
 };
 
+type VariantSaveInput = VariantInput & { id?: string; isActive?: boolean };
+
 function handleActionError(error: unknown): ActionResult<never> {
   if (error instanceof Error) {
     if (error.message === "UNAUTHORIZED") {
@@ -157,9 +159,9 @@ async function ensureVariantCodes(
 }
 
 function prepareVariantsForSave(
-  variants: (VariantInput & { id?: string })[],
+  variants: VariantSaveInput[],
   existingRows: { id: string; sku: string; barcode: string | null }[]
-): (VariantInput & { id?: string; barcode: string })[] {
+): (VariantSaveInput & { barcode: string })[] {
   return variants.map((variant) => {
     const sku = variant.sku.trim();
     const barcode = resolveStoredBarcode(sku, variant.barcode);
@@ -269,7 +271,7 @@ export async function updateProduct(
     categoryId?: string;
     imageUrl?: string;
     isActive?: boolean;
-    variants?: (VariantInput & { id?: string; isActive?: boolean })[];
+    variants?: VariantSaveInput[];
   }
 ) {
   try {
