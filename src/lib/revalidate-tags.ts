@@ -46,10 +46,12 @@ export function invalidateInventoryData() {
 
 export function invalidatePurchasesData() {
   updateTag(CACHE_TAG.purchases);
+  updateTag(CACHE_TAG.suppliers);
   updateTag(CACHE_TAG.inventory);
   updateTag(CACHE_TAG.dashboard);
   updateTag(CACHE_TAG.reports);
   revalidatePath("/purchases");
+  revalidatePath("/suppliers");
   revalidatePath("/inventory");
   revalidatePath("/dashboard");
   revalidatePath("/reports");

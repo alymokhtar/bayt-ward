@@ -18,9 +18,11 @@ import { formatCurrency } from "@/lib/utils";
 import { PackagePlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import ProductInventoryModal from "@/app/(dashboard)/inventory/ProductInventoryModal";
 
 type Variant = {
   id: string;
+  productId: string;
   sku: string;
   size: string;
   color: string;
@@ -50,6 +52,7 @@ export default function InventoryVariantsClient({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [detailProductId, setDetailProductId] = useState<string | null>(null);
 
   function openAdjust(variant: Variant) {
     setSelectedVariant(variant);
@@ -104,9 +107,13 @@ export default function InventoryVariantsClient({
           {variants.map((v) => (
             <TableRow key={v.id}>
               <TableCell>
-                <p className="font-medium">
+                <button
+                  type="button"
+                  onClick={() => setDetailProductId(v.productId)}
+                  className="text-start font-medium text-brown hover:text-gold hover:underline transition-colors"
+                >
                   {v.product.nameAr || v.product.name}
-                </p>
+                </button>
                 <p className="text-xs text-muted">
                   {v.product.category.nameAr || v.product.category.name}
                 </p>
@@ -198,6 +205,11 @@ export default function InventoryVariantsClient({
           </div>
         </form>
       </Modal>
+
+      <ProductInventoryModal
+        productId={detailProductId}
+        onClose={() => setDetailProductId(null)}
+      />
     </>
   );
 }

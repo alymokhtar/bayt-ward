@@ -328,20 +328,39 @@ export async function searchVariants(query: string) {
       ],
     },
     take: 20,
-    select: {
-      id: true,
-      sku: true,
-      barcode: true,
-      size: true,
-      color: true,
-      costPrice: true,
-      sellingPrice: true,
-      stockQuantity: true,
-      product: {
-        select: { id: true, name: true, nameAr: true },
-      },
-    },
+    select: variantSearchSelect,
     orderBy: { sku: "asc" },
+  });
+}
+
+const variantSearchSelect = {
+  id: true,
+  sku: true,
+  barcode: true,
+  size: true,
+  color: true,
+  costPrice: true,
+  sellingPrice: true,
+  stockQuantity: true,
+  product: {
+    select: { id: true, name: true, nameAr: true },
+  },
+} as const;
+
+/** Exact barcode or SKU lookup — for scanners and Enter key in purchases/POS */
+export async function lookupVariantByCode(code: string) {
+  await requireAuth();
+
+  const q = code?.trim();
+  if (!q) return null;
+
+  return prisma.productVariant.findFirst({
+    where: {
+      isActive: true,
+      product: { isActive: true },
+      OR: [{ barcode: q }, { sku: q }],
+    },
+    select: variantSearchSelect,
   });
 }
 

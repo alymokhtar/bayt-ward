@@ -14,11 +14,11 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { createPurchase, receivePurchase } from "@/lib/actions/purchases";
-import { searchVariants } from "@/lib/actions/products";
+import { lookupVariantByCode, searchVariants } from "@/lib/actions/products";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { PackageCheck, Plus, Search } from "lucide-react";
+import { PackageCheck, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Supplier = { id: string; name: string };
 type Purchase = {
@@ -55,11 +55,13 @@ export default function PurchasesClient({
   suppliers,
 }: PurchasesClientProps) {
   const router = useRouter();
+  const searchRef = useRef<HTMLInputElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [supplierId, setSupplierId] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<VariantResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -74,13 +76,21 @@ export default function PurchasesClient({
       setResults([]);
       return;
     }
+    setSearching(true);
     setResults(await searchVariants(q));
+    setSearching(false);
   }, []);
 
   useEffect(() => {
     const t = setTimeout(() => doSearch(query), 300);
     return () => clearTimeout(t);
   }, [query, doSearch]);
+
+  useEffect(() => {
+    if (modalOpen) {
+      setTimeout(() => searchRef.current?.focus(), 100);
+    }
+  }, [modalOpen]);
 
   function addItem(variant: VariantResult) {
     setItems((prev) => {
@@ -99,6 +109,39 @@ export default function PurchasesClient({
     });
     setQuery("");
     setResults([]);
+    searchRef.current?.focus();
+  }
+
+  async function resolveAndAdd(queryText: string) {
+    const q = queryText.trim();
+    if (!q) return;
+
+    const exact = await lookupVariantByCode(q);
+    if (exact) {
+      addItem(exact);
+      return;
+    }
+
+    const matches = await searchVariants(q);
+    if (matches.length === 1) {
+      addItem(matches[0]);
+      return;
+    }
+
+    if (matches.length > 1) {
+      setResults(matches);
+      setError("اختر المنتج من القائمة");
+      return;
+    }
+
+    setError("لم يتم العثور على منتج بهذا الباركود أو الاسم");
+  }
+
+  async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    setError("");
+    await resolveAndAdd(query);
   }
 
   function updateItem(
@@ -115,6 +158,16 @@ export default function PurchasesClient({
 
   function removeItem(variantId: string) {
     setItems((prev) => prev.filter((i) => i.variant.id !== variantId));
+  }
+
+  function openModal() {
+    setError("");
+    setItems([]);
+    setSupplierId("");
+    setNotes("");
+    setQuery("");
+    setResults([]);
+    setModalOpen(true);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -141,9 +194,6 @@ export default function PurchasesClient({
 
     if (result.success) {
       setModalOpen(false);
-      setItems([]);
-      setSupplierId("");
-      setNotes("");
       router.refresh();
     } else {
       setError(result.error ?? "حدث خطأ");
@@ -160,7 +210,7 @@ export default function PurchasesClient({
   return (
     <>
       <div className="flex justify-end mb-4">
-        <Button onClick={() => { setModalOpen(true); setError(""); }}>
+        <Button onClick={openModal}>
           <Plus className="h-4 w-4" />
           أمر شراء جديد
         </Button>
@@ -216,6 +266,7 @@ export default function PurchasesClient({
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title="أمر شراء جديد"
+        description="ابحث بالباركود أو اسم المنتج — يُضاف المخزون مباشرة عند الحفظ"
         size="xl"
       >
         <form onSubmit={handleCreate} className="space-y-4">
@@ -237,78 +288,117 @@ export default function PurchasesClient({
           <div className="relative">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input
+              ref={searchRef}
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث عن منتج..."
-              className="w-full h-10 rounded-lg border border-border ps-10 pe-4 text-sm"
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setError("");
+              }}
+              onKeyDown={handleSearchKeyDown}
+              placeholder="ابحث بالباركود أو SKU أو اسم المنتج ثم Enter..."
+              className="w-full h-11 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
             />
           </div>
 
-          {results.length > 0 && (
-            <ul className="border border-border rounded-lg divide-y max-h-40 overflow-y-auto">
+          {searching ? (
+            <p className="text-sm text-muted text-center py-2">جاري البحث...</p>
+          ) : results.length > 0 ? (
+            <ul className="border border-border rounded-lg divide-y max-h-48 overflow-y-auto">
               {results.map((v) => (
                 <li key={v.id}>
                   <button
                     type="button"
                     onClick={() => addItem(v)}
-                    className="w-full px-3 py-2 text-sm text-start hover:bg-gold/5"
+                    className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-sm text-start hover:bg-gold/5"
                   >
-                    {v.product.nameAr || v.product.name} — {v.sku}
+                    <div>
+                      <p className="font-medium text-brown">
+                        {v.product.nameAr || v.product.name}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">
+                        {v.sku}
+                        {v.barcode ? ` · ${v.barcode}` : ""} · {v.size} · {v.color}
+                      </p>
+                    </div>
+                    <div className="text-end shrink-0">
+                      <p className="text-xs text-muted">متوفر: {v.stockQuantity}</p>
+                      <p className="text-sm font-medium text-gold">
+                        {formatCurrency(v.costPrice)}
+                      </p>
+                    </div>
                   </button>
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
 
           {items.length > 0 && (
             <div className="space-y-2">
+              <p className="text-sm font-medium text-brown">
+                المنتجات المضافة ({items.length})
+              </p>
               {items.map((item) => (
                 <div
                   key={item.variant.id}
-                  className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3"
+                  className="rounded-lg border border-border p-3 space-y-2"
                 >
-                  <span className="flex-1 text-sm font-medium">
-                    {item.variant.product.nameAr || item.variant.product.name}
-                  </span>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={item.quantity}
-                    onChange={(e) =>
-                      updateItem(
-                        item.variant.id,
-                        "quantity",
-                        parseInt(e.target.value) || 1
-                      )
-                    }
-                    className="w-20"
-                  />
-                  <Input
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={item.unitCost}
-                    onChange={(e) =>
-                      updateItem(
-                        item.variant.id,
-                        "unitCost",
-                        parseFloat(e.target.value) || 0
-                      )
-                    }
-                    className="w-28"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeItem(item.variant.id)}
-                  >
-                    حذف
-                  </Button>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-medium text-brown">
+                        {item.variant.product.nameAr || item.variant.product.name}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {item.variant.sku} · {item.variant.size} · {item.variant.color}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeItem(item.variant.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-danger" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <Input
+                      label="الكمية"
+                      type="number"
+                      min={1}
+                      value={item.quantity}
+                      onChange={(e) =>
+                        updateItem(
+                          item.variant.id,
+                          "quantity",
+                          parseInt(e.target.value) || 1
+                        )
+                      }
+                    />
+                    <Input
+                      label="سعر التكلفة"
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={item.unitCost}
+                      onChange={(e) =>
+                        updateItem(
+                          item.variant.id,
+                          "unitCost",
+                          parseFloat(e.target.value) || 0
+                        )
+                      }
+                    />
+                    <div className="flex items-end">
+                      <p className="text-sm font-medium text-brown pb-2.5">
+                        الإجمالي:{" "}
+                        {formatCurrency(item.unitCost * item.quantity)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               ))}
-              <p className="text-sm font-semibold text-brown">
-                الإجمالي: {formatCurrency(subtotal)}
+              <p className="text-sm font-semibold text-brown pt-1">
+                إجمالي الأمر: {formatCurrency(subtotal)}
               </p>
             </div>
           )}
@@ -320,11 +410,15 @@ export default function PurchasesClient({
           />
 
           <div className="flex gap-2 justify-end">
-            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+            >
               إلغاء
             </Button>
-            <Button type="submit" loading={loading}>
-              إنشاء الأمر
+            <Button type="submit" loading={loading} disabled={items.length === 0}>
+              حفظ وإضافة للمخزون
             </Button>
           </div>
         </form>

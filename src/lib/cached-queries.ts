@@ -398,6 +398,7 @@ export const getCachedLowStockPreview = unstable_cache(
 
 type InventoryRow = {
   id: string;
+  productId: string;
   sku: string;
   size: string;
   color: string;
@@ -442,6 +443,7 @@ export const getCachedInventoryPage = unstable_cache(
     const rows = await prisma.$queryRaw<InventoryRow[]>`
       SELECT
         pv.id,
+        p.id AS "productId",
         pv.sku,
         pv.size,
         pv.color,
@@ -467,6 +469,7 @@ export const getCachedInventoryPage = unstable_cache(
     const total = rows[0]?.totalCount ?? 0;
     const items = rows.map((row) => ({
       id: row.id,
+      productId: row.productId,
       sku: row.sku,
       size: row.size,
       color: row.color,
@@ -620,22 +623,57 @@ export const getCachedSuppliersList = unstable_cache(
       includeInactive?: boolean;
     };
 
-    return prisma.supplier.findMany({
-      where: includeInactive ? undefined : { isActive: true },
-      orderBy: { name: "asc" },
-      take: 500,
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        email: true,
-        address: true,
-        notes: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { purchases: true } },
-      },
+    const [suppliers, aggregates, lastPurchases] = await Promise.all([
+      prisma.supplier.findMany({
+        where: includeInactive ? undefined : { isActive: true },
+        orderBy: { name: "asc" },
+        take: 500,
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          email: true,
+          address: true,
+          notes: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: { select: { purchases: true } },
+        },
+      }),
+      prisma.purchase.groupBy({
+        by: ["supplierId"],
+        where: { status: { not: "CANCELLED" } },
+        _sum: { totalAmount: true },
+      }),
+      prisma.$queryRaw<
+        { supplierId: string; totalAmount: number; createdAt: Date }[]
+      >`
+        SELECT DISTINCT ON ("supplierId")
+          "supplierId",
+          "totalAmount",
+          "createdAt"
+        FROM "Purchase"
+        WHERE status != 'CANCELLED'
+        ORDER BY "supplierId", "createdAt" DESC
+      `,
+    ]);
+
+    const totalBySupplier = new Map(
+      aggregates.map((row) => [row.supplierId, row._sum.totalAmount ?? 0])
+    );
+    const lastBySupplier = new Map(
+      lastPurchases.map((row) => [row.supplierId, row])
+    );
+
+    return suppliers.map((supplier) => {
+      const last = lastBySupplier.get(supplier.id);
+      return {
+        ...supplier,
+        totalPurchaseAmount: totalBySupplier.get(supplier.id) ?? 0,
+        lastPurchaseAmount: last?.totalAmount ?? null,
+        lastPurchaseAt: last?.createdAt ?? null,
+      };
     });
   },
   ["suppliers-list"],

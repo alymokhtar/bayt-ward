@@ -17,6 +17,7 @@ import {
   updateSupplier,
   deleteSupplier,
 } from "@/lib/actions/suppliers";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -29,6 +30,9 @@ type Supplier = {
   address: string | null;
   notes: string | null;
   isActive: boolean;
+  totalPurchaseAmount: number;
+  lastPurchaseAmount: number | null;
+  lastPurchaseAt: Date | null;
   _count: { purchases: number };
 };
 
@@ -117,7 +121,9 @@ export default function SuppliersClient({
           <TableRow>
             <TableHead>الاسم</TableHead>
             <TableHead>الهاتف</TableHead>
-            <TableHead>المشتريات</TableHead>
+            <TableHead>عدد المشتريات</TableHead>
+            <TableHead>إجمالي المشتريات</TableHead>
+            <TableHead>آخر عملية شراء</TableHead>
             <TableHead>الحالة</TableHead>
             <TableHead>الإجراءات</TableHead>
           </TableRow>
@@ -130,6 +136,25 @@ export default function SuppliersClient({
                 {s.phone}
               </TableCell>
               <TableCell>{s._count.purchases}</TableCell>
+              <TableCell className="font-medium text-gold">
+                {formatCurrency(s.totalPurchaseAmount)}
+              </TableCell>
+              <TableCell>
+                {s.lastPurchaseAmount != null ? (
+                  <div>
+                    <p className="font-medium text-brown">
+                      {formatCurrency(s.lastPurchaseAmount)}
+                    </p>
+                    {s.lastPurchaseAt && (
+                      <p className="text-xs text-muted">
+                        {formatDateTime(s.lastPurchaseAt)}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-muted text-sm">—</span>
+                )}
+              </TableCell>
               <TableCell>
                 <button type="button" onClick={() => toggleActive(s)}>
                   <Badge variant={s.isActive ? "success" : "danger"}>

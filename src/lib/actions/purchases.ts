@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { invalidatePurchasesData } from "@/lib/revalidate-tags";
 import { getCachedPurchasesList } from "@/lib/cached-queries";
+import type { Prisma } from "@prisma/client";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -15,6 +16,12 @@ export type PurchaseItemInput = {
   quantity: number;
   unitCost: number;
   totalCost: number;
+};
+
+type PurchaseItemRow = {
+  variantId: string;
+  quantity: number;
+  unitCost: number;
 };
 
 function handleActionError(error: unknown): ActionResult<never> {
@@ -32,6 +39,47 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidatePurchasePaths() {
   invalidatePurchasesData();
+}
+
+async function applyPurchaseItemsToInventory(
+  tx: Prisma.TransactionClient,
+  items: PurchaseItemRow[],
+  invoiceNumber: string,
+  userId: string
+) {
+  for (const item of items) {
+    const variant = await tx.productVariant.findUnique({
+      where: { id: item.variantId },
+    });
+
+    if (!variant) {
+      throw new Error("أحد المنتجات غير موجود");
+    }
+
+    const previousQty = variant.stockQuantity;
+    const newQty = previousQty + item.quantity;
+
+    await tx.productVariant.update({
+      where: { id: item.variantId },
+      data: {
+        stockQuantity: newQty,
+        costPrice: item.unitCost,
+      },
+    });
+
+    await tx.stockMovement.create({
+      data: {
+        variantId: item.variantId,
+        userId,
+        type: "PURCHASE",
+        quantity: item.quantity,
+        previousQty,
+        newQty,
+        reference: invoiceNumber,
+        notes: "شراء من مورد",
+      },
+    });
+  }
 }
 
 export async function getPurchases(options?: {
@@ -78,36 +126,54 @@ export async function createPurchase(data: {
       return { success: false, error: "أحد المنتجات غير موجود" };
     }
 
-    const purchase = await prisma.purchase.create({
-      data: {
-        invoiceNumber: generateInvoiceNumber("PUR"),
-        supplierId: data.supplierId,
-        userId: user.id,
-        subtotal: data.subtotal,
-        taxAmount: data.taxAmount ?? 0,
-        totalAmount: data.totalAmount,
-        status: "PENDING",
-        notes: data.notes,
-        items: {
-          create: data.items.map((item) => ({
-            variantId: item.variantId,
-            quantity: item.quantity,
-            unitCost: item.unitCost,
-            totalCost: item.totalCost,
-          })),
-        },
-      },
-      include: {
-        supplier: true,
-        items: {
-          include: {
-            variant: {
-              include: { product: true },
-            },
+    const invoiceNumber = generateInvoiceNumber("PUR");
+    const now = new Date();
+
+    const purchase = await prisma.$transaction(async (tx) => {
+      const created = await tx.purchase.create({
+        data: {
+          invoiceNumber,
+          supplierId: data.supplierId,
+          userId: user.id,
+          subtotal: data.subtotal,
+          taxAmount: data.taxAmount ?? 0,
+          totalAmount: data.totalAmount,
+          status: "RECEIVED",
+          receivedAt: now,
+          notes: data.notes,
+          items: {
+            create: data.items.map((item) => ({
+              variantId: item.variantId,
+              quantity: item.quantity,
+              unitCost: item.unitCost,
+              totalCost: item.totalCost,
+            })),
           },
         },
-        user: { select: { id: true, name: true } },
-      },
+        include: { items: true },
+      });
+
+      await applyPurchaseItemsToInventory(
+        tx,
+        created.items,
+        invoiceNumber,
+        user.id
+      );
+
+      return tx.purchase.findUniqueOrThrow({
+        where: { id: created.id },
+        include: {
+          supplier: true,
+          items: {
+            include: {
+              variant: {
+                include: { product: true },
+              },
+            },
+          },
+          user: { select: { id: true, name: true } },
+        },
+      });
     });
 
     revalidatePurchasePaths();
@@ -139,39 +205,12 @@ export async function receivePurchase(id: string) {
     }
 
     const received = await prisma.$transaction(async (tx) => {
-      for (const item of purchase.items) {
-        const variant = await tx.productVariant.findUnique({
-          where: { id: item.variantId },
-        });
-
-        if (!variant) {
-          throw new Error("أحد المنتجات غير موجود");
-        }
-
-        const previousQty = variant.stockQuantity;
-        const newQty = previousQty + item.quantity;
-
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: {
-            stockQuantity: newQty,
-            costPrice: item.unitCost,
-          },
-        });
-
-        await tx.stockMovement.create({
-          data: {
-            variantId: item.variantId,
-            userId: user.id,
-            type: "PURCHASE",
-            quantity: item.quantity,
-            previousQty,
-            newQty,
-            reference: purchase.invoiceNumber,
-            notes: "استلام مشتريات",
-          },
-        });
-      }
+      await applyPurchaseItemsToInventory(
+        tx,
+        purchase.items,
+        purchase.invoiceNumber,
+        user.id
+      );
 
       return tx.purchase.update({
         where: { id },

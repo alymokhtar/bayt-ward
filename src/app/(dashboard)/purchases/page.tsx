@@ -8,7 +8,7 @@ export default function PurchasesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-brown">المشتريات</h1>
-        <p className="text-sm text-muted mt-1">أوامر الشراء واستلام البضائع</p>
+        <p className="text-sm text-muted mt-1">أوامر الشراء وإضافة البضائع للمخزون</p>
       </div>
       <Card>
         <CardContent className="pt-6">

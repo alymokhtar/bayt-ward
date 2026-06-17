@@ -144,3 +144,64 @@ export async function getStockMovements(options?: {
     })
   );
 }
+
+export async function getProductInventory(productId: string) {
+  await requireRole(["ADMIN", "MANAGER"]);
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId, isActive: true },
+    select: {
+      id: true,
+      name: true,
+      nameAr: true,
+      brand: true,
+      category: { select: { name: true, nameAr: true } },
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ size: "asc" }, { color: "asc" }],
+        select: {
+          id: true,
+          sku: true,
+          barcode: true,
+          size: true,
+          color: true,
+          stockQuantity: true,
+          minStockLevel: true,
+          costPrice: true,
+          sellingPrice: true,
+        },
+      },
+    },
+  });
+
+  if (!product) {
+    throw new Error("المنتج غير موجود");
+  }
+
+  const variants = product.variants;
+  const totalStock = variants.reduce((sum, v) => sum + v.stockQuantity, 0);
+  const totalCostValue = variants.reduce(
+    (sum, v) => sum + v.costPrice * v.stockQuantity,
+    0
+  );
+  const totalRetailValue = variants.reduce(
+    (sum, v) => sum + v.sellingPrice * v.stockQuantity,
+    0
+  );
+  const lowStockCount = variants.filter(
+    (v) => v.stockQuantity > 0 && v.stockQuantity <= v.minStockLevel
+  ).length;
+  const outOfStockCount = variants.filter((v) => v.stockQuantity === 0).length;
+
+  return {
+    ...product,
+    summary: {
+      totalStock,
+      totalCostValue,
+      totalRetailValue,
+      lowStockCount,
+      outOfStockCount,
+      variantCount: variants.length,
+    },
+  };
+}
