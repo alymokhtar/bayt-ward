@@ -2,7 +2,7 @@ import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileNav from "@/components/layout/MobileNav";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
-import { getSession } from "@/lib/auth";
+import { resolveSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { type ReactNode } from "react";
 
@@ -11,10 +11,10 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  const session = await getSession();
+  const session = await resolveSession();
 
   if (!session) {
-    redirect("/login");
+    redirect("/api/auth/logout?redirect=/login");
   }
 
   return (

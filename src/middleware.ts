@@ -48,7 +48,11 @@ export async function middleware(request: NextRequest) {
   if (isProtectedRoute(pathname) && !hasValidSession) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", pathname);
-    return NextResponse.redirect(loginUrl);
+    const response = NextResponse.redirect(loginUrl);
+    if (token) {
+      response.cookies.delete("session");
+    }
+    return response;
   }
 
   return NextResponse.next();

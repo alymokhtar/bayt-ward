@@ -87,26 +87,12 @@ const getActiveUser = unstable_cache(
   { revalidate: 120, tags: [CACHE_TAG.session] }
 );
 
-/** Validates JWT against the database; clears stale sessions after DB migration. */
+/** Validates JWT against the database (read-only — safe in Server Components). */
 export const resolveSession = cache(async (): Promise<SessionUser | null> => {
   const session = await getSession();
   if (!session) return null;
 
   const user = await getActiveUser(session.id, session.email);
-
-  if (!user) {
-    await destroySession();
-    return null;
-  }
-
-  if (
-    user.id !== session.id ||
-    user.role !== session.role ||
-    user.name !== session.name
-  ) {
-    await createSession(user);
-  }
-
   return user;
 });
 

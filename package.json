@@ -8,9 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "tsx prisma/seed.ts",
+    "db:bootstrap": "tsx prisma/bootstrap.ts",
     "db:push": "npx prisma db push",
     "db:deploy": "npx prisma migrate deploy",
     "db:reset": "npx prisma migrate reset --force",
+    "db:empty": "npx prisma migrate reset --force --skip-seed && npm run db:bootstrap",
     "vercel:env": "scripts\\sync-vercel-env.bat",
     "postinstall": "prisma generate"
   },
