@@ -24,12 +24,10 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export function exportLowStockToPdf(
+function buildReportElement(
   items: LowStockExportItem[],
   options: { categoryLabel: string; generatedAt: Date }
-): void {
-  if (items.length === 0) return;
-
+): HTMLDivElement {
   const dateLabel = options.generatedAt.toLocaleDateString("ar-EG", {
     year: "numeric",
     month: "long",
@@ -69,119 +67,88 @@ export function exportLowStockToPdf(
     })
     .join("");
 
-  const html = `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <title>طلب إعادة مخزون — بيت ورد</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet" />
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: "Cairo", sans-serif;
-      color: #4B3621;
-      margin: 0;
-      padding: 24px;
-      background: #fff;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 2px solid #C9A84C;
-    }
-    .header h1 {
-      margin: 0 0 4px;
-      font-size: 22px;
-      color: #4B3621;
-    }
-    .header p {
-      margin: 4px 0;
-      font-size: 13px;
-      color: #6B5B4F;
-    }
-    .meta {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 16px;
-      font-size: 13px;
-    }
-    .meta span { font-weight: 600; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 12px;
-    }
-    th, td {
-      border: 1px solid #E8E0D5;
-      padding: 8px 6px;
-      text-align: right;
-    }
-    th {
-      background: #F5F0E8;
-      font-weight: 700;
-    }
-    tr:nth-child(even) td { background: #FDFBF7; }
-    .footer {
-      margin-top: 20px;
-      font-size: 11px;
-      color: #6B5B4F;
-      text-align: center;
-    }
-    @media print {
-      body { padding: 12px; }
-      @page { margin: 12mm; }
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>بيت ورد — طلب إعادة مخزون</h1>
-    <p>منتجات بمخزون منخفض أو نافد</p>
-  </div>
-  <div class="meta">
-    <div>التصنيف: <span>${escapeHtml(options.categoryLabel)}</span></div>
-    <div>عدد الأصناف: <span>${items.length}</span></div>
-    <div>التاريخ: <span>${dateLabel} — ${timeLabel}</span></div>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>المنتج</th>
-        <th>المقاس / اللون</th>
-        <th>SKU</th>
-        <th>التصنيف</th>
-        <th>الكمية المتاحة</th>
-        <th>الحد الأدنى</th>
-        <th>كمية مقترحة للطلب</th>
-        <th>الحالة</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rows}
-    </tbody>
-  </table>
-  <p class="footer">تم إنشاء التقرير من نظام بيت ورد — للاستخدام الداخلي في إعادة الطلب من الموردين</p>
-  <script>
-    window.onload = function() {
-      window.focus();
-      window.print();
-    };
-  </script>
-</body>
-</html>`;
+  const container = document.createElement("div");
+  container.dir = "rtl";
+  container.lang = "ar";
+  container.style.cssText =
+    "width:794px;padding:24px;background:#fff;color:#4B3621;font-family:var(--font-cairo),Cairo,sans-serif;";
 
-  const printWindow = window.open("", "_blank", "noopener,noreferrer");
-  if (!printWindow) {
-    alert("تعذّر فتح نافذة التصدير. اسمح بالنوافذ المنبثقة ثم حاول مجدداً.");
-    return;
+  container.innerHTML = `
+    <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #C9A84C;">
+      <h1 style="margin:0 0 4px;font-size:22px;color:#4B3621;">بيت ورد — طلب إعادة مخزون</h1>
+      <p style="margin:4px 0;font-size:13px;color:#6B5B4F;">منتجات بمخزون منخفض أو نافد</p>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:16px;font-size:13px;">
+      <div>التصنيف: <strong>${escapeHtml(options.categoryLabel)}</strong></div>
+      <div>عدد الأصناف: <strong>${items.length}</strong></div>
+      <div>التاريخ: <strong>${dateLabel} — ${timeLabel}</strong></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">#</th>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">المنتج</th>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">المقاس / اللون</th>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">SKU</th>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">التصنيف</th>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">الكمية المتاحة</th>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">الحد الأدنى</th>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">كمية مقترحة للطلب</th>
+          <th style="border:1px solid #E8E0D5;padding:8px 6px;text-align:right;background:#F5F0E8;">الحالة</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:20px;font-size:11px;color:#6B5B4F;text-align:center;">
+      تم إنشاء التقرير من نظام بيت ورد — للاستخدام الداخلي في إعادة الطلب من الموردين
+    </p>
+  `;
+
+  return container;
+}
+
+function buildPdfFilename(date: Date): string {
+  const stamp = date.toISOString().slice(0, 10);
+  return `bayt-ward-reorder-${stamp}.pdf`;
+}
+
+export async function exportLowStockToPdf(
+  items: LowStockExportItem[],
+  options: { categoryLabel: string; generatedAt: Date }
+): Promise<void> {
+  if (items.length === 0) return;
+
+  const container = buildReportElement(items, options);
+  container.style.position = "fixed";
+  container.style.left = "-10000px";
+  container.style.top = "0";
+  container.style.zIndex = "-1";
+  document.body.appendChild(container);
+
+  try {
+    await document.fonts.ready;
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    const html2pdf = (await import("html2pdf.js")).default;
+
+    await html2pdf()
+      .set({
+        margin: [10, 10, 10, 10],
+        filename: buildPdfFilename(options.generatedAt),
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
+          scrollX: 0,
+          scrollY: 0,
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["css", "legacy"] },
+      })
+      .from(container)
+      .save();
+  } finally {
+    document.body.removeChild(container);
   }
-
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
 }

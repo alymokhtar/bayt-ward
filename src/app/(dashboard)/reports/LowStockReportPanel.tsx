@@ -37,6 +37,8 @@ export default function LowStockReportPanel({
 }: LowStockReportPanelProps) {
   const [categoryId, setCategoryId] = useState(ALL_CATEGORIES);
   const [excludedIds, setExcludedIds] = useState<Set<string>>(() => new Set());
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   const categoryOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -91,12 +93,22 @@ export default function LowStockReportPanel({
     });
   }
 
-  function handleExport() {
+  async function handleExport() {
     if (includedItems.length === 0) return;
-    exportLowStockToPdf(includedItems, {
-      categoryLabel,
-      generatedAt: new Date(),
-    });
+
+    setExporting(true);
+    setExportError("");
+
+    try {
+      await exportLowStockToPdf(includedItems, {
+        categoryLabel,
+        generatedAt: new Date(),
+      });
+    } catch {
+      setExportError("تعذّر تنزيل الملف. حاول مرة أخرى.");
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -110,12 +122,19 @@ export default function LowStockReportPanel({
             type="button"
             size="sm"
             onClick={handleExport}
-            disabled={includedItems.length === 0}
+            loading={exporting}
+            disabled={includedItems.length === 0 || exporting}
           >
             <FileDown className="h-4 w-4" />
-            تصدير PDF ({includedItems.length})
+            تنزيل PDF ({includedItems.length})
           </Button>
         </div>
+
+        {exportError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-danger">
+            {exportError}
+          </div>
+        )}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="w-full sm:max-w-xs">
@@ -140,8 +159,8 @@ export default function LowStockReportPanel({
         </div>
 
         <p className="text-xs text-muted">
-          حدّد المنتجات المراد تضمينها في ملف PDF لإعادة الطلب. المنتجات غير
-          المحددة لن تُصدَّر.
+          حدّد المنتجات المراد تضمينها في ملف PDF لإعادة الطلب. سيُنزَّل الملف
+          مباشرة إلى جهازك.
         </p>
       </CardHeader>
 
