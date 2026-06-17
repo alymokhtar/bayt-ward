@@ -791,6 +791,7 @@ export const getCachedInventoryReport = unstable_cache(
             color: string;
             stockQuantity: number;
             minStockLevel: number;
+            categoryId: string;
             category: string;
           }[]
         >`
@@ -802,6 +803,7 @@ export const getCachedInventoryReport = unstable_cache(
             pv.color,
             pv."stockQuantity" AS "stockQuantity",
             pv."minStockLevel" AS "minStockLevel",
+            c.id AS "categoryId",
             COALESCE(c."nameAr", c.name) AS category
           FROM "ProductVariant" pv
           INNER JOIN "Product" p ON pv."productId" = p.id
@@ -809,8 +811,7 @@ export const getCachedInventoryReport = unstable_cache(
           WHERE pv."isActive" = true
             AND p."isActive" = true
             AND pv."stockQuantity" <= pv."minStockLevel"
-          ORDER BY pv."stockQuantity" ASC
-          LIMIT 200
+          ORDER BY category ASC, pv."stockQuantity" ASC, "productName" ASC
         `,
         prisma.$queryRaw<
           {

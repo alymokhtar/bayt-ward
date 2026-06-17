@@ -1,4 +1,4 @@
-import Badge from "@/components/ui/Badge";
+import LowStockReportPanel from "@/app/(dashboard)/reports/LowStockReportPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
   Table,
@@ -109,39 +109,10 @@ export default async function ReportsContentSection({
             value={formatCurrency(inventoryReport.potentialProfit)}
           />
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              منتجات بمخزون منخفض ({inventoryReport.lowStockCount})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>المنتج</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>الكمية</TableHead>
-                  <TableHead>الحد الأدنى</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inventoryReport.lowStockItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      {item.productName} — {item.size}/{item.color}
-                    </TableCell>
-                    <TableCell dir="ltr">{item.sku}</TableCell>
-                    <TableCell>
-                      <Badge variant="warning">{item.stockQuantity}</Badge>
-                    </TableCell>
-                    <TableCell>{item.minStockLevel}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <LowStockReportPanel
+          items={inventoryReport.lowStockItems}
+          totalCount={inventoryReport.lowStockCount}
+        />
       </div>
     );
   }
