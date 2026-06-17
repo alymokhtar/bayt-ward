@@ -19,7 +19,7 @@ export default function Sidebar({ role }: SidebarProps) {
   );
 
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-brown text-cream min-h-screen">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-brown text-cream min-h-screen sticky top-0 self-start h-screen">
       <div className="flex flex-col items-center gap-2 border-b border-cream/10 px-6 py-6">
         <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-gold/40 bg-cream/10">
           <Image
