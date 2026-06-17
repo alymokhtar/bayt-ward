@@ -27,7 +27,7 @@ export default function Sidebar({ role }: SidebarProps) {
             alt={STORE_NAME}
             fill
             sizes="56px"
-            className="object-contain p-1.5"
+            className="object-cover"
             priority
           />
         </div>
