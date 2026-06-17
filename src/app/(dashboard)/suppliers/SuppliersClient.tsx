@@ -21,6 +21,7 @@ import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import SupplierDetailsModal from "@/app/(dashboard)/suppliers/SupplierDetailsModal";
 
 type Supplier = {
   id: string;
@@ -53,6 +54,7 @@ export default function SuppliersClient({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [detailSupplierId, setDetailSupplierId] = useState<string | null>(null);
 
   function openCreate() {
     setEditing(null);
@@ -131,7 +133,15 @@ export default function SuppliersClient({
         <TableBody>
           {initial.map((s) => (
             <TableRow key={s.id}>
-              <TableCell className="font-medium">{s.name}</TableCell>
+              <TableCell>
+                <button
+                  type="button"
+                  onClick={() => setDetailSupplierId(s.id)}
+                  className="font-medium text-brown hover:text-gold hover:underline transition-colors text-start"
+                >
+                  {s.name}
+                </button>
+              </TableCell>
               <TableCell dir="ltr" className="text-start">
                 {s.phone}
               </TableCell>
@@ -219,6 +229,11 @@ export default function SuppliersClient({
           </div>
         </form>
       </Modal>
+
+      <SupplierDetailsModal
+        supplierId={detailSupplierId}
+        onClose={() => setDetailSupplierId(null)}
+      />
     </>
   );
 }

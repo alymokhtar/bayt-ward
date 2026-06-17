@@ -31,6 +31,78 @@ export async function getSuppliers(includeInactive = false) {
   return getCachedSuppliersList(JSON.stringify({ includeInactive }));
 }
 
+export async function getSupplierDetails(supplierId: string) {
+  await requireRole(["ADMIN", "MANAGER"]);
+
+  const supplier = await prisma.supplier.findUnique({
+    where: { id: supplierId },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      email: true,
+      address: true,
+      notes: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+      purchases: {
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          totalAmount: true,
+          subtotal: true,
+          status: true,
+          notes: true,
+          createdAt: true,
+          receivedAt: true,
+          user: { select: { name: true } },
+          _count: { select: { items: true } },
+          items: {
+            select: {
+              quantity: true,
+              unitCost: true,
+              totalCost: true,
+              variant: {
+                select: {
+                  sku: true,
+                  size: true,
+                  color: true,
+                  product: { select: { name: true, nameAr: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!supplier) {
+    throw new Error("المورد غير موجود");
+  }
+
+  const activePurchases = supplier.purchases.filter(
+    (p) => p.status !== "CANCELLED"
+  );
+  const totalPurchaseAmount = activePurchases.reduce(
+    (sum, p) => sum + p.totalAmount,
+    0
+  );
+  const lastPurchase = activePurchases[0] ?? null;
+
+  return {
+    ...supplier,
+    summary: {
+      purchaseCount: activePurchases.length,
+      totalPurchaseAmount,
+      lastPurchaseAmount: lastPurchase?.totalAmount ?? null,
+      lastPurchaseAt: lastPurchase?.createdAt ?? null,
+    },
+  };
+}
+
 export async function createSupplier(data: {
   name: string;
   phone: string;

@@ -92,6 +92,13 @@ export default function PurchasesClient({
     }
   }, [modalOpen]);
 
+  function focusAddProduct() {
+    setQuery("");
+    setResults([]);
+    setError("");
+    setTimeout(() => searchRef.current?.focus(), 0);
+  }
+
   function addItem(variant: VariantResult) {
     setItems((prev) => {
       const existing = prev.find((i) => i.variant.id === variant.id);
@@ -109,6 +116,7 @@ export default function PurchasesClient({
     });
     setQuery("");
     setResults([]);
+    setError("");
     searchRef.current?.focus();
   }
 
@@ -285,19 +293,31 @@ export default function PurchasesClient({
             required
           />
 
-          <div className="relative">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setError("");
-              }}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="ابحث بالباركود أو SKU أو اسم المنتج ثم Enter..."
-              className="w-full h-11 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
-            />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-sm font-medium text-brown">
+                إضافة منتج
+              </label>
+              {items.length > 0 && (
+                <span className="text-xs text-muted">
+                  {items.length} منتج في الأمر
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setError("");
+                }}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="ابحث بالباركود أو SKU أو اسم المنتج ثم Enter..."
+                className="w-full h-11 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
+              />
+            </div>
           </div>
 
           {searching ? (
@@ -397,6 +417,15 @@ export default function PurchasesClient({
                   </div>
                 </div>
               ))}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={focusAddProduct}
+              >
+                <Plus className="h-4 w-4" />
+                إضافة منتج آخر
+              </Button>
               <p className="text-sm font-semibold text-brown pt-1">
                 إجمالي الأمر: {formatCurrency(subtotal)}
               </p>
