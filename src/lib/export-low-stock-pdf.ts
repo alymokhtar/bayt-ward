@@ -59,12 +59,13 @@ function buildReportHtml(
       .entries()
   );
 
-  const blocks = groupedItems
+  const tableRows = groupedItems
     .map(([productName, productItems]) => {
-      const rows = productItems
+      const groupRows = productItems
         .map((item) => {
           return `
             <tr>
+              <td>${escapeHtml(productName)}</td>
               <td>${escapeHtml(item.color)}</td>
               <td>${escapeHtml(item.size)}</td>
               <td>${item.stockQuantity}</td>
@@ -75,20 +76,10 @@ function buildReportHtml(
         .join("");
 
       return `
-        <section class="product-block">
-          <div class="product-title">${escapeHtml(productName)}</div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width:28%">اللون</th>
-                <th style="width:28%">المقاس</th>
-                <th style="width:22%">الكمية المتاحة</th>
-                <th style="width:22%">الحد الأدنى</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-        </section>
+        <tr class="group-row">
+          <td colspan="5">${escapeHtml(productName)}</td>
+        </tr>
+        ${groupRows}
       `;
     })
     .join("");
@@ -138,28 +129,12 @@ function buildReportHtml(
       font-size: 13px;
       flex-wrap: wrap;
     }
-    .product-block {
-      margin-bottom: 18px;
-      padding: 14px;
-      border: 1px solid #E8E0D5;
-      border-radius: 12px;
-      background: #fff;
-      break-inside: avoid;
-      page-break-inside: avoid;
-    }
-    .product-title {
-      margin-bottom: 10px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid #E8E0D5;
-      font-size: 15px;
-      font-weight: 700;
-      color: #4B3621;
-    }
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
       table-layout: fixed;
+      background: #fff;
     }
     th, td {
       border: 1px solid #E8E0D5;
@@ -170,17 +145,27 @@ function buildReportHtml(
     th {
       background: #F5F0E8;
       font-weight: 700;
+      text-align: center;
     }
     tbody tr:nth-child(even) {
       background: #FCFAF6;
     }
-    tbody td:nth-child(3),
-    tbody td:nth-child(4) {
+    .group-row td {
+      background: #EFE4CF;
+      font-weight: 700;
+      color: #4B3621;
+      text-align: right;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    tbody td:nth-child(4),
+    tbody td:nth-child(5) {
       text-align: center;
       white-space: nowrap;
     }
     tbody td:nth-child(1),
-    tbody td:nth-child(2) {
+    tbody td:nth-child(2),
+    tbody td:nth-child(3) {
       word-break: break-word;
     }
     .footer {
@@ -205,7 +190,18 @@ function buildReportHtml(
     <div>عدد الأصناف: <strong>${items.length}</strong></div>
     <div>التاريخ: <strong>${dateLabel} — ${timeLabel}</strong></div>
   </div>
-  ${blocks}
+  <table>
+    <thead>
+      <tr>
+        <th style="width:32%">المنتج</th>
+        <th style="width:18%">اللون</th>
+        <th style="width:18%">المقاس</th>
+        <th style="width:16%">الكمية المتاحة</th>
+        <th style="width:16%">الحد الأدنى</th>
+      </tr>
+    </thead>
+    <tbody>${tableRows}</tbody>
+  </table>
   <div class="footer">
     تم إنشاء التقرير من نظام بيت ورد — للاستخدام الداخلي في إعادة الطلب من الموردين
   </div>
