@@ -68,10 +68,11 @@ function buildReportElement(
     .join("");
 
   const container = document.createElement("div");
+  container.dataset.lowStockPdf = "true";
   container.dir = "rtl";
   container.lang = "ar";
   container.style.cssText =
-    "width:794px;padding:24px;background:#fff;color:#4B3621;font-family:var(--font-cairo),Cairo,sans-serif;";
+    "width:794px;padding:24px;background:#fff;color:#4B3621;font-family:var(--font-cairo),Cairo,sans-serif;visibility:hidden;position:fixed;left:0;top:0;pointer-events:none;";
 
   container.innerHTML = `
     <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #C9A84C;">
@@ -127,7 +128,7 @@ export async function exportLowStockToPdf(
 
   try {
     await document.fonts.ready;
-    await new Promise((resolve) => setTimeout(resolve, 150));
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
 
     const html2pdf = (await import("html2pdf.js")).default;
 
@@ -142,6 +143,24 @@ export async function exportLowStockToPdf(
           letterRendering: true,
           scrollX: 0,
           scrollY: 0,
+          windowWidth: 794,
+          onclone: (clonedDocument: Document) => {
+            const clonedContainer = clonedDocument.querySelector(
+              '[data-low-stock-pdf="true"]'
+            ) as HTMLDivElement | null;
+
+            if (!clonedContainer) return;
+
+            clonedContainer.style.visibility = "visible";
+            clonedContainer.style.position = "relative";
+            clonedContainer.style.left = "0";
+            clonedContainer.style.top = "0";
+            clonedContainer.style.pointerEvents = "auto";
+            clonedContainer.style.zIndex = "auto";
+            clonedContainer.style.margin = "0";
+            clonedDocument.body.style.margin = "0";
+            clonedDocument.body.style.background = "#fff";
+          },
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["css", "legacy"] },
