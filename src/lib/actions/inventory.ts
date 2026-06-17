@@ -9,6 +9,7 @@ import {
   getCachedStockMovementsPage,
 } from "@/lib/cached-queries";
 import { invalidateInventoryData } from "@/lib/revalidate-tags";
+import { sendTelegramMessage } from "@/lib/telegram";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -29,6 +30,80 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidateInventoryPaths() {
   invalidateInventoryData();
+}
+
+type LowStockNotificationItem = {
+  productId: string;
+  productName: string;
+  size: string;
+  color: string;
+  stockQuantity: number;
+  minStockLevel: number;
+};
+
+async function notifyLowStockItems(items: LowStockNotificationItem[]) {
+  if (items.length === 0) return;
+
+  const groupedItems = new Map<string, LowStockNotificationItem[]>();
+  for (const item of items) {
+    const group = groupedItems.get(item.productId) ?? [];
+    group.push(item);
+    groupedItems.set(item.productId, group);
+  }
+
+  const message = [
+    "⚠️ مخزون منخفض",
+    "",
+    ...Array.from(groupedItems.entries()).flatMap(([, group]) => {
+      const productName = group[0]?.productName || "—";
+      return [
+        `• ${productName}`,
+        ...group.map(
+          (item) =>
+            `  - ${item.color} / ${item.size}: ${item.stockQuantity} من ${item.minStockLevel}`
+        ),
+      ];
+    }),
+  ].join("\n");
+
+  void sendTelegramMessage(message);
+}
+
+export async function checkLowStockAndNotify(variantIds?: string[]) {
+  try {
+    const variants = await prisma.productVariant.findMany({
+      where: {
+        isActive: true,
+        ...(variantIds?.length ? { id: { in: variantIds } } : {}),
+      },
+      select: {
+        id: true,
+        productId: true,
+        size: true,
+        color: true,
+        stockQuantity: true,
+        minStockLevel: true,
+        product: {
+          select: { name: true, nameAr: true },
+        },
+      },
+    });
+
+    await notifyLowStockItems(
+      variants
+        .filter((variant) => variant.stockQuantity <= variant.minStockLevel)
+        .map((variant) => ({
+          productId: variant.productId,
+          productName: variant.product.nameAr || variant.product.name,
+          size: variant.size,
+          color: variant.color,
+          stockQuantity: variant.stockQuantity,
+          minStockLevel: variant.minStockLevel,
+        }))
+    );
+  } catch (error) {
+    console.error("Low stock notification failed", error);
+  }
 }
 
 export async function getLowStockPreview(limit = 8) {
@@ -121,6 +196,7 @@ export async function adjustStock(data: {
     });
 
     revalidateInventoryPaths();
+    void checkLowStockAndNotify([data.variantId]);
     return { success: true, data: movement };
   } catch (error) {
     return handleActionError(error);

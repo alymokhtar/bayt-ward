@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import type { ExpenseCategory } from "@prisma/client";
 import { invalidateExpensesData } from "@/lib/revalidate-tags";
 import { getCachedExpensesList } from "@/lib/cached-queries";
+import { sendTelegramMessage } from "@/lib/telegram";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -25,6 +26,43 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidateExpensePaths() {
   invalidateExpensesData();
+}
+
+function buildExpenseTelegramMessage(expense: {
+  title: string;
+  amount: number;
+  category: ExpenseCategory;
+  description: string | null;
+  user?: { name: string } | null;
+}) {
+  const dateTime = new Date().toLocaleString("ar-EG", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return [
+    "💰 مصروف جديد",
+    "",
+    `نوع المصروف: ${
+      {
+        RENT: "إيجار",
+        UTILITIES: "مرافق",
+        SALARIES: "رواتب",
+        MARKETING: "تسويق",
+        SUPPLIES: "مستلزمات",
+        MAINTENANCE: "صيانة",
+        OTHER: "أخرى",
+      }[expense.category] || expense.category
+    }`,
+    `المبلغ: ${expense.amount.toLocaleString("ar-EG")} ج.م`,
+    `الوصف: ${expense.description || expense.title}`,
+    `اسم المستخدم: ${expense.user?.name || "—"}`,
+    `التاريخ والوقت: ${dateTime}`,
+  ].join("\n");
 }
 
 export async function getExpenses(options?: {
@@ -135,6 +173,7 @@ export async function createExpense(data: {
       });
 
       revalidateExpensePaths();
+      void sendTelegramMessage(buildExpenseTelegramMessage(expense));
       return { success: true, data: expense };
     }
 
@@ -154,6 +193,7 @@ export async function createExpense(data: {
     });
 
     revalidateExpensePaths();
+    void sendTelegramMessage(buildExpenseTelegramMessage(expense));
     return { success: true, data: expense };
   } catch (error) {
     return handleActionError(error);

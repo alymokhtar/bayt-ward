@@ -5,6 +5,8 @@ import { requireAuth } from "@/lib/auth";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { getCachedSalesPage } from "@/lib/cached-queries";
 import { invalidateSalesData } from "@/lib/revalidate-tags";
+import { sendTelegramMessage } from "@/lib/telegram";
+import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import type { PaymentMethod } from "@prisma/client";
 
 type ActionResult<T = void> =
@@ -34,6 +36,35 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidateSalePaths() {
   invalidateSalesData();
+}
+
+function formatSaleTelegramMessage(sale: {
+  invoiceNumber: string;
+  totalAmount: number;
+  customer?: { name: string | null } | null;
+  user?: { name: string } | null;
+  items: { quantity: number }[];
+}) {
+  const totalQuantity = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+  const dateTime = new Date().toLocaleString("ar-EG", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return [
+    "🛒 عملية بيع جديدة",
+    "",
+    `رقم الفاتورة: ${sale.invoiceNumber}`,
+    `اسم العميل: ${sale.customer?.name || "عميل نقدي"}`,
+    `عدد المنتجات: ${totalQuantity}`,
+    `إجمالي الفاتورة: ${sale.totalAmount.toLocaleString("ar-EG")} ج.م`,
+    `اسم المستخدم: ${sale.user?.name || "—"}`,
+    `التاريخ والوقت: ${dateTime}`,
+  ].join("\n");
 }
 
 export async function getSales(options?: {
@@ -290,6 +321,9 @@ export async function createSale(data: {
     });
 
     revalidateSalePaths();
+
+    void checkLowStockAndNotify(data.items.map((item) => item.variantId));
+    void sendTelegramMessage(formatSaleTelegramMessage(sale));
     return { success: true, data: sale };
   } catch (error) {
     return handleActionError(error);
@@ -387,6 +421,25 @@ export async function cancelSale(id: string, reason?: string) {
     });
 
     revalidateSalePaths();
+
+    void sendTelegramMessage(
+      [
+        "🔁 إلغاء عملية بيع",
+        "",
+        `رقم الفاتورة: ${cancelled.invoiceNumber}`,
+        `الإجمالي: ${cancelled.totalAmount.toLocaleString("ar-EG")} ج.م`,
+        `اسم المستخدم: ${cancelled.user.name}`,
+        `التاريخ والوقت: ${new Date().toLocaleString("ar-EG", {
+          timeZone: "Africa/Cairo",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`,
+      ].join("\n")
+    );
+
     return { success: true, data: cancelled };
   } catch (error) {
     return handleActionError(error);

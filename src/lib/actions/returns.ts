@@ -5,6 +5,8 @@ import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { invalidateReturnsData } from "@/lib/revalidate-tags";
 import { getCachedReturnsList } from "@/lib/cached-queries";
+import { checkLowStockAndNotify } from "@/lib/actions/inventory";
+import { sendTelegramMessage } from "@/lib/telegram";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -32,6 +34,32 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidateReturnPaths() {
   invalidateReturnsData();
+}
+
+function buildReturnTelegramMessage(returnRecord: {
+  returnNumber: string;
+  sale: { invoiceNumber: string };
+  refundAmount: number;
+  user?: { name: string } | null;
+}) {
+  const dateTime = new Date().toLocaleString("ar-EG", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return [
+    "🔁 مرتجع جديد",
+    "",
+    `رقم المرتجع: ${returnRecord.returnNumber}`,
+    `رقم الفاتورة الأصلية: ${returnRecord.sale.invoiceNumber}`,
+    `المبلغ المسترد: ${returnRecord.refundAmount.toLocaleString("ar-EG")} ج.م`,
+    `اسم المستخدم: ${returnRecord.user?.name || "—"}`,
+    `التاريخ والوقت: ${dateTime}`,
+  ].join("\n");
 }
 
 export async function getReturns(options?: {
@@ -192,6 +220,8 @@ export async function createReturn(data: {
     });
 
     revalidateReturnPaths();
+    void checkLowStockAndNotify(data.items.map((item) => item.variantId));
+    void sendTelegramMessage(buildReturnTelegramMessage(returnRecord));
     return { success: true, data: returnRecord };
   } catch (error) {
     return handleActionError(error);
