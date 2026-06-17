@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import BarcodePrintSheet, {
   type LabelData,
 } from "@/components/barcode/BarcodePrintSheet";
+import { getBarcodeValue } from "@/lib/barcode";
 import { formatCurrency } from "@/lib/utils";
 import { Barcode, Search } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -51,7 +52,7 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
         return {
           id: variant.id,
           sku: variant.sku,
-          barcode: variant.barcode || variant.sku,
+          barcode: getBarcodeValue(variant.barcode, variant.sku),
           productName: variant.product.nameAr || variant.product.name,
           size: variant.size,
           color: variant.color,
@@ -109,7 +110,8 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="بحث..."
+                placeholder="بحث بالباركود أو SKU..."
+                autoComplete="off"
                 className="w-full h-10 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30"
               />
             </div>

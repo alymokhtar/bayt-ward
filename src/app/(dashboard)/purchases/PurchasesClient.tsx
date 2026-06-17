@@ -14,7 +14,8 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { createPurchase, receivePurchase } from "@/lib/actions/purchases";
-import { lookupVariantByCode, searchVariants } from "@/lib/actions/products";
+import { searchVariants } from "@/lib/actions/products";
+import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { PackageCheck, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -121,28 +122,23 @@ export default function PurchasesClient({
   }
 
   async function resolveAndAdd(queryText: string) {
-    const q = queryText.trim();
-    if (!q) return;
+    const result = await scanVariantCode(queryText);
 
-    const exact = await lookupVariantByCode(q);
-    if (exact) {
-      addItem(exact);
+    if (result.status === "found") {
+      addItem(result.variant);
       return;
     }
 
-    const matches = await searchVariants(q);
-    if (matches.length === 1) {
-      addItem(matches[0]);
-      return;
-    }
-
-    if (matches.length > 1) {
-      setResults(matches);
+    if (result.status === "choose") {
+      setResults(result.matches);
       setError("اختر المنتج من القائمة");
       return;
     }
 
-    setError("لم يتم العثور على منتج بهذا الباركود أو الاسم");
+    if (result.status === "not_found") {
+      setError("لم يتم العثور على منتج بهذا الباركود أو الاسم");
+      setResults([]);
+    }
   }
 
   async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -314,8 +310,9 @@ export default function PurchasesClient({
                   setError("");
                 }}
                 onKeyDown={handleSearchKeyDown}
-                placeholder="ابحث بالباركود أو SKU أو اسم المنتج ثم Enter..."
-                className="w-full h-11 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
+              placeholder="امسح الباركود أو ابحث بالـ SKU أو اسم المنتج ثم Enter..."
+              className="w-full h-11 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
+              autoComplete="off"
               />
             </div>
           </div>

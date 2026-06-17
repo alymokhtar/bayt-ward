@@ -39,7 +39,8 @@ export default async function InventoryPage({
               <input
                 name="search"
                 defaultValue={search}
-                placeholder="بحث..."
+                placeholder="امسح الباركود أو ابحث بالـ SKU..."
+                autoComplete="off"
                 className="w-full h-10 rounded-lg border border-border bg-white ps-10 pe-4 text-sm"
               />
             </div>

@@ -107,7 +107,17 @@ export default function ProductForm({
     value: string | number | boolean
   ) {
     setVariants((prev) =>
-      prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
+      prev.map((v, i) => {
+        if (i !== index) return v;
+        const next = { ...v, [field]: value };
+        if (field === "sku") {
+          const sku = String(value);
+          if (!v.barcode?.trim() || v.barcode === v.sku) {
+            next.barcode = sku;
+          }
+        }
+        return next;
+      })
     );
   }
 
@@ -267,6 +277,7 @@ export default function ProductForm({
                 value={variant.barcode || ""}
                 onChange={(e) => updateVariant(index, "barcode", e.target.value)}
                 dir="ltr"
+                hint="يُستخدم للمسح (CODE128) — يُنسخ من SKU إن تُرك فارغاً"
               />
               <Select
                 label="المقاس"

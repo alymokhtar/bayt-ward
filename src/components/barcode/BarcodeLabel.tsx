@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import JsBarcode from "jsbarcode";
+import { isCode128Compatible } from "@/lib/barcode";
 
 interface BarcodeLabelProps {
   value: string;
@@ -19,11 +20,12 @@ export default function BarcodeLabel({
   className,
 }: BarcodeLabelProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  const valid = isCode128Compatible(value);
 
   useEffect(() => {
-    if (!svgRef.current || !value) return;
+    if (!svgRef.current || !value || !valid) return;
     try {
-      JsBarcode(svgRef.current, value, {
+      JsBarcode(svgRef.current, value.trim(), {
         format: "CODE128",
         width,
         height,
@@ -38,7 +40,15 @@ export default function BarcodeLabel({
     } catch {
       // invalid barcode value
     }
-  }, [value, width, height, displayValue]);
+  }, [value, width, height, displayValue, valid]);
+
+  if (!valid) {
+    return (
+      <p className="text-xs text-danger py-2">
+        باركود غير صالح للطباعة (استخدم أحرفاً إنجليزية وأرقاماً)
+      </p>
+    );
+  }
 
   return <svg ref={svgRef} className={className} />;
 }

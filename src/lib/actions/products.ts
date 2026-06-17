@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
+import { normalizeScanCode, resolveStoredBarcode } from "@/lib/barcode";
 import {
   getCachedProductsPage,
 } from "@/lib/cached-queries";
@@ -129,7 +130,7 @@ export async function createProduct(data: {
           variants: {
             create: data.variants.map((v) => ({
               sku: v.sku.trim(),
-              barcode: v.barcode?.trim() || null,
+              barcode: resolveStoredBarcode(v.sku, v.barcode),
               size: v.size,
               color: v.color,
               colorHex: v.colorHex,
@@ -238,7 +239,7 @@ export async function updateProduct(
               where: { id: variant.id },
               data: {
                 sku: variant.sku.trim(),
-                barcode: variant.barcode?.trim() || null,
+                barcode: resolveStoredBarcode(variant.sku, variant.barcode),
                 size: variant.size,
                 color: variant.color,
                 colorHex: variant.colorHex,
@@ -253,7 +254,7 @@ export async function updateProduct(
               data: {
                 productId: id,
                 sku: variant.sku.trim(),
-                barcode: variant.barcode?.trim() || null,
+                barcode: resolveStoredBarcode(variant.sku, variant.barcode),
                 size: variant.size,
                 color: variant.color,
                 colorHex: variant.colorHex,
@@ -351,7 +352,7 @@ const variantSearchSelect = {
 export async function lookupVariantByCode(code: string) {
   await requireAuth();
 
-  const q = code?.trim();
+  const q = normalizeScanCode(code);
   if (!q) return null;
 
   return prisma.productVariant.findFirst({

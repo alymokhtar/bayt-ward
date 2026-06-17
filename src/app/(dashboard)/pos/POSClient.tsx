@@ -8,6 +8,7 @@ import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
 import { createSale } from "@/lib/actions/sales";
 import { createCustomer, searchCustomers } from "@/lib/actions/customers";
 import { searchVariants } from "@/lib/actions/products";
+import { scanVariantCode } from "@/lib/variant-scan-client";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import { buildWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp";
@@ -143,7 +144,38 @@ export default function POSClient({
     });
     setQuery("");
     setResults([]);
+    setError("");
     searchRef.current?.focus();
+  }
+
+  async function resolveScanAndAdd(code: string) {
+    const result = await scanVariantCode(code);
+
+    if (result.status === "found") {
+      if (result.variant.stockQuantity <= 0) {
+        setError("المنتج غير متوفر في المخزون");
+        return;
+      }
+      addToCart(result.variant);
+      return;
+    }
+
+    if (result.status === "choose") {
+      setResults(result.matches);
+      setError("اختر المنتج من القائمة");
+      return;
+    }
+
+    if (result.status === "not_found") {
+      setError("لم يتم العثور على منتج بهذا الباركود");
+      setResults([]);
+    }
+  }
+
+  async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    await resolveScanAndAdd(query);
   }
 
   function updateQuantity(variantId: string, delta: number) {
@@ -298,11 +330,22 @@ export default function POSClient({
           <input
             ref={searchRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث بالباركود أو SKU أو اسم المنتج..."
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setError("");
+            }}
+            onKeyDown={handleSearchKeyDown}
+            placeholder="امسح الباركود أو ابحث بالـ SKU أو اسم المنتج ثم Enter..."
             className="w-full h-12 rounded-xl border border-border bg-white ps-10 pe-4 text-brown focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
+            autoComplete="off"
           />
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-danger">
+            {error}
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto rounded-xl border border-border bg-white">
           {searching ? (
