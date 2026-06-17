@@ -26,8 +26,8 @@ export async function sendTelegramMessage(message: string): Promise<void> {
         body: JSON.stringify({
           chat_id: config.chatId,
           text: message,
-          parse_mode: "HTML",
           disable_web_page_preview: true,
+          disable_notification: false,
         }),
       }
     );
@@ -38,6 +38,7 @@ export async function sendTelegramMessage(message: string): Promise<void> {
         status: response.status,
         statusText: response.statusText,
         errorText,
+        message,
       });
     }
   } catch (error) {
