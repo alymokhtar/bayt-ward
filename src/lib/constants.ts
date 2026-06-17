@@ -163,3 +163,15 @@ export const USER_ROLES = [
   { value: "MANAGER", label: "مدير فرع" },
   { value: "CASHIER", label: "كاشير" },
 ];
+
+export const EMPLOYEE_ADJUSTMENT_TYPES = [
+  { value: "ADVANCE", label: "سلفة" },
+  { value: "DEDUCTION", label: "خصم" },
+  { value: "ABSENCE", label: "غياب" },
+] as const;
+
+export const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
+  ADVANCE: "سلفة",
+  DEDUCTION: "خصم",
+  ABSENCE: "غياب",
+};

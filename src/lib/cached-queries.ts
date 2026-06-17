@@ -1038,6 +1038,7 @@ export const getCachedExpensesList = unstable_cache(
       take: options.limit ?? 100,
       include: {
         user: { select: { id: true, name: true } },
+        employee: { select: { id: true, name: true } },
       },
     });
   },

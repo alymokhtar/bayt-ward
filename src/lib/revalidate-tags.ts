@@ -74,9 +74,11 @@ export function invalidateReturnsData() {
 
 export function invalidateExpensesData() {
   updateTag(CACHE_TAG.expenses);
+  updateTag(CACHE_TAG.employees);
   updateTag(CACHE_TAG.dashboard);
   updateTag(CACHE_TAG.reports);
   revalidatePath("/expenses");
+  revalidatePath("/employees");
   revalidatePath("/dashboard");
   revalidatePath("/reports");
 }
@@ -99,8 +101,10 @@ export function invalidateSuppliersData() {
 
 export function invalidateEmployeesData() {
   updateTag(CACHE_TAG.employees);
+  updateTag(CACHE_TAG.expenses);
   updateTag(CACHE_TAG.session);
   revalidatePath("/employees");
+  revalidatePath("/expenses");
 }
 
 export function invalidateSettingsData() {

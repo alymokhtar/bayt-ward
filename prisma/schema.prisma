@@ -59,6 +59,12 @@ enum ExpenseCategory {
   OTHER
 }
 
+enum EmployeeAdjustmentType {
+  ADVANCE
+  DEDUCTION
+  ABSENCE
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -66,15 +72,19 @@ model User {
   password  String
   phone     String?
   role      UserRole @default(CASHIER)
+  salary    Float    @default(0)
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sales         Sale[]
-  purchases     Purchase[]
-  returns       Return[]
-  stockMovements StockMovement[]
-  expenses      Expense[]
+  sales                Sale[]
+  purchases            Purchase[]
+  returns              Return[]
+  stockMovements       StockMovement[]
+  expenses             Expense[]            @relation("RecordedExpenses")
+  salaryExpenses       Expense[]            @relation("SalaryExpenses")
+  employeeAdjustments  EmployeeAdjustment[] @relation("EmployeeAdjustments")
+  adjustmentsCreated   EmployeeAdjustment[] @relation("AdjustmentsCreated")
 }
 
 model Category {
@@ -311,20 +321,48 @@ model StockMovement {
 }
 
 model Expense {
-  id          String          @id @default(cuid())
-  title       String
-  amount      Float
-  category    ExpenseCategory @default(OTHER)
-  description String?
-  userId      String
-  expenseDate DateTime        @default(now())
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  id              String          @id @default(cuid())
+  title           String
+  amount          Float
+  category        ExpenseCategory @default(OTHER)
+  description     String?
+  userId          String
+  employeeId      String?
+  baseSalary      Float?
+  deductionsTotal Float?
+  expenseDate     DateTime        @default(now())
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user        User                 @relation("RecordedExpenses", fields: [userId], references: [id])
+  employee    User?                @relation("SalaryExpenses", fields: [employeeId], references: [id])
+  adjustments EmployeeAdjustment[]
 
   @@index([userId])
+  @@index([employeeId])
   @@index([expenseDate])
+}
+
+model EmployeeAdjustment {
+  id             String                 @id @default(cuid())
+  userId         String
+  createdById    String
+  type           EmployeeAdjustmentType
+  amount         Float
+  title          String?
+  notes          String?
+  adjustmentDate DateTime               @default(now())
+  settled        Boolean                @default(false)
+  settledAt      DateTime?
+  expenseId      String?
+  createdAt      DateTime               @default(now())
+
+  employee  User     @relation("EmployeeAdjustments", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User     @relation("AdjustmentsCreated", fields: [createdById], references: [id])
+  expense   Expense? @relation(fields: [expenseId], references: [id], onDelete: SetNull)
+
+  @@index([userId, settled])
+  @@index([expenseId])
 }
 
 model Setting {

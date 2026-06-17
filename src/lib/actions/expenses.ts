@@ -50,6 +50,7 @@ export async function createExpense(data: {
   category?: ExpenseCategory;
   description?: string;
   expenseDate?: Date;
+  employeeId?: string;
 }) {
   try {
     const user = await requireRole(["ADMIN", "MANAGER"]);
@@ -60,6 +61,81 @@ export async function createExpense(data: {
 
     if (!data.amount || data.amount <= 0) {
       return { success: false, error: "المبلغ يجب أن يكون أكبر من صفر" };
+    }
+
+    if (data.category === "SALARIES") {
+      if (!data.employeeId) {
+        return { success: false, error: "يجب اختيار الموظف لمصروف الراتب" };
+      }
+
+      const employee = await prisma.user.findUnique({
+        where: { id: data.employeeId },
+        select: {
+          id: true,
+          name: true,
+          salary: true,
+          isActive: true,
+          employeeAdjustments: {
+            where: { settled: false },
+            select: { id: true, amount: true },
+          },
+        },
+      });
+
+      if (!employee || !employee.isActive) {
+        return { success: false, error: "الموظف غير موجود" };
+      }
+
+      const deductionsTotal = employee.employeeAdjustments.reduce(
+        (sum, item) => sum + item.amount,
+        0
+      );
+      const expectedNet = Math.max(0, employee.salary - deductionsTotal);
+
+      if (Math.abs(data.amount - expectedNet) > 0.01) {
+        return {
+          success: false,
+          error: `صافي الراتب المتوقع هو ${expectedNet.toFixed(2)} ج.م`,
+        };
+      }
+
+      const expense = await prisma.$transaction(async (tx) => {
+        const created = await tx.expense.create({
+          data: {
+            title: data.title.trim(),
+            amount: data.amount,
+            category: "SALARIES",
+            description: data.description?.trim(),
+            expenseDate: data.expenseDate ?? new Date(),
+            userId: user.id,
+            employeeId: employee.id,
+            baseSalary: employee.salary,
+            deductionsTotal,
+          },
+          include: {
+            user: { select: { id: true, name: true } },
+            employee: { select: { id: true, name: true } },
+          },
+        });
+
+        if (employee.employeeAdjustments.length > 0) {
+          await tx.employeeAdjustment.updateMany({
+            where: {
+              id: { in: employee.employeeAdjustments.map((a) => a.id) },
+            },
+            data: {
+              settled: true,
+              settledAt: new Date(),
+              expenseId: created.id,
+            },
+          });
+        }
+
+        return created;
+      });
+
+      revalidateExpensePaths();
+      return { success: true, data: expense };
     }
 
     const expense = await prisma.expense.create({
@@ -73,6 +149,7 @@ export async function createExpense(data: {
       },
       include: {
         user: { select: { id: true, name: true } },
+        employee: { select: { id: true, name: true } },
       },
     });
 
@@ -92,7 +169,13 @@ export async function deleteExpense(id: string) {
       return { success: false, error: "المصروف غير موجود" };
     }
 
-    await prisma.expense.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.employeeAdjustment.updateMany({
+        where: { expenseId: id },
+        data: { settled: false, settledAt: null, expenseId: null },
+      });
+      await tx.expense.delete({ where: { id } });
+    });
 
     revalidateExpensePaths();
     return { success: true, data: undefined };

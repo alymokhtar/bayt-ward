@@ -13,14 +13,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
+import EmployeeAdjustmentModal from "@/app/(dashboard)/employees/EmployeeAdjustmentModal";
 import {
   createEmployee,
   updateEmployee,
   deleteEmployee,
 } from "@/lib/actions/employees";
 import { USER_ROLES } from "@/lib/constants";
-import { formatDate, getRoleLabel } from "@/lib/utils";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { formatCurrency, formatDate, getRoleLabel } from "@/lib/utils";
+import { Banknote, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -30,6 +31,8 @@ type Employee = {
   email: string;
   phone: string | null;
   role: string;
+  salary: number;
+  pendingDeductions: number;
   isActive: boolean;
   createdAt: Date;
 };
@@ -44,11 +47,16 @@ export default function EmployeesClient({
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Employee | null>(null);
+  const [adjustmentEmployee, setAdjustmentEmployee] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("CASHIER");
+  const [salary, setSalary] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -59,6 +67,7 @@ export default function EmployeesClient({
     setPhone("");
     setPassword("");
     setRole("CASHIER");
+    setSalary("");
     setError("");
     setModalOpen(true);
   }
@@ -70,6 +79,7 @@ export default function EmployeesClient({
     setPhone(emp.phone || "");
     setPassword("");
     setRole(emp.role);
+    setSalary(emp.salary.toString());
     setError("");
     setModalOpen(true);
   }
@@ -79,12 +89,14 @@ export default function EmployeesClient({
     setLoading(true);
     setError("");
 
+    const salaryValue = parseFloat(salary) || 0;
     const result = editing
       ? await updateEmployee(editing.id, {
           name,
           email,
           phone,
           role: role as "ADMIN" | "MANAGER" | "CASHIER",
+          salary: salaryValue,
           ...(password ? { password } : {}),
         })
       : await createEmployee({
@@ -93,6 +105,7 @@ export default function EmployeesClient({
           password,
           phone,
           role: role as "ADMIN" | "MANAGER" | "CASHIER",
+          salary: salaryValue,
         });
 
     setLoading(false);
@@ -133,6 +146,8 @@ export default function EmployeesClient({
             <TableHead>الاسم</TableHead>
             <TableHead>البريد</TableHead>
             <TableHead>الدور</TableHead>
+            <TableHead>الراتب</TableHead>
+            <TableHead>استقطاعات معلقة</TableHead>
             <TableHead>الحالة</TableHead>
             <TableHead>تاريخ الإنشاء</TableHead>
             <TableHead>الإجراءات</TableHead>
@@ -148,6 +163,18 @@ export default function EmployeesClient({
               <TableCell>
                 <Badge variant="gold">{getRoleLabel(emp.role)}</Badge>
               </TableCell>
+              <TableCell className="font-medium text-gold">
+                {formatCurrency(emp.salary)}
+              </TableCell>
+              <TableCell>
+                {emp.pendingDeductions > 0 ? (
+                  <span className="font-medium text-danger">
+                    {formatCurrency(emp.pendingDeductions)}
+                  </span>
+                ) : (
+                  <span className="text-muted text-sm">—</span>
+                )}
+              </TableCell>
               <TableCell>
                 <button type="button" onClick={() => toggleActive(emp)}>
                   <Badge variant={emp.isActive ? "success" : "danger"}>
@@ -160,6 +187,16 @@ export default function EmployeesClient({
               </TableCell>
               <TableCell>
                 <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setAdjustmentEmployee({ id: emp.id, name: emp.name })
+                    }
+                    title="سلفة / خصم / غياب"
+                  >
+                    <Banknote className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
@@ -204,6 +241,15 @@ export default function EmployeesClient({
             dir="ltr"
           />
           <Input
+            label="الراتب الشهري"
+            type="number"
+            min={0}
+            step={0.01}
+            value={salary}
+            onChange={(e) => setSalary(e.target.value)}
+            required
+          />
+          <Input
             label={editing ? "كلمة مرور جديدة (اختياري)" : "كلمة المرور"}
             type="password"
             value={password}
@@ -227,6 +273,11 @@ export default function EmployeesClient({
           </div>
         </form>
       </Modal>
+
+      <EmployeeAdjustmentModal
+        employee={adjustmentEmployee}
+        onClose={() => setAdjustmentEmployee(null)}
+      />
     </>
   );
 }
