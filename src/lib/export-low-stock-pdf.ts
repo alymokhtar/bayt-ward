@@ -40,28 +40,14 @@ function buildReportHtml(
 
   const rows = items
     .map((item, index) => {
-      const reorderQty = suggestedReorderQuantity(
-        item.stockQuantity,
-        item.minStockLevel
-      );
-      const status =
-        item.stockQuantity === 0
-          ? "نفد"
-          : item.stockQuantity < item.minStockLevel
-            ? "منخفض"
-            : "عند الحد";
-
       return `
         <tr>
           <td>${index + 1}</td>
           <td>${escapeHtml(item.productName)}</td>
-          <td>${escapeHtml(item.size)} / ${escapeHtml(item.color)}</td>
-          <td dir="ltr">${escapeHtml(item.sku)}</td>
-          <td>${escapeHtml(item.category)}</td>
+          <td>${escapeHtml(item.color)}</td>
+          <td>${escapeHtml(item.size)}</td>
           <td>${item.stockQuantity}</td>
           <td>${item.minStockLevel}</td>
-          <td>${reorderQty}</td>
-          <td>${status}</td>
         </tr>
       `;
     })
@@ -115,16 +101,31 @@ function buildReportHtml(
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 13px;
+      table-layout: fixed;
     }
     th, td {
       border: 1px solid #E8E0D5;
-      padding: 8px 6px;
+      padding: 10px 8px;
       text-align: right;
       vertical-align: top;
     }
     th {
       background: #F5F0E8;
+      font-weight: 700;
+    }
+    tbody tr:nth-child(even) {
+      background: #FCFAF6;
+    }
+    tbody td:nth-child(1),
+    tbody td:nth-child(4),
+    tbody td:nth-child(5) {
+      text-align: center;
+      white-space: nowrap;
+    }
+    tbody td:nth-child(2),
+    tbody td:nth-child(3) {
+      word-break: break-word;
     }
     .footer {
       margin-top: 20px;
@@ -151,15 +152,12 @@ function buildReportHtml(
   <table>
     <thead>
       <tr>
-        <th>#</th>
-        <th>المنتج</th>
-        <th>المقاس / اللون</th>
-        <th class="num">SKU</th>
-        <th>التصنيف</th>
-        <th>الكمية المتاحة</th>
-        <th>الحد الأدنى</th>
-        <th>كمية مقترحة للطلب</th>
-        <th>الحالة</th>
+        <th style="width:7%">#</th>
+        <th style="width:39%">المنتج</th>
+        <th style="width:18%">اللون</th>
+        <th style="width:18%">المقاس</th>
+        <th style="width:9%">الكمية المتاحة</th>
+        <th style="width:9%">الحد الأدنى</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
