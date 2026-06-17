@@ -7,12 +7,14 @@ import Select from "@/components/ui/Select";
 import { SIZES } from "@/lib/constants";
 import {
   createProduct,
+  getNextVariantCodes,
   updateProduct,
+  type VariantCodePair,
   type VariantInput,
 } from "@/lib/actions/products";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Category = { id: string; name: string; nameAr: string | null };
 
@@ -44,13 +46,17 @@ interface ProductFormProps {
   categories: Category[];
   product?: ProductData;
   usedColors?: string[];
+  initialVariantCode?: VariantCodePair;
 }
 
 type VariantForm = VariantInput & { id?: string; isActive?: boolean };
 
-const emptyVariant = (template?: VariantForm): VariantForm => ({
-  sku: "",
-  barcode: "",
+const emptyVariant = (
+  template?: VariantForm,
+  codes?: VariantCodePair
+): VariantForm => ({
+  sku: codes?.sku ?? "",
+  barcode: codes?.barcode ?? "",
   size: template?.size ?? "M",
   color: "",
   colorHex: "",
@@ -64,6 +70,7 @@ export default function ProductForm({
   categories,
   product,
   usedColors = [],
+  initialVariantCode,
 }: ProductFormProps) {
   const router = useRouter();
   const isEdit = !!product;
@@ -88,11 +95,36 @@ export default function ProductForm({
       stockQuantity: v.stockQuantity,
       minStockLevel: v.minStockLevel,
       isActive: v.isActive,
-    })) || [emptyVariant()]
+    })) || [emptyVariant(undefined, initialVariantCode)]
   );
 
   const [loading, setLoading] = useState(false);
+  const [addingVariant, setAddingVariant] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (isEdit || initialVariantCode) return;
+
+    let cancelled = false;
+
+    async function assignInitialCodes() {
+      const result = await getNextVariantCodes(1);
+      if (cancelled || !result.success) return;
+
+      setVariants((prev) => {
+        if (prev.some((v) => v.sku.trim())) return prev;
+        return prev.map((v, i) =>
+          i === 0 ? { ...v, ...result.data[0] } : v
+        );
+      });
+    }
+
+    void assignInitialCodes();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isEdit, initialVariantCode]);
 
   const colorSuggestions = useMemo(() => {
     const fromForm = variants
@@ -107,17 +139,7 @@ export default function ProductForm({
     value: string | number | boolean
   ) {
     setVariants((prev) =>
-      prev.map((v, i) => {
-        if (i !== index) return v;
-        const next = { ...v, [field]: value };
-        if (field === "sku") {
-          const sku = String(value);
-          if (!v.barcode?.trim() || v.barcode === v.sku) {
-            next.barcode = sku;
-          }
-        }
-        return next;
-      })
+      prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
     );
   }
 
@@ -129,10 +151,22 @@ export default function ProductForm({
     );
   }
 
-  function addVariant() {
+  async function addVariant() {
+    setAddingVariant(true);
+    setError("");
+
+    const result = await getNextVariantCodes(1);
+    setAddingVariant(false);
+
+    if (!result.success) {
+      setError(result.error ?? "تعذّر توليد أكواد المتغير");
+      return;
+    }
+
+    const codes = result.data[0];
     setVariants((prev) => {
       const template = prev[0];
-      return [...prev, emptyVariant(template)];
+      return [...prev, emptyVariant(template, codes)];
     });
   }
 
@@ -238,7 +272,13 @@ export default function ProductForm({
       <div className="rounded-xl border border-border bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-brown">المتغيرات (المقاسات والألوان)</h2>
-          <Button type="button" variant="outline" size="sm" onClick={addVariant}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addVariant}
+            loading={addingVariant}
+          >
             <Plus className="h-4 w-4" />
             إضافة متغير
           </Button>
@@ -271,13 +311,18 @@ export default function ProductForm({
                 onChange={(e) => updateVariant(index, "sku", e.target.value)}
                 required
                 dir="ltr"
+                hint={!isEdit ? "يُولَّد تلقائياً — يمكن تعديله عند الحاجة" : undefined}
               />
               <Input
                 label="الباركود"
                 value={variant.barcode || ""}
                 onChange={(e) => updateVariant(index, "barcode", e.target.value)}
                 dir="ltr"
-                hint="يُستخدم للمسح (CODE128) — يُنسخ من SKU إن تُرك فارغاً"
+                hint={
+                  !isEdit
+                    ? "يُولَّد تلقائياً (CODE128) — يُستخدم للمسح والطباعة"
+                    : "يُستخدم للمسح (CODE128)"
+                }
               />
               <Select
                 label="المقاس"

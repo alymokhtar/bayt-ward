@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { normalizeScanCode, resolveStoredBarcode } from "@/lib/barcode";
+import { computeNextVariantCodes } from "@/lib/variant-codes";
 import {
   getCachedProductsPage,
 } from "@/lib/cached-queries";
@@ -87,6 +88,71 @@ export async function getUsedColors(): Promise<string[]> {
   return rows.map((row) => row.color);
 }
 
+export type VariantCodePair = { sku: string; barcode: string };
+
+export async function getNextVariantCodes(
+  count: number = 1
+): Promise<ActionResult<VariantCodePair[]>> {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+
+    if (!Number.isInteger(count) || count < 1 || count > 50) {
+      return { success: false, error: "عدد الأكواد غير صالح" };
+    }
+
+    const rows = await prisma.productVariant.findMany({
+      select: { sku: true, barcode: true },
+    });
+
+    return { success: true, data: computeNextVariantCodes(rows, count) };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+async function ensureVariantCodes(
+  variants: VariantInput[],
+  existingRows: { sku: string; barcode: string | null }[]
+): Promise<VariantInput[]> {
+  const usedSkus = new Set(existingRows.map((r) => r.sku));
+  const usedBarcodes = new Set(
+    existingRows.map((r) => r.barcode).filter((b): b is string => !!b)
+  );
+
+  const needsAllocation = variants.filter((v) => !v.sku?.trim()).length;
+
+  const freshCodes =
+    needsAllocation > 0
+      ? computeNextVariantCodes(existingRows, needsAllocation)
+      : [];
+
+  let codeIndex = 0;
+
+  return variants.map((variant) => {
+    let sku = variant.sku?.trim() ?? "";
+    let barcode = variant.barcode?.trim() ?? "";
+
+    if (!sku) {
+      const allocated = freshCodes[codeIndex++];
+      sku = allocated.sku;
+      if (!barcode) barcode = allocated.barcode;
+    } else if (!barcode) {
+      barcode = resolveStoredBarcode(sku, "");
+    } else {
+      barcode = resolveStoredBarcode(sku, barcode);
+    }
+
+    if (usedSkus.has(sku) || usedBarcodes.has(barcode)) {
+      throw new Error("رمز SKU أو الباركود مستخدم بالفعل");
+    }
+
+    usedSkus.add(sku);
+    usedBarcodes.add(barcode);
+
+    return { ...variant, sku, barcode };
+  });
+}
+
 export async function createProduct(data: {
   name: string;
   nameAr?: string;
@@ -119,6 +185,14 @@ export async function createProduct(data: {
     }
 
     const product = await prisma.$transaction(async (tx) => {
+      const existingRows = await tx.productVariant.findMany({
+        select: { sku: true, barcode: true },
+      });
+      const preparedVariants = await ensureVariantCodes(
+        data.variants,
+        existingRows
+      );
+
       const created = await tx.product.create({
         data: {
           name: data.name.trim(),
@@ -128,7 +202,7 @@ export async function createProduct(data: {
           categoryId: data.categoryId,
           imageUrl: data.imageUrl,
           variants: {
-            create: data.variants.map((v) => ({
+            create: preparedVariants.map((v) => ({
               sku: v.sku.trim(),
               barcode: resolveStoredBarcode(v.sku, v.barcode),
               size: v.size,
@@ -250,11 +324,16 @@ export async function updateProduct(
               },
             });
           } else if (!variant.id) {
+            const existingRows = await tx.productVariant.findMany({
+              select: { sku: true, barcode: true },
+            });
+            const [prepared] = await ensureVariantCodes([variant], existingRows);
+
             await tx.productVariant.create({
               data: {
                 productId: id,
-                sku: variant.sku.trim(),
-                barcode: resolveStoredBarcode(variant.sku, variant.barcode),
+                sku: prepared.sku.trim(),
+                barcode: resolveStoredBarcode(prepared.sku, prepared.barcode),
                 size: variant.size,
                 color: variant.color,
                 colorHex: variant.colorHex,
