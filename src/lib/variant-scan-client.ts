@@ -7,14 +7,16 @@ export type VariantScanResult =
   | { status: "empty" }
   | { status: "found"; variant: VariantResult }
   | { status: "choose"; matches: VariantResult[] }
+  | { status: "ambiguous"; matches: VariantResult[] }
   | { status: "not_found" };
 
 export async function scanVariantCode(code: string): Promise<VariantScanResult> {
   const q = code.trim();
   if (!q) return { status: "empty" };
 
-  const { variant, matches } = await resolveVariantScan(q);
+  const { variant, matches, ambiguous } = await resolveVariantScan(q);
 
+  if (ambiguous) return { status: "ambiguous", matches };
   if (variant) return { status: "found", variant };
   if (matches.length > 1) return { status: "choose", matches };
   return { status: "not_found" };

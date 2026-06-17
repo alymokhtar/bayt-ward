@@ -166,6 +166,12 @@ export default function POSClient({
       return;
     }
 
+    if (result.status === "ambiguous") {
+      setResults(result.matches);
+      setError("هذا الرمز مكرر بين أكثر من متغير — راجع المنتجات وصحّح الأكواد");
+      return;
+    }
+
     if (result.status === "not_found") {
       setError("لم يتم العثور على منتج بهذا الباركود");
       setResults([]);

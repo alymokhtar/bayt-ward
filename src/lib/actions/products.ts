@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { normalizeScanCode, resolveStoredBarcode } from "@/lib/barcode";
-import { computeNextVariantCodes } from "@/lib/variant-codes";
+import { computeNextVariantCodes, validateVariantCodesPayload } from "@/lib/variant-codes";
 import {
   getCachedProductsPage,
 } from "@/lib/cached-queries";
@@ -91,7 +91,8 @@ export async function getUsedColors(): Promise<string[]> {
 export type VariantCodePair = { sku: string; barcode: string };
 
 export async function getNextVariantCodes(
-  count: number = 1
+  count: number = 1,
+  pending: { sku: string; barcode?: string | null }[] = []
 ): Promise<ActionResult<VariantCodePair[]>> {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
@@ -104,7 +105,17 @@ export async function getNextVariantCodes(
       select: { sku: true, barcode: true },
     });
 
-    return { success: true, data: computeNextVariantCodes(rows, count) };
+    const merged = [
+      ...rows,
+      ...pending
+        .filter((item) => item.sku.trim())
+        .map((item) => ({
+          sku: item.sku.trim(),
+          barcode: item.barcode?.trim() || null,
+        })),
+    ];
+
+    return { success: true, data: computeNextVariantCodes(merged, count) };
   } catch (error) {
     return handleActionError(error);
   }
@@ -112,13 +123,8 @@ export async function getNextVariantCodes(
 
 async function ensureVariantCodes(
   variants: VariantInput[],
-  existingRows: { sku: string; barcode: string | null }[]
+  existingRows: { id?: string; sku: string; barcode: string | null }[]
 ): Promise<VariantInput[]> {
-  const usedSkus = new Set(existingRows.map((r) => r.sku));
-  const usedBarcodes = new Set(
-    existingRows.map((r) => r.barcode).filter((b): b is string => !!b)
-  );
-
   const needsAllocation = variants.filter((v) => !v.sku?.trim()).length;
 
   const freshCodes =
@@ -128,7 +134,7 @@ async function ensureVariantCodes(
 
   let codeIndex = 0;
 
-  return variants.map((variant) => {
+  const prepared = variants.map((variant) => {
     let sku = variant.sku?.trim() ?? "";
     let barcode = variant.barcode?.trim() ?? "";
 
@@ -142,13 +148,21 @@ async function ensureVariantCodes(
       barcode = resolveStoredBarcode(sku, barcode);
     }
 
-    if (usedSkus.has(sku) || usedBarcodes.has(barcode)) {
-      throw new Error("رمز SKU أو الباركود مستخدم بالفعل");
-    }
+    return { ...variant, sku, barcode };
+  });
 
-    usedSkus.add(sku);
-    usedBarcodes.add(barcode);
+  validateVariantCodesPayload(prepared, existingRows);
 
+  return prepared;
+}
+
+function prepareVariantsForSave(
+  variants: (VariantInput & { id?: string })[],
+  existingRows: { id: string; sku: string; barcode: string | null }[]
+): (VariantInput & { id?: string; barcode: string })[] {
+  return variants.map((variant) => {
+    const sku = variant.sku.trim();
+    const barcode = resolveStoredBarcode(sku, variant.barcode);
     return { ...variant, sku, barcode };
   });
 }
@@ -186,7 +200,7 @@ export async function createProduct(data: {
 
     const product = await prisma.$transaction(async (tx) => {
       const existingRows = await tx.productVariant.findMany({
-        select: { sku: true, barcode: true },
+        select: { id: true, sku: true, barcode: true },
       });
       const preparedVariants = await ensureVariantCodes(
         data.variants,
@@ -203,8 +217,8 @@ export async function createProduct(data: {
           imageUrl: data.imageUrl,
           variants: {
             create: preparedVariants.map((v) => ({
-              sku: v.sku.trim(),
-              barcode: resolveStoredBarcode(v.sku, v.barcode),
+              sku: v.sku,
+              barcode: v.barcode,
               size: v.size,
               color: v.color,
               colorHex: v.colorHex,
@@ -307,13 +321,39 @@ export async function updateProduct(
           });
         }
 
-        for (const variant of data.variants) {
+        const allRows = await tx.productVariant.findMany({
+          select: { id: true, sku: true, barcode: true },
+        });
+
+        const variantsNeedingCodes = data.variants.filter((v) => !v.sku?.trim());
+        const allocatedCodes =
+          variantsNeedingCodes.length > 0
+            ? computeNextVariantCodes(allRows, variantsNeedingCodes.length)
+            : [];
+        let allocationIndex = 0;
+
+        const incomingPrepared = data.variants.map((variant) => {
+          if (!variant.sku?.trim()) {
+            const codes = allocatedCodes[allocationIndex++];
+            return {
+              ...variant,
+              sku: codes.sku,
+              barcode: variant.barcode?.trim() || codes.barcode,
+            };
+          }
+          return variant;
+        });
+
+        const preparedVariants = prepareVariantsForSave(incomingPrepared, allRows);
+        validateVariantCodesPayload(preparedVariants, allRows);
+
+        for (const variant of preparedVariants) {
           if (variant.id && existingIds.has(variant.id)) {
             await tx.productVariant.update({
               where: { id: variant.id },
               data: {
-                sku: variant.sku.trim(),
-                barcode: resolveStoredBarcode(variant.sku, variant.barcode),
+                sku: variant.sku,
+                barcode: variant.barcode,
                 size: variant.size,
                 color: variant.color,
                 colorHex: variant.colorHex,
@@ -324,16 +364,11 @@ export async function updateProduct(
               },
             });
           } else if (!variant.id) {
-            const existingRows = await tx.productVariant.findMany({
-              select: { sku: true, barcode: true },
-            });
-            const [prepared] = await ensureVariantCodes([variant], existingRows);
-
             await tx.productVariant.create({
               data: {
                 productId: id,
-                sku: prepared.sku.trim(),
-                barcode: resolveStoredBarcode(prepared.sku, prepared.barcode),
+                sku: variant.sku,
+                barcode: variant.barcode,
                 size: variant.size,
                 color: variant.color,
                 colorHex: variant.colorHex,
@@ -427,14 +462,34 @@ const variantSearchSelect = {
   },
 } as const;
 
-/** Exact barcode or SKU lookup — for scanners and Enter key in purchases/POS */
+/** Exact barcode or SKU lookup — returns null if ambiguous or not found */
 export async function lookupVariantByCode(code: string) {
   await requireAuth();
 
   const q = normalizeScanCode(code);
   if (!q) return null;
 
-  return prisma.productVariant.findFirst({
+  const matches = await prisma.productVariant.findMany({
+    where: {
+      isActive: true,
+      product: { isActive: true },
+      OR: [{ barcode: q }, { sku: q }],
+    },
+    select: variantSearchSelect,
+    take: 2,
+  });
+
+  if (matches.length !== 1) return null;
+  return matches[0];
+}
+
+export async function findVariantsByExactCode(code: string) {
+  await requireAuth();
+
+  const q = normalizeScanCode(code);
+  if (!q) return [];
+
+  return prisma.productVariant.findMany({
     where: {
       isActive: true,
       product: { isActive: true },

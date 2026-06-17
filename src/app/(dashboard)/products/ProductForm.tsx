@@ -5,6 +5,11 @@ import ColorAutocomplete from "@/components/ui/ColorAutocomplete";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { SIZES } from "@/lib/constants";
+import { resolveStoredBarcode } from "@/lib/barcode";
+import {
+  findVariantCodeIssues,
+  registerVariantCodes,
+} from "@/lib/variant-codes";
 import {
   createProduct,
   getNextVariantCodes,
@@ -155,7 +160,11 @@ export default function ProductForm({
     setAddingVariant(true);
     setError("");
 
-    const result = await getNextVariantCodes(1);
+    const pending = variants.map((v) => ({
+      sku: v.sku,
+      barcode: v.barcode || null,
+    }));
+    const result = await getNextVariantCodes(1, pending);
     setAddingVariant(false);
 
     if (!result.success) {
@@ -175,9 +184,30 @@ export default function ProductForm({
     setVariants((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function validateLocalVariantCodes(): string | null {
+    const usedCodes = new Set<string>();
+
+    for (const variant of variants) {
+      const sku = variant.sku.trim();
+      const barcode = resolveStoredBarcode(sku, variant.barcode);
+      const issues = findVariantCodeIssues(sku, barcode, usedCodes);
+      if (issues.length > 0) return issues[0].message;
+      registerVariantCodes(sku, barcode, usedCodes);
+    }
+
+    return null;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    const localCodeError = validateLocalVariantCodes();
+    if (localCodeError) {
+      setError(localCodeError);
+      return;
+    }
+
     setLoading(true);
 
     const payload = {
@@ -311,7 +341,7 @@ export default function ProductForm({
                 onChange={(e) => updateVariant(index, "sku", e.target.value)}
                 required
                 dir="ltr"
-                hint={!isEdit ? "يُولَّد تلقائياً — يمكن تعديله عند الحاجة" : undefined}
+                hint={!isEdit ? "يُولَّد تلقائياً — يجب أن يكون فريداً لكل متغير" : "يجب أن يكون فريداً لكل متغير"}
               />
               <Input
                 label="الباركود"
@@ -320,8 +350,8 @@ export default function ProductForm({
                 dir="ltr"
                 hint={
                   !isEdit
-                    ? "يُولَّد تلقائياً (CODE128) — يُستخدم للمسح والطباعة"
-                    : "يُستخدم للمسح (CODE128)"
+                    ? "يُولَّد تلقائياً (CODE128) — فريد لكل متغير ولا يُكرَّر مع SKU"
+                    : "فريد لكل متغير — يُستخدم للمسح والطباعة"
                 }
               />
               <Select
