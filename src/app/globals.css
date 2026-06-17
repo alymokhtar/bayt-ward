@@ -1,17 +1,26 @@
 @import "tailwindcss";
 
 :root {
-  --color-cream: #fdf5e6;
-  --color-cream-dark: #f5ead6;
-  --color-brown: #4b3621;
-  --color-brown-light: #6b4f3a;
-  --color-gold: #b8860b;
-  --color-gold-light: #d4af37;
-  --color-gold-dark: #96700a;
-  --color-dark: #1a1a1a;
+  --theme-accent: #b8860b;
+  --theme-accent-foreground: #ffffff;
+  --color-cream-base: #fdf5e6;
+  --color-cream-dark-base: #f5ead6;
+  --color-brown-base: #4b3621;
+  --color-brown-light-base: #6b4f3a;
+  --color-border-base: #e8dcc8;
+  --color-muted-base: #8b7355;
+  --color-dark-base: #1a1a1a;
   --color-white: #ffffff;
-  --color-muted: #8b7355;
-  --color-border: #e8dcc8;
+  --color-cream: color-mix(in srgb, var(--theme-accent) 4%, var(--color-cream-base));
+  --color-cream-dark: color-mix(in srgb, var(--theme-accent) 8%, var(--color-cream-dark-base));
+  --color-brown: var(--color-brown-base);
+  --color-brown-light: color-mix(in srgb, var(--theme-accent) 14%, var(--color-brown-light-base));
+  --color-gold: var(--theme-accent);
+  --color-gold-light: color-mix(in srgb, var(--theme-accent) 70%, white);
+  --color-gold-dark: color-mix(in srgb, var(--theme-accent) 76%, black);
+  --color-dark: var(--color-dark-base);
+  --color-muted: color-mix(in srgb, var(--theme-accent) 18%, var(--color-muted-base));
+  --color-border: color-mix(in srgb, var(--theme-accent) 16%, var(--color-border-base));
   --color-danger: #b91c1c;
   --color-success: #15803d;
   --color-warning: #ca8a04;
@@ -19,16 +28,16 @@
   --background: var(--color-cream);
   --foreground: var(--color-brown);
   --primary: var(--color-gold);
-  --primary-foreground: var(--color-white);
-  --secondary: var(--color-brown);
-  --secondary-foreground: var(--color-cream);
+  --primary-foreground: var(--theme-accent-foreground);
+  --secondary: color-mix(in srgb, var(--theme-accent) 78%, black);
+  --secondary-foreground: var(--color-white);
   --muted: var(--color-muted);
   --muted-foreground: var(--color-muted);
   --border: var(--color-border);
   --ring: var(--color-gold);
   --card: var(--color-white);
   --card-foreground: var(--color-brown);
-  --sidebar: var(--color-brown);
+  --sidebar: color-mix(in srgb, var(--theme-accent) 28%, var(--color-brown-base));
   --sidebar-foreground: var(--color-cream);
   --sidebar-active: var(--color-gold);
   --radius: 0.625rem;
@@ -76,7 +85,10 @@ html {
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 12%, transparent) 0%, transparent 38%),
+    radial-gradient(circle at bottom left, color-mix(in srgb, var(--theme-accent) 8%, transparent) 0%, transparent 35%),
+    var(--background);
   color: var(--foreground);
   font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
   min-height: 100vh;

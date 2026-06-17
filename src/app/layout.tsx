@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cairo } from "next/font/google";
 import PWARegister from "@/components/pwa/PWARegister";
+import { buildThemeStyle, getAppThemeAccent } from "@/lib/theme";
 import "./globals.css";
 
 const cairo = Cairo({
@@ -31,21 +32,32 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#4B3621",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-};
+export async function generateViewport(): Promise<Viewport> {
+  const themeAccent = await getAppThemeAccent();
 
-export default function RootLayout({
+  return {
+    themeColor: themeAccent,
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  };
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeAccent = await getAppThemeAccent();
+
   return (
-    <html lang="ar" dir="rtl" className={`${cairo.variable} h-full`}>
+    <html
+      lang="ar"
+      dir="rtl"
+      className={`${cairo.variable} h-full`}
+      style={buildThemeStyle(themeAccent)}
+    >
       <body className="min-h-full flex flex-col font-sans antialiased">
         {children}
         <PWARegister />

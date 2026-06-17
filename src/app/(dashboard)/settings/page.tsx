@@ -1,4 +1,5 @@
 import SettingsClient from "@/app/(dashboard)/settings/SettingsClient";
+import AppearanceSettingsPanel from "@/app/(dashboard)/settings/AppearanceSettingsPanel";
 import ManualBackupPanel from "@/components/backup/ManualBackupPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getSettings } from "@/lib/actions/settings";
@@ -13,6 +14,7 @@ export default async function SettingsPage() {
   }
 
   const settings = await getSettings();
+  const themeAccent = settings.theme_accent;
 
   return (
     <div className="space-y-6">
@@ -25,6 +27,15 @@ export default async function SettingsPage() {
           <p className="text-sm text-muted mt-1">إعدادات المتجر</p>
         </div>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>المظهر</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AppearanceSettingsPanel themeAccent={themeAccent} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
