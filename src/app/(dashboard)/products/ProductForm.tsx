@@ -302,16 +302,6 @@ export default function ProductForm({
       <div className="rounded-xl border border-border bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-brown">المتغيرات (المقاسات والألوان)</h2>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addVariant}
-            loading={addingVariant}
-          >
-            <Plus className="h-4 w-4" />
-            إضافة متغير
-          </Button>
         </div>
 
         {variants.map((variant, index) => (
@@ -414,6 +404,19 @@ export default function ProductForm({
             </div>
           </div>
         ))}
+
+        <div className="flex justify-end pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addVariant}
+            loading={addingVariant}
+          >
+            <Plus className="h-4 w-4" />
+            إضافة متغير
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-3">
