@@ -1,4 +1,5 @@
 import SettingsClient from "@/app/(dashboard)/settings/SettingsClient";
+import ManualBackupPanel from "@/components/backup/ManualBackupPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getSettings } from "@/lib/actions/settings";
 import { getSession } from "@/lib/auth";
@@ -31,6 +32,15 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <SettingsClient settings={settings} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>النسخ الاحتياطي اليدوي</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ManualBackupPanel />
         </CardContent>
       </Card>
     </div>
