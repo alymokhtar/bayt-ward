@@ -66,7 +66,7 @@ export default function LowStockReportPanel({
     categoryId === ALL_CATEGORIES
       ? "جميع التصنيفات"
       : (categoryOptions.find((option) => option.value === categoryId)?.label ??
-        "—");
+        "-");
 
   function toggleItem(id: string) {
     setExcludedIds((prev) => {
@@ -104,8 +104,9 @@ export default function LowStockReportPanel({
         categoryLabel,
         generatedAt: new Date(),
       });
-    } catch {
-      setExportError("تعذّر تنزيل الملف. حاول مرة أخرى.");
+    } catch (error) {
+      console.error("Failed to export low-stock PDF", error);
+      setExportError("تعذر تنزيل الملف. حاول مرة أخرى.");
     } finally {
       setExporting(false);
     }
@@ -115,9 +116,7 @@ export default function LowStockReportPanel({
     <Card>
       <CardHeader className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>
-            منتجات بمخزون منخفض ({totalCount})
-          </CardTitle>
+          <CardTitle>منتجات بمخزون منخفض ({totalCount})</CardTitle>
           <Button
             type="button"
             size="sm"
@@ -159,7 +158,7 @@ export default function LowStockReportPanel({
         </div>
 
         <p className="text-xs text-muted">
-          حدّد المنتجات المراد تضمينها في ملف PDF لإعادة الطلب. سيُنزَّل الملف
+          حدد المنتجات المراد تضمينها في ملف PDF لإعادة الطلب. سيتم تنزيل الملف
           مباشرة إلى جهازك.
         </p>
       </CardHeader>
@@ -206,7 +205,7 @@ export default function LowStockReportPanel({
                         />
                       </TableCell>
                       <TableCell>
-                        {item.productName} — {item.size}/{item.color}
+                        {item.productName} - {item.size}/{item.color}
                       </TableCell>
                       <TableCell className="text-muted">{item.category}</TableCell>
                       <TableCell dir="ltr">{item.sku}</TableCell>

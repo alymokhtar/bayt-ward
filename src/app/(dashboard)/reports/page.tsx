@@ -38,9 +38,11 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="space-y-1">
         <h1 className="text-2xl font-bold text-brown">التقارير</h1>
-        <p className="text-sm text-muted mt-1">تحليلات وإحصائيات المتجر</p>
+        <p className="text-sm text-muted">
+          تحليلات وإحصائيات المتجر لمتابعة المبيعات والمخزون والأرباح.
+        </p>
       </div>
       <Card>
         <CardContent className="pt-6 space-y-6">

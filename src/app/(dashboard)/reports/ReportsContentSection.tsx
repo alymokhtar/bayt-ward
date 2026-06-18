@@ -160,7 +160,7 @@ export default async function ReportsContentSection({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>أفضل المنتجات مبيعاً</CardTitle>
+          <CardTitle>أفضل المنتجات مبيعًا</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>

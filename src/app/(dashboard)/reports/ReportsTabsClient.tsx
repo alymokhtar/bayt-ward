@@ -63,22 +63,22 @@ export default function ReportsTabsClient({
 
       {activeTab !== "inventory" && (
         <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs text-muted mb-1">من</label>
+          <div className="min-w-36">
+            <label className="mb-1 block text-xs text-muted">من</label>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="h-10 rounded-lg border border-border px-3 text-sm"
+              className="h-10 w-full rounded-lg border border-border px-3 text-sm"
             />
           </div>
-          <div>
-            <label className="block text-xs text-muted mb-1">إلى</label>
+          <div className="min-w-36">
+            <label className="mb-1 block text-xs text-muted">إلى</label>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="h-10 rounded-lg border border-border px-3 text-sm"
+              className="h-10 w-full rounded-lg border border-border px-3 text-sm"
             />
           </div>
           <Button variant="secondary" onClick={applyDates} loading={isPending}>
