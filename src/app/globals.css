@@ -3,6 +3,7 @@
 :root {
   --theme-accent: #b8860b;
   --theme-accent-foreground: #ffffff;
+  --theme-sidebar: #765607;
   --color-cream-base: #fdf5e6;
   --color-cream-dark-base: #f5ead6;
   --color-brown-base: #4b3621;
@@ -29,7 +30,7 @@
   --foreground: var(--color-brown);
   --primary: var(--color-gold);
   --primary-foreground: var(--theme-accent-foreground);
-  --secondary: color-mix(in srgb, var(--theme-accent) 78%, black);
+  --secondary: var(--theme-sidebar);
   --secondary-foreground: var(--color-white);
   --muted: var(--color-muted);
   --muted-foreground: var(--color-muted);
@@ -37,7 +38,7 @@
   --ring: var(--color-gold);
   --card: var(--color-white);
   --card-foreground: var(--color-brown);
-  --sidebar: var(--secondary);
+  --sidebar: var(--theme-sidebar);
   --sidebar-foreground: var(--color-cream);
   --sidebar-active: var(--color-gold);
   --radius: 0.625rem;

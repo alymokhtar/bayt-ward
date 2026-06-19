@@ -37,7 +37,7 @@ export default function MobileNav({ role }: MobileNavProps) {
       <nav
         className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-sidebar-foreground/10 safe-area-bottom"
         style={{
-          backgroundColor: "var(--sidebar)",
+          backgroundColor: "var(--theme-sidebar)",
           color: "var(--sidebar-foreground)",
         }}
       >
@@ -85,7 +85,7 @@ export default function MobileNav({ role }: MobileNavProps) {
           <div
             className="absolute bottom-0 inset-x-0 rounded-t-2xl max-h-[70vh] overflow-y-auto animate-in slide-in-from-bottom"
             style={{
-              backgroundColor: "var(--sidebar)",
+              backgroundColor: "var(--theme-sidebar)",
               color: "var(--sidebar-foreground)",
             }}
           >

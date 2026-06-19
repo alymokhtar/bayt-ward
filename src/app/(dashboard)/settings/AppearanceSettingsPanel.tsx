@@ -7,6 +7,7 @@ import {
   DEFAULT_THEME_ACCENT,
   THEME_PRESETS,
   getThemeContrastColor,
+  getThemeSidebarColor,
   normalizeHexColor,
 } from "@/lib/theme";
 import { Palette, Save } from "lucide-react";
@@ -20,12 +21,14 @@ interface AppearanceSettingsPanelProps {
 function applyThemeAccent(accent: string) {
   const normalizedAccent = normalizeHexColor(accent);
   const accentForeground = getThemeContrastColor(normalizedAccent);
+  const sidebar = getThemeSidebarColor(normalizedAccent);
 
   document.documentElement.style.setProperty("--theme-accent", normalizedAccent);
   document.documentElement.style.setProperty(
     "--theme-accent-foreground",
     accentForeground
   );
+  document.documentElement.style.setProperty("--theme-sidebar", sidebar);
   window.localStorage.setItem("bayt-ward-theme-accent", normalizedAccent);
 }
 
@@ -41,6 +44,7 @@ export default function AppearanceSettingsPanel({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const sidebarColor = useMemo(() => getThemeSidebarColor(accent), [accent]);
 
   useEffect(() => {
     applyThemeAccent(accent);
@@ -150,7 +154,7 @@ export default function AppearanceSettingsPanel({
                 <p className="text-xs text-muted">لون جانبي</p>
                 <div
                   className="mt-2 h-10 rounded-xl"
-                  style={{ background: `color-mix(in srgb, ${accent} 78%, black)` }}
+                  style={{ backgroundColor: sidebarColor }}
                 />
               </div>
             </div>

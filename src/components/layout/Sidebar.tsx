@@ -22,7 +22,7 @@ export default function Sidebar({ role }: SidebarProps) {
     <aside
       className="hidden md:flex w-64 shrink-0 flex-col min-h-screen sticky top-0 self-start h-screen"
       style={{
-        backgroundColor: "var(--sidebar)",
+        backgroundColor: "var(--theme-sidebar)",
         color: "var(--sidebar-foreground)",
       }}
     >

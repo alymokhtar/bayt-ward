@@ -74,19 +74,37 @@ function hexToRgb(hex: string) {
   return { red, green, blue };
 }
 
+function toHexChannel(value: number): string {
+  return Math.round(Math.min(255, Math.max(0, value)))
+    .toString(16)
+    .padStart(2, "0")
+    .toUpperCase();
+}
+
 export function getThemeContrastColor(hex: string): string {
   const { red, green, blue } = hexToRgb(hex);
   const luminance = (red * 299 + green * 587 + blue * 114) / 1000;
   return luminance >= 160 ? "#1A1A1A" : "#FFFFFF";
 }
 
+export function getThemeSidebarColor(hex: string): string {
+  const { red, green, blue } = hexToRgb(hex);
+  const sidebarRatio = 0.64;
+
+  return `#${toHexChannel(red * sidebarRatio)}${toHexChannel(
+    green * sidebarRatio
+  )}${toHexChannel(blue * sidebarRatio)}`;
+}
+
 export function buildThemeStyle(themeAccent?: string | null): CSSProperties {
   const normalizedAccent = normalizeHexColor(themeAccent);
   const accentForeground = getThemeContrastColor(normalizedAccent);
+  const sidebar = getThemeSidebarColor(normalizedAccent);
 
   return {
     ["--theme-accent" as never]: normalizedAccent,
     ["--theme-accent-foreground" as never]: accentForeground,
+    ["--theme-sidebar" as never]: sidebar,
   } as CSSProperties;
 }
 
