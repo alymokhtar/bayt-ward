@@ -98,7 +98,7 @@ function buildReportHtml(
           color: #4b3621;
           background: #ffffff;
           font-family: "ArabTypeReport", "Cairo", "Segoe UI", Tahoma, Arial, sans-serif;
-          font-size: 12px;
+          font-size: 15px;
           line-height: 1.65;
           direction: rtl;
           unicode-bidi: isolate;
@@ -116,14 +116,14 @@ function buildReportHtml(
 
         .pdf-title {
           margin: 0;
-          font-size: 24px;
+          font-size: 29px;
           font-weight: 700;
         }
 
         .pdf-subtitle {
           margin: 6px 0 0;
           color: #6b5b4f;
-          font-size: 13px;
+          font-size: 17px;
         }
 
         .pdf-meta {
@@ -143,12 +143,12 @@ function buildReportHtml(
 
         .pdf-meta-label {
           color: #6b5b4f;
-          font-size: 11px;
+          font-size: 13px;
         }
 
         .pdf-meta-value {
           margin-top: 2px;
-          font-size: 13px;
+          font-size: 16px;
           font-weight: 700;
         }
 
@@ -170,15 +170,16 @@ function buildReportHtml(
         th,
         td {
           border: 1px solid #e8e0d5;
-          padding: 7px 8px;
+          padding: 9px 8px;
           vertical-align: middle;
           overflow-wrap: anywhere;
+          text-align: center;
         }
 
         th {
           background: #f5f0e8;
-          text-align: center;
           font-weight: 700;
+          font-size: 15px;
         }
 
         tbody tr:nth-child(even) td {
@@ -186,7 +187,8 @@ function buildReportHtml(
         }
 
         td {
-          text-align: right;
+          text-align: center;
+          font-size: 14px;
         }
 
         .number,
@@ -224,7 +226,7 @@ function buildReportHtml(
           border-top: 1px solid #e8e0d5;
           color: #6b5b4f;
           text-align: center;
-          font-size: 11px;
+          font-size: 13px;
           break-inside: avoid;
         }
       </style>
