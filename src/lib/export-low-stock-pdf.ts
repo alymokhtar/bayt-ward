@@ -275,14 +275,35 @@ function buildReportHtml(
 
 function createReportElement(html: string): HTMLDivElement {
   const wrapper = document.createElement("div");
+  wrapper.className = "pdf-render-root";
   wrapper.style.position = "fixed";
   wrapper.style.inset = "0 auto auto -10000px";
   wrapper.style.width = "210mm";
   wrapper.style.padding = "12mm";
   wrapper.style.background = "#ffffff";
+  wrapper.style.color = "#4b3621";
   wrapper.innerHTML = html;
   document.body.appendChild(wrapper);
   return wrapper;
+}
+
+function preparePdfClone(clonedDocument: Document): void {
+  clonedDocument.head
+    .querySelectorAll('style, link[rel="stylesheet"]')
+    .forEach((node) => node.remove());
+
+  const html = clonedDocument.documentElement;
+  const body = clonedDocument.body;
+  html.style.background = "#ffffff";
+  html.style.color = "#4b3621";
+  body.style.background = "#ffffff";
+  body.style.color = "#4b3621";
+
+  const wrapper = clonedDocument.querySelector<HTMLElement>(".pdf-render-root");
+  if (wrapper) {
+    wrapper.style.background = "#ffffff";
+    wrapper.style.color = "#4b3621";
+  }
 }
 
 export async function exportLowStockToPdf(
@@ -310,6 +331,7 @@ export async function exportLowStockToPdf(
           useCORS: true,
           backgroundColor: "#ffffff",
           letterRendering: true,
+          onclone: preparePdfClone,
         },
         jsPDF: {
           unit: "mm",
