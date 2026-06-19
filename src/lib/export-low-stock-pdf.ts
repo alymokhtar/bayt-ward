@@ -1,6 +1,3 @@
-import { jsPDF } from "jspdf";
-import { autoTable } from "jspdf-autotable";
-
 export type LowStockExportItem = {
   id: string;
   sku: string;
@@ -11,14 +8,6 @@ export type LowStockExportItem = {
   minStockLevel: number;
   category: string;
 };
-
-type PdfTextInput = string | number;
-
-const PDF_FONT_NAME = "ArabType";
-const PDF_FONT_FILE = "arabtype.ttf";
-const PDF_FONT_URL = "/fonts/arabtype.ttf";
-
-let arabicFontDataPromise: Promise<string> | null = null;
 
 export function suggestedReorderQuantity(
   stockQuantity: number,
@@ -58,41 +47,242 @@ function formatGeneratedAt(date: Date): string {
   return `${dateLabel} - ${timeLabel}`;
 }
 
-function pdfText(doc: jsPDF, value: PdfTextInput): string {
-  return doc.processArabic(String(value));
+function escapeHtml(value: string | number): string {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
-function arrayBufferToBinaryString(buffer: ArrayBuffer): string {
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 0x8000;
-  let binary = "";
+function buildReportHtml(
+  items: LowStockExportItem[],
+  options: { categoryLabel: string; generatedAt: Date }
+): string {
+  const rows = sortLowStockItems(items)
+    .map((item) => {
+      const reorderQty = suggestedReorderQuantity(
+        item.stockQuantity,
+        item.minStockLevel
+      );
 
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
-  }
+      return `
+        <tr>
+          <td>${escapeHtml(item.productName)}</td>
+          <td>${escapeHtml(item.color)}</td>
+          <td>${escapeHtml(item.size)}</td>
+          <td class="number">${escapeHtml(item.stockQuantity)}</td>
+          <td class="number">${escapeHtml(item.minStockLevel)}</td>
+          <td class="number strong">${escapeHtml(reorderQty)}</td>
+          <td class="sku">${escapeHtml(item.sku)}</td>
+        </tr>
+      `;
+    })
+    .join("");
 
-  return binary;
+  return `
+    <section class="pdf-report" dir="rtl" lang="ar">
+      <style>
+        @font-face {
+          font-family: "ArabTypeReport";
+          src: url("/fonts/arabtype.ttf") format("truetype");
+          font-weight: 400 700;
+        }
+
+        .pdf-report {
+          width: 186mm;
+          min-height: 273mm;
+          box-sizing: border-box;
+          padding: 0;
+          color: #4b3621;
+          background: #ffffff;
+          font-family: "ArabTypeReport", "Cairo", "Segoe UI", Tahoma, Arial, sans-serif;
+          font-size: 12px;
+          line-height: 1.65;
+          direction: rtl;
+          unicode-bidi: isolate;
+        }
+
+        .pdf-header {
+          border: 1px solid #c9a84c;
+          border-radius: 8px;
+          background: #fcfaf6;
+          padding: 18px 20px;
+          text-align: center;
+          margin-bottom: 18px;
+          break-inside: avoid;
+        }
+
+        .pdf-title {
+          margin: 0;
+          font-size: 24px;
+          font-weight: 700;
+        }
+
+        .pdf-subtitle {
+          margin: 6px 0 0;
+          color: #6b5b4f;
+          font-size: 13px;
+        }
+
+        .pdf-meta {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+          margin-bottom: 18px;
+          break-inside: avoid;
+        }
+
+        .pdf-meta-item {
+          border: 1px solid #e8e0d5;
+          border-radius: 8px;
+          background: #fcfaf6;
+          padding: 9px 12px;
+        }
+
+        .pdf-meta-label {
+          color: #6b5b4f;
+          font-size: 11px;
+        }
+
+        .pdf-meta-value {
+          margin-top: 2px;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          table-layout: fixed;
+          direction: rtl;
+        }
+
+        thead {
+          display: table-header-group;
+        }
+
+        tr {
+          break-inside: avoid;
+        }
+
+        th,
+        td {
+          border: 1px solid #e8e0d5;
+          padding: 7px 8px;
+          vertical-align: middle;
+          overflow-wrap: anywhere;
+        }
+
+        th {
+          background: #f5f0e8;
+          text-align: center;
+          font-weight: 700;
+        }
+
+        tbody tr:nth-child(even) td {
+          background: #fcfaf6;
+        }
+
+        td {
+          text-align: right;
+        }
+
+        .number,
+        .sku {
+          direction: ltr;
+          unicode-bidi: embed;
+          text-align: center;
+          font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+        }
+
+        .strong {
+          color: #4b3621;
+          font-weight: 700;
+        }
+
+        .product-column {
+          width: 31%;
+        }
+
+        .small-column {
+          width: 11%;
+        }
+
+        .number-column {
+          width: 10%;
+        }
+
+        .sku-column {
+          width: 17%;
+        }
+
+        .pdf-footer {
+          margin-top: 16px;
+          padding-top: 10px;
+          border-top: 1px solid #e8e0d5;
+          color: #6b5b4f;
+          text-align: center;
+          font-size: 11px;
+          break-inside: avoid;
+        }
+      </style>
+
+      <header class="pdf-header">
+        <h1 class="pdf-title">بيت ورد - طلب إعادة مخزون</h1>
+        <p class="pdf-subtitle">منتجات بمخزون منخفض أو نافد</p>
+      </header>
+
+      <div class="pdf-meta">
+        <div class="pdf-meta-item">
+          <div class="pdf-meta-label">التصنيف</div>
+          <div class="pdf-meta-value">${escapeHtml(options.categoryLabel)}</div>
+        </div>
+        <div class="pdf-meta-item">
+          <div class="pdf-meta-label">عدد الأصناف</div>
+          <div class="pdf-meta-value number">${escapeHtml(items.length)}</div>
+        </div>
+        <div class="pdf-meta-item">
+          <div class="pdf-meta-label">تاريخ التقرير</div>
+          <div class="pdf-meta-value">${escapeHtml(formatGeneratedAt(options.generatedAt))}</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th class="product-column">المنتج</th>
+            <th class="small-column">اللون</th>
+            <th class="small-column">المقاس</th>
+            <th class="number-column">المتاح</th>
+            <th class="number-column">الحد الأدنى</th>
+            <th class="number-column">المقترح</th>
+            <th class="sku-column">SKU</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+
+      <footer class="pdf-footer">
+        تم إنشاء التقرير من نظام بيت ورد - للاستخدام الداخلي في إعادة الطلب من الموردين
+      </footer>
+    </section>
+  `;
 }
 
-async function loadArabicFontData(): Promise<string> {
-  arabicFontDataPromise ??= fetch(PDF_FONT_URL).then(async (response) => {
-    if (!response.ok) {
-      throw new Error(`Failed to load PDF font: ${response.status}`);
-    }
-
-    return arrayBufferToBinaryString(await response.arrayBuffer());
-  });
-
-  return arabicFontDataPromise;
-}
-
-async function registerArabicFont(doc: jsPDF): Promise<void> {
-  const fontData = await loadArabicFontData();
-
-  doc.addFileToVFS(PDF_FONT_FILE, fontData);
-  doc.addFont(PDF_FONT_FILE, PDF_FONT_NAME, "normal");
-  doc.addFont(PDF_FONT_FILE, PDF_FONT_NAME, "bold");
-  doc.setFont(PDF_FONT_NAME, "normal");
+function createReportElement(html: string): HTMLDivElement {
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "fixed";
+  wrapper.style.inset = "0 auto auto -10000px";
+  wrapper.style.width = "210mm";
+  wrapper.style.padding = "12mm";
+  wrapper.style.background = "#ffffff";
+  wrapper.innerHTML = html;
+  document.body.appendChild(wrapper);
+  return wrapper;
 }
 
 export async function exportLowStockToPdf(
@@ -101,148 +291,35 @@ export async function exportLowStockToPdf(
 ): Promise<void> {
   if (items.length === 0) return;
 
-  const doc = new jsPDF({
-    unit: "mm",
-    format: "a4",
-    orientation: "portrait",
-  });
+  const { default: html2pdf } = await import("html2pdf.js");
+  const reportElement = createReportElement(buildReportHtml(items, options));
 
-  await registerArabicFont(doc);
+  try {
+    await Promise.all([
+      document.fonts?.load('12px "ArabTypeReport"') ?? Promise.resolve(),
+      document.fonts?.ready ?? Promise.resolve(),
+    ]);
 
-  doc.setLanguage("ar-EG");
-  doc.setR2L(true);
-  doc.setProperties({
-    title: "Bayt Ward Reorder Report",
-    subject: "Low stock reorder report",
-    creator: "Bayt Ward",
-  });
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 12;
-
-  doc.setFillColor(252, 250, 246);
-  doc.setDrawColor(201, 168, 76);
-  doc.roundedRect(margin, 10, pageWidth - margin * 2, 28, 2, 2, "FD");
-
-  doc.setTextColor(75, 54, 33);
-  doc.setFont(PDF_FONT_NAME, "bold");
-  doc.setFontSize(17);
-  doc.text(pdfText(doc, "بيت ورد - طلب إعادة مخزون"), pageWidth / 2, 21, {
-    align: "center",
-  });
-
-  doc.setFont(PDF_FONT_NAME, "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(107, 91, 79);
-  doc.text(pdfText(doc, "منتجات بمخزون منخفض أو نافد"), pageWidth / 2, 30, {
-    align: "center",
-  });
-
-  const metaTop = 45;
-  const metaBoxWidth = (pageWidth - margin * 2 - 8) / 3;
-  const metaItems = [
-    ["التصنيف", options.categoryLabel],
-    ["عدد الأصناف", items.length],
-    ["تاريخ التقرير", formatGeneratedAt(options.generatedAt)],
-  ];
-
-  metaItems.forEach(([label, value], index) => {
-    const x = margin + index * (metaBoxWidth + 4);
-    doc.setFillColor(252, 250, 246);
-    doc.setDrawColor(232, 224, 213);
-    doc.roundedRect(x, metaTop, metaBoxWidth, 18, 2, 2, "FD");
-
-    doc.setFont(PDF_FONT_NAME, "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(107, 91, 79);
-    doc.text(pdfText(doc, label), x + metaBoxWidth - 3, metaTop + 6, {
-      align: "right",
-    });
-
-    doc.setFont(PDF_FONT_NAME, "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(75, 54, 33);
-    doc.text(pdfText(doc, value), x + metaBoxWidth - 3, metaTop + 13, {
-      align: "right",
-      maxWidth: metaBoxWidth - 6,
-    });
-  });
-
-  const body = sortLowStockItems(items).map((item) => [
-    pdfText(doc, item.productName),
-    pdfText(doc, item.color),
-    pdfText(doc, item.size),
-    String(item.stockQuantity),
-    String(item.minStockLevel),
-    String(suggestedReorderQuantity(item.stockQuantity, item.minStockLevel)),
-  ]);
-
-  autoTable(doc, {
-    startY: 72,
-    head: [
-      [
-        pdfText(doc, "المنتج"),
-        pdfText(doc, "اللون"),
-        pdfText(doc, "المقاس"),
-        pdfText(doc, "المتاح"),
-        pdfText(doc, "الحد الأدنى"),
-        pdfText(doc, "المقترح"),
-      ],
-    ],
-    body,
-    theme: "grid",
-    margin: { left: margin, right: margin },
-    tableWidth: "auto",
-    styles: {
-      font: PDF_FONT_NAME,
-      fontSize: 8,
-      cellPadding: 2.2,
-      halign: "right",
-      valign: "middle",
-      overflow: "linebreak",
-      lineColor: [232, 224, 213],
-      lineWidth: 0.1,
-      textColor: [75, 54, 33],
-    },
-    headStyles: {
-      fillColor: [245, 240, 232],
-      textColor: [75, 54, 33],
-      fontStyle: "bold",
-      halign: "center",
-    },
-    alternateRowStyles: {
-      fillColor: [252, 250, 246],
-    },
-    columnStyles: {
-      0: { cellWidth: 58 },
-      1: { cellWidth: 28 },
-      2: { cellWidth: 24 },
-      3: { cellWidth: 22, halign: "center" },
-      4: { cellWidth: 24, halign: "center" },
-      5: { cellWidth: 22, halign: "center" },
-    },
-    didDrawPage: (data) => {
-      const pageNumber = doc.getCurrentPageInfo().pageNumber;
-
-      doc.setDrawColor(232, 224, 213);
-      doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
-
-      doc.setFont(PDF_FONT_NAME, "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(107, 91, 79);
-      doc.text(
-        pdfText(
-          doc,
-          "تم إنشاء التقرير من نظام بيت ورد - للاستخدام الداخلي في إعادة الطلب من الموردين"
-        ),
-        pageWidth / 2,
-        pageHeight - 9,
-        { align: "center" }
-      );
-      doc.text(String(pageNumber), data.settings.margin.left, pageHeight - 9);
-    },
-  });
-
-  doc.save(buildPdfFilename(options.generatedAt));
+    await html2pdf()
+      .set({
+        margin: [12, 12, 12, 12],
+        filename: buildPdfFilename(options.generatedAt),
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          letterRendering: true,
+        },
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait",
+        },
+      })
+      .from(reportElement)
+      .save();
+  } finally {
+    reportElement.remove();
+  }
 }
