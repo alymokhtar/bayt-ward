@@ -62,11 +62,6 @@ function buildReportHtml(
 ): string {
   const rows = sortLowStockItems(items)
     .map((item) => {
-      const reorderQty = suggestedReorderQuantity(
-        item.stockQuantity,
-        item.minStockLevel
-      );
-
       return `
         <tr>
           <td class="emphasis-cell">${escapeHtml(item.productName)}</td>
@@ -74,7 +69,6 @@ function buildReportHtml(
           <td>${escapeHtml(item.size)}</td>
           <td class="number">${escapeHtml(item.stockQuantity)}</td>
           <td class="number">${escapeHtml(item.minStockLevel)}</td>
-          <td class="number strong">${escapeHtml(reorderQty)}</td>
         </tr>
       `;
     })
@@ -197,26 +191,21 @@ function buildReportHtml(
           font-family: "Segoe UI", Tahoma, Arial, sans-serif;
         }
 
-        .strong {
-          color: #000000;
-          font-weight: 700;
-        }
-
         .emphasis-cell {
           font-size: 19px;
           font-weight: 700;
         }
 
         .product-column {
-          width: 36%;
+          width: 44%;
         }
 
         .small-column {
-          width: 14%;
+          width: 18%;
         }
 
         .number-column {
-          width: 12%;
+          width: 10%;
         }
 
         .pdf-footer {
@@ -258,7 +247,6 @@ function buildReportHtml(
             <th class="small-column">المقاس</th>
             <th class="number-column">المتاح</th>
             <th class="number-column">الحد الأدنى</th>
-            <th class="number-column">المقترح</th>
           </tr>
         </thead>
         <tbody>
