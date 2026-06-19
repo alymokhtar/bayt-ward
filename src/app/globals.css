@@ -37,7 +37,7 @@
   --ring: var(--color-gold);
   --card: var(--color-white);
   --card-foreground: var(--color-brown);
-  --sidebar: color-mix(in srgb, var(--theme-accent) 28%, var(--color-brown-base));
+  --sidebar: var(--secondary);
   --sidebar-foreground: var(--color-cream);
   --sidebar-active: var(--color-gold);
   --radius: 0.625rem;
