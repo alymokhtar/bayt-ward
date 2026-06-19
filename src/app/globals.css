@@ -3,7 +3,7 @@
 :root {
   --theme-accent: #b8860b;
   --theme-accent-foreground: #ffffff;
-  --theme-sidebar: #765607;
+  --theme-sidebar: #5F4606;
   --color-cream-base: #fdf5e6;
   --color-cream-dark-base: #f5ead6;
   --color-brown-base: #4b3621;
@@ -86,6 +86,8 @@
 html {
   direction: rtl;
   scroll-behavior: smooth;
+  scrollbar-color: color-mix(in srgb, var(--theme-accent) 62%, black)
+    color-mix(in srgb, var(--theme-accent) 10%, var(--color-cream-dark-base));
 }
 
 body {
@@ -123,16 +125,16 @@ select {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-cream-dark);
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--color-cream-dark-base));
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-brown-light);
+  background: color-mix(in srgb, var(--theme-accent) 62%, black);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gold);
+  background: var(--theme-sidebar);
 }
 
 /* Table utilities */
