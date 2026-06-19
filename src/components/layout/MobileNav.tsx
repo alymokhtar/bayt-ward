@@ -34,7 +34,7 @@ export default function MobileNav({ role }: MobileNavProps) {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-brown border-t border-cream/10 safe-area-bottom">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-sidebar border-t border-sidebar-foreground/10 safe-area-bottom">
         <div className="flex items-center justify-around h-16">
           {MOBILE_TABS.filter((tab) =>
             allItems.some((item) => item.href === tab.href)
@@ -50,7 +50,7 @@ export default function MobileNav({ role }: MobileNavProps) {
                 prefetch={false}
                 className={cn(
                   "flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors min-w-[64px]",
-                  isActive ? "text-gold" : "text-cream/60"
+                  isActive ? "text-gold" : "text-sidebar-foreground/60"
                 )}
               >
                 <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 1.75} />
@@ -62,7 +62,7 @@ export default function MobileNav({ role }: MobileNavProps) {
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="flex flex-col items-center gap-0.5 px-3 py-1 text-cream/60 min-w-[64px]"
+            className="flex flex-col items-center gap-0.5 px-3 py-1 text-sidebar-foreground/60 min-w-[64px]"
           >
             <Menu className="h-5 w-5" />
             <span className="text-[10px] font-medium">المزيد</span>
@@ -76,10 +76,10 @@ export default function MobileNav({ role }: MobileNavProps) {
             className="absolute inset-0 bg-black/50"
             onClick={() => setMenuOpen(false)}
           />
-          <div className="absolute bottom-0 inset-x-0 bg-brown rounded-t-2xl max-h-[70vh] overflow-y-auto animate-in slide-in-from-bottom">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-cream/10">
-              <p className="font-semibold text-cream">جميع الأقسام</p>
-              <button onClick={() => setMenuOpen(false)} className="text-cream/60 p-1">
+          <div className="absolute bottom-0 inset-x-0 bg-sidebar rounded-t-2xl max-h-[70vh] overflow-y-auto animate-in slide-in-from-bottom">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-foreground/10">
+              <p className="font-semibold text-sidebar-foreground">جميع الأقسام</p>
+              <button onClick={() => setMenuOpen(false)} className="text-sidebar-foreground/60 p-1">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -101,7 +101,7 @@ export default function MobileNav({ role }: MobileNavProps) {
                         "flex flex-col items-center gap-1.5 rounded-xl p-3 text-center transition-colors",
                         isActive
                           ? "bg-gold text-primary-foreground"
-                          : "text-cream/80 hover:bg-cream/10"
+                          : "text-sidebar-foreground/80 hover:bg-sidebar-foreground/10"
                       )}
                     >
                       <Icon className="h-5 w-5" />

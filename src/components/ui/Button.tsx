@@ -5,7 +5,7 @@ const variants = {
   primary:
     "bg-gold text-primary-foreground hover:bg-gold-dark shadow-sm hover:shadow-md border border-gold-dark/20",
   secondary:
-    "bg-brown text-cream hover:bg-brown-light shadow-sm border border-brown-light/20",
+    "bg-gold text-primary-foreground hover:bg-gold-dark shadow-sm border border-gold-dark/20",
   outline:
     "bg-transparent text-brown border-2 border-brown/20 hover:border-gold hover:text-gold hover:bg-gold/5",
   danger:

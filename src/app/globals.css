@@ -56,6 +56,9 @@
   --color-ring: var(--ring);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-active: var(--sidebar-active);
   --color-cream: color-mix(in srgb, var(--theme-accent) 4%, var(--color-cream-base));
   --color-cream-dark: color-mix(in srgb, var(--theme-accent) 8%, var(--color-cream-dark-base));
   --color-brown: var(--color-brown-base);

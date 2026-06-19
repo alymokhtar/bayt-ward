@@ -19,9 +19,9 @@ export default function Sidebar({ role }: SidebarProps) {
   );
 
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-brown text-cream min-h-screen sticky top-0 self-start h-screen">
-      <div className="flex flex-col items-center gap-2 border-b border-cream/10 px-6 py-6">
-        <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-gold/40 bg-cream/10">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground min-h-screen sticky top-0 self-start h-screen">
+      <div className="flex flex-col items-center gap-2 border-b border-sidebar-foreground/10 px-6 py-6">
+        <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-gold/40 bg-sidebar-foreground/10">
           <Image
             src="/images/logo-light.png"
             alt={STORE_NAME}
@@ -33,7 +33,7 @@ export default function Sidebar({ role }: SidebarProps) {
         </div>
         <div className="text-center">
           <p className="text-lg font-bold tracking-wide">{STORE_NAME_AR}</p>
-          <p className="text-xs text-cream/60 font-light tracking-widest uppercase">
+          <p className="text-xs text-sidebar-foreground/60 font-light tracking-widest uppercase">
             {STORE_NAME}
           </p>
         </div>
@@ -57,7 +57,7 @@ export default function Sidebar({ role }: SidebarProps) {
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
                       ? "bg-gold text-primary-foreground shadow-md"
-                      : "text-cream/80 hover:bg-cream/10 hover:text-cream"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0" strokeWidth={1.75} />
@@ -69,8 +69,8 @@ export default function Sidebar({ role }: SidebarProps) {
         </ul>
       </nav>
 
-      <div className="border-t border-cream/10 px-6 py-4">
-        <p className="text-xs text-cream/40 text-center">
+      <div className="border-t border-sidebar-foreground/10 px-6 py-4">
+        <p className="text-xs text-sidebar-foreground/40 text-center">
           © {new Date().getFullYear()} {STORE_NAME_AR}
         </p>
       </div>
