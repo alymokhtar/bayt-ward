@@ -1,10 +1,11 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-const LOGOUT_URL = "/api/auth/logout";
 const EXIT_WARNING_MESSAGE = "هل تريد تسجيل الخروج";
+const LOGOUT_BACKUP_URL = "/settings?logoutBackup=1#manual-backup";
 
 function isStandalonePWA() {
   return (
@@ -15,47 +16,38 @@ function isStandalonePWA() {
   );
 }
 
-function requestLogout() {
-  try {
-    fetch(LOGOUT_URL, {
-      method: "POST",
-      credentials: "same-origin",
-      keepalive: true,
-    }).catch(() => {});
-  } catch {
-    navigator.sendBeacon?.(LOGOUT_URL);
-  }
-}
-
 export default function PWAExitGuard() {
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
-    if (pathname === "/login" || !isStandalonePWA()) return;
-
-    let promptedForUnload = false;
+    if (
+      pathname === "/login" ||
+      pathname === "/settings" ||
+      !isStandalonePWA()
+    ) {
+      return;
+    }
 
     function handleBeforeUnload(event: BeforeUnloadEvent) {
-      promptedForUnload = true;
       event.preventDefault();
       event.returnValue = EXIT_WARNING_MESSAGE;
+
+      window.setTimeout(() => {
+        if (!document.hidden) {
+          router.push(LOGOUT_BACKUP_URL);
+        }
+      }, 0);
+
       return EXIT_WARNING_MESSAGE;
     }
 
-    function handlePageHide() {
-      if (promptedForUnload) {
-        requestLogout();
-      }
-    }
-
     window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("pagehide", handlePageHide);
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("pagehide", handlePageHide);
     };
-  }, [pathname]);
+  }, [pathname, router]);
 
   return null;
 }
