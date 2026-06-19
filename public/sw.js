@@ -1,4 +1,4 @@
-const CACHE_NAME = "bayt-ward-v1";
+const CACHE_NAME = "bayt-ward-v2";
 const STATIC_ASSETS = [
   "/",
   "/dashboard",
@@ -29,6 +29,8 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.startsWith("/_next/")) return;
+  if (url.pathname === "/sw.js") return;
 
   // Let the browser handle page navigations normally for faster, fresh routing.
   if (event.request.mode === "navigate") return;
