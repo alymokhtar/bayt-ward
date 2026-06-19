@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cairo } from "next/font/google";
+import PWAExitGuard from "@/components/pwa/PWAExitGuard";
 import PWARegister from "@/components/pwa/PWARegister";
 import { buildThemeStyle, getAppThemeAccent } from "@/lib/theme";
 import "./globals.css";
@@ -60,6 +61,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col font-sans antialiased">
         {children}
+        <PWAExitGuard />
         <PWARegister />
       </body>
     </html>
