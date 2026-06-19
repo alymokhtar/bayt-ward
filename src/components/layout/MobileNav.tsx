@@ -34,7 +34,13 @@ export default function MobileNav({ role }: MobileNavProps) {
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-sidebar border-t border-sidebar-foreground/10 safe-area-bottom">
+      <nav
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-sidebar-foreground/10 safe-area-bottom"
+        style={{
+          backgroundColor: "var(--sidebar)",
+          color: "var(--sidebar-foreground)",
+        }}
+      >
         <div className="flex items-center justify-around h-16">
           {MOBILE_TABS.filter((tab) =>
             allItems.some((item) => item.href === tab.href)
@@ -76,7 +82,13 @@ export default function MobileNav({ role }: MobileNavProps) {
             className="absolute inset-0 bg-black/50"
             onClick={() => setMenuOpen(false)}
           />
-          <div className="absolute bottom-0 inset-x-0 bg-sidebar rounded-t-2xl max-h-[70vh] overflow-y-auto animate-in slide-in-from-bottom">
+          <div
+            className="absolute bottom-0 inset-x-0 rounded-t-2xl max-h-[70vh] overflow-y-auto animate-in slide-in-from-bottom"
+            style={{
+              backgroundColor: "var(--sidebar)",
+              color: "var(--sidebar-foreground)",
+            }}
+          >
             <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-foreground/10">
               <p className="font-semibold text-sidebar-foreground">جميع الأقسام</p>
               <button onClick={() => setMenuOpen(false)} className="text-sidebar-foreground/60 p-1">

@@ -19,7 +19,13 @@ export default function Sidebar({ role }: SidebarProps) {
   );
 
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col bg-sidebar text-sidebar-foreground min-h-screen sticky top-0 self-start h-screen">
+    <aside
+      className="hidden md:flex w-64 shrink-0 flex-col min-h-screen sticky top-0 self-start h-screen"
+      style={{
+        backgroundColor: "var(--sidebar)",
+        color: "var(--sidebar-foreground)",
+      }}
+    >
       <div className="flex flex-col items-center gap-2 border-b border-sidebar-foreground/10 px-6 py-6">
         <div className="relative h-14 w-14 overflow-hidden rounded-full border-2 border-gold/40 bg-sidebar-foreground/10">
           <Image
