@@ -227,38 +227,77 @@ function buildPdfFilename(date: Date): string {
   return `bayt-ward-reorder-${stamp}.pdf`;
 }
 
+function createPdfFrame(html: string): HTMLIFrameElement {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.position = "fixed";
+  frame.style.left = "0";
+  frame.style.top = "0";
+  frame.style.width = "794px";
+  frame.style.height = "1123px";
+  frame.style.border = "0";
+  frame.style.pointerEvents = "none";
+  frame.style.zIndex = "-1";
+  frame.style.opacity = "0";
+
+  document.body.appendChild(frame);
+
+  const frameDocument = frame.contentDocument;
+  if (!frameDocument) {
+    document.body.removeChild(frame);
+    throw new Error("FAILED_TO_CREATE_PDF_FRAME");
+  }
+
+  frameDocument.open();
+  frameDocument.write(`
+    <!doctype html>
+    <html lang="ar" dir="rtl">
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          html,
+          body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+          }
+        </style>
+      </head>
+      <body>${html}</body>
+    </html>
+  `);
+  frameDocument.close();
+
+  return frame;
+}
+
 export async function exportLowStockToPdf(
   items: LowStockExportItem[],
   options: { categoryLabel: string; generatedAt: Date }
 ): Promise<void> {
   if (items.length === 0) return;
 
-  const container = document.createElement("div");
-  container.setAttribute("aria-hidden", "true");
-  container.style.position = "fixed";
-  container.style.left = "0";
-  container.style.top = "0";
-  container.style.width = "794px";
-  container.style.minHeight = "1123px";
-  container.style.background = "#ffffff";
-  container.style.pointerEvents = "none";
-  container.style.zIndex = "-1";
-  container.style.overflow = "hidden";
-
-  document.body.appendChild(container);
+  const frame = createPdfFrame(buildReportHtml(items, options));
 
   try {
-    container.innerHTML = buildReportHtml(items, options);
+    const frameDocument = frame.contentDocument;
+    const frameWindow = frame.contentWindow;
 
-    await document.fonts.ready;
+    if (!frameDocument || !frameWindow) {
+      throw new Error("FAILED_TO_CREATE_PDF_FRAME");
+    }
+
+    await frameDocument.fonts.ready;
     await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      frameWindow.requestAnimationFrame(() =>
+        frameWindow.requestAnimationFrame(() => resolve())
+      );
     });
 
     const html2pdf = (await import("html2pdf.js")).default;
-    const source = container.firstElementChild;
+    const source = frameDocument.querySelector(".pdf-report");
 
-    if (!(source instanceof HTMLElement)) {
+    if (!source) {
       throw new Error("FAILED_TO_BUILD_PDF_SOURCE");
     }
 
@@ -279,9 +318,9 @@ export async function exportLowStockToPdf(
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
         pagebreak: { mode: ["css", "legacy"] },
       })
-      .from(source)
+      .from(source as HTMLElement)
       .save();
   } finally {
-    document.body.removeChild(container);
+    document.body.removeChild(frame);
   }
 }
