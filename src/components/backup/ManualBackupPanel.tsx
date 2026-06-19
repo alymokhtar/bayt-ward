@@ -6,7 +6,13 @@ import { Download, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-export default function ManualBackupPanel() {
+interface ManualBackupPanelProps {
+  logoutAfterExport?: boolean;
+}
+
+export default function ManualBackupPanel({
+  logoutAfterExport = false,
+}: ManualBackupPanelProps) {
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -50,7 +56,17 @@ export default function ManualBackupPanel() {
       anchor.click();
       URL.revokeObjectURL(url);
 
-      setSuccess("تم تصدير النسخة الاحتياطية بنجاح");
+      setSuccess(
+        logoutAfterExport
+          ? "تم تصدير النسخة الاحتياطية بنجاح، جار تسجيل الخروج..."
+          : "تم تصدير النسخة الاحتياطية بنجاح"
+      );
+
+      if (logoutAfterExport) {
+        await fetch("/api/auth/logout", { method: "POST" });
+        router.replace("/login");
+        return;
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : "حدث خطأ غير متوقع");
     } finally {
@@ -106,6 +122,13 @@ export default function ManualBackupPanel() {
 
   return (
     <div className="space-y-4">
+      {logoutAfterExport && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-brown">
+          يجب تنزيل نسخة احتياطية قبل تسجيل الخروج. اضغط تصدير JSON وسيتم تسجيل
+          الخروج تلقائيًا بعد اكتمال التنزيل.
+        </div>
+      )}
+
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-danger">
           {error}

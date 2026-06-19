@@ -16,14 +16,15 @@ export default function Header({ user }: HeaderProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function handleLogout() {
+  function handleLogout() {
+    const confirmed = window.confirm(
+      "هل تريد تسجيل الخروج؟ يجب تنزيل نسخة احتياطية قبل إغلاق الجلسة."
+    );
+
+    if (!confirmed) return;
+
     setLoading(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
-    } catch {
-      setLoading(false);
-    }
+    router.push("/settings?logoutBackup=1#manual-backup");
   }
 
   return (

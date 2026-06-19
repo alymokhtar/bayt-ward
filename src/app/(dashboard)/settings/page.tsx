@@ -7,12 +7,18 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Settings } from "lucide-react";
 
-export default async function SettingsPage() {
+interface SettingsPageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const session = await getSession();
   if (session?.role !== "ADMIN") {
     redirect("/dashboard");
   }
 
+  const params = await searchParams;
+  const logoutAfterExport = params?.logoutBackup === "1";
   const settings = await getSettings();
   const themeAccent = settings.theme_accent;
 
@@ -46,12 +52,12 @@ export default async function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="manual-backup">
         <CardHeader>
           <CardTitle>النسخ الاحتياطي اليدوي</CardTitle>
         </CardHeader>
         <CardContent>
-          <ManualBackupPanel />
+          <ManualBackupPanel logoutAfterExport={logoutAfterExport} />
         </CardContent>
       </Card>
     </div>
