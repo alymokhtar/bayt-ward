@@ -18,6 +18,8 @@ enum PaymentMethod {
   CASH
   CARD
   TRANSFER
+  INSTAPAY
+  WALLET
   MIXED
 }
 

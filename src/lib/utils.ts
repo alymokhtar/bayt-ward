@@ -97,8 +97,10 @@ export function getRoleLabel(role: string): string {
 
 export function getPaymentMethodLabel(method: string): string {
   const labels: Record<string, string> = {
-    CASH: "نقدي",
-    CARD: "بطاقة",
+    CASH: "كاش",
+    CARD: "فيزا",
+    INSTAPAY: "إنستاباي",
+    WALLET: "محفظة",
     TRANSFER: "تحويل",
     MIXED: "مختلط",
   };

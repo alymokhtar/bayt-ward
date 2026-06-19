@@ -243,7 +243,7 @@ export async function restoreBackupSnapshot(
     totalAmount: Number(row.totalAmount ?? 0),
     paidAmount: Number(row.paidAmount ?? 0),
     changeAmount: Number(row.changeAmount ?? 0),
-    paymentMethod: row.paymentMethod as "CASH" | "CARD" | "TRANSFER" | "MIXED",
+    paymentMethod: row.paymentMethod as "CASH" | "CARD" | "TRANSFER" | "INSTAPAY" | "WALLET" | "MIXED",
     status: row.status as "COMPLETED" | "PENDING" | "CANCELLED" | "REFUNDED",
     notes: toNullableString(row.notes),
     createdAt: toDate(row.createdAt),

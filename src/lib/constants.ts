@@ -152,8 +152,10 @@ export const EXPENSE_CATEGORIES = [
 ];
 
 export const PAYMENT_METHODS = [
-  { value: "CASH", label: "نقدي" },
-  { value: "CARD", label: "بطاقة" },
+  { value: "CASH", label: "كاش" },
+  { value: "CARD", label: "فيزا" },
+  { value: "INSTAPAY", label: "إنستاباي" },
+  { value: "WALLET", label: "محفظة" },
   { value: "TRANSFER", label: "تحويل بنكي" },
   { value: "MIXED", label: "مختلط" },
 ];

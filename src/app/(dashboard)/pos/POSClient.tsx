@@ -2,28 +2,38 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import Select from "@/components/ui/Select";
 import ReceiptModal from "@/components/pos/ReceiptModal";
 import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
 import { createSale } from "@/lib/actions/sales";
 import { createCustomer, searchCustomers } from "@/lib/actions/customers";
 import { searchVariants } from "@/lib/actions/products";
 import { scanVariantCode } from "@/lib/variant-scan-client";
-import { PAYMENT_METHODS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 import {
+  Banknote,
+  CreditCard,
   Minus,
   Plus,
   Search,
   ShoppingCart,
+  Smartphone,
   Trash2,
   User,
   UserPlus,
+  Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type VariantResult = Awaited<ReturnType<typeof searchVariants>>[number];
 type CustomerResult = Awaited<ReturnType<typeof searchCustomers>>[number];
+type PosPaymentMethod = "CASH" | "CARD" | "INSTAPAY" | "WALLET";
+
+const POS_PAYMENT_METHODS = [
+  { value: "CASH", label: "كاش", icon: Banknote },
+  { value: "CARD", label: "فيزا", icon: CreditCard },
+  { value: "INSTAPAY", label: "إنستاباي", icon: Smartphone },
+  { value: "WALLET", label: "محفظة", icon: Wallet },
+] as const;
 
 interface CartItem {
   variant: VariantResult;
@@ -51,7 +61,7 @@ export default function POSClient({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod | "">("");
   const [paidAmount, setPaidAmount] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -230,6 +240,11 @@ export default function POSClient({
       return;
     }
 
+    if (!paymentMethod) {
+      setError("اختر طريقة الدفع أولاً");
+      return;
+    }
+
     setLoading(true);
     const result = await createSale({
       customerId: selectedCustomer?.id,
@@ -247,7 +262,7 @@ export default function POSClient({
       totalAmount,
       paidAmount: paid,
       changeAmount,
-      paymentMethod: paymentMethod as "CASH" | "CARD" | "TRANSFER" | "MIXED",
+      paymentMethod,
       notes: notes || undefined,
     });
 
@@ -294,6 +309,7 @@ export default function POSClient({
       setPaidAmount("");
       setNotes("");
       setSelectedCustomer(null);
+      setPaymentMethod("");
 
     } else {
       setError(result.success ? "حدث خطأ" : (result.error ?? "حدث خطأ"));
@@ -548,12 +564,37 @@ export default function POSClient({
             />
           </div>
 
-          <Select
-            label="طريقة الدفع"
-            options={PAYMENT_METHODS}
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-          />
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-brown">طريقة الدفع</span>
+            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="طريقة الدفع">
+              {POS_PAYMENT_METHODS.map((method) => {
+                const Icon = method.icon;
+                const selected = paymentMethod === method.value;
+
+                return (
+                  <button
+                    key={method.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => {
+                      setPaymentMethod(method.value);
+                      setError("");
+                    }}
+                    className={`
+                      flex h-12 items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-all
+                      ${selected
+                        ? "border-gold bg-gold text-white shadow-sm"
+                        : "border-border bg-white text-brown hover:border-gold hover:bg-gold/5"}
+                    `}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {method.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
@@ -601,7 +642,7 @@ export default function POSClient({
             className="w-full"
             size="lg"
             loading={loading}
-            disabled={cart.length === 0}
+            disabled={cart.length === 0 || !paymentMethod}
             onClick={handleCompleteSale}
           >
             إتمام البيع
