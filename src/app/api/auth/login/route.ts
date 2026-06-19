@@ -4,7 +4,32 @@ import {
   signSessionToken,
 } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/env";
+import { sendTelegramMessage } from "@/lib/telegram";
 import { NextResponse } from "next/server";
+
+function formatSystemOpenMessage(user: {
+  name: string;
+  email: string;
+  role: string;
+}) {
+  const openedAt = new Date().toLocaleString("ar-EG", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return [
+    "🔔 تم فتح النظام",
+    "",
+    `اسم المستخدم: ${user.name}`,
+    `البريد الإلكتروني: ${user.email}`,
+    `الصلاحية: ${user.role}`,
+    `التوقيت: ${openedAt}`,
+  ].join("\n");
+}
 
 export async function POST(request: Request) {
   if (!isDatabaseConfigured()) {
@@ -45,6 +70,8 @@ export async function POST(request: Request) {
     });
 
     response.cookies.set("session", token, SESSION_COOKIE_OPTIONS);
+
+    await sendTelegramMessage(formatSystemOpenMessage(user));
 
     return response;
   } catch (error) {
