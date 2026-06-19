@@ -1,17 +1,8 @@
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
 import EmptyState from "@/components/ui/EmptyState";
 import { Card, CardContent } from "@/components/ui/Card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/Table";
+import ProductsTableClient from "@/app/(dashboard)/products/ProductsTableClient";
 import { getProducts } from "@/lib/actions/products";
-import { formatCurrency } from "@/lib/utils";
 import PaginationNav from "@/components/ui/PaginationNav";
 import { Package, Plus, Search } from "lucide-react";
 import Link from "next/link";
@@ -73,88 +64,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               action={{ label: "إضافة منتج", href: "/products/new" }}
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>المنتج</TableHead>
-                  <TableHead>التصنيف</TableHead>
-                  <TableHead>المتغيرات</TableHead>
-                  <TableHead>المخزون</TableHead>
-                  <TableHead>السعر</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {products.map((product) => {
-                  const totalStock = product.variants.reduce(
-                    (sum, v) => sum + v.stockQuantity,
-                    0
-                  );
-                  const minPrice = Math.min(
-                    ...product.variants.map((v) => v.sellingPrice)
-                  );
-                  const maxPrice = Math.max(
-                    ...product.variants.map((v) => v.sellingPrice)
-                  );
-                  const priceLabel =
-                    minPrice === maxPrice
-                      ? formatCurrency(minPrice)
-                      : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`;
-
-                  return (
-                    <TableRow key={product.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {product.nameAr || product.name}
-                          </p>
-                          {product.brand && (
-                            <p className="text-xs text-muted">{product.brand}</p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {product.category.nameAr || product.category.name}
-                      </TableCell>
-                      <TableCell>{product.variants.length}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            totalStock <=
-                            product.variants.reduce(
-                              (s, v) => s + v.minStockLevel,
-                              0
-                            ) /
-                              product.variants.length
-                              ? "warning"
-                              : "default"
-                          }
-                        >
-                          {totalStock}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-medium text-gold">
-                        {priceLabel}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={product.isActive ? "success" : "danger"}>
-                          {product.isActive ? "نشط" : "غير نشط"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Link
-                          href={`/products/${product.id}`}
-                          className="text-sm text-gold hover:underline"
-                        >
-                          تعديل
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <ProductsTableClient products={products} />
           )}
           <PaginationNav
             page={result.page}
