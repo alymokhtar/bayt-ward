@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 
 const LOGOUT_URL = "/api/auth/logout";
+const EXIT_WARNING_MESSAGE = "هل تريد تسجيل الخروج";
 
 function isStandalonePWA() {
   return (
@@ -37,7 +38,8 @@ export default function PWAExitGuard() {
     function handleBeforeUnload(event: BeforeUnloadEvent) {
       promptedForUnload = true;
       event.preventDefault();
-      event.returnValue = "";
+      event.returnValue = EXIT_WARNING_MESSAGE;
+      return EXIT_WARNING_MESSAGE;
     }
 
     function handlePageHide() {
