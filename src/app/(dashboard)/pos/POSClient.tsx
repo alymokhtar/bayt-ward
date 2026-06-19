@@ -11,7 +11,6 @@ import { searchVariants } from "@/lib/actions/products";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { PAYMENT_METHODS } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
-import { buildWhatsAppMessage, openWhatsApp } from "@/lib/whatsapp";
 import {
   Minus,
   Plus,
@@ -296,25 +295,6 @@ export default function POSClient({
       setNotes("");
       setSelectedCustomer(null);
 
-      if (customer?.phone) {
-        const itemsText = soldItems
-          .map(
-            (item) =>
-              `• ${item.variant.product.nameAr || item.variant.product.name} × ${item.quantity}`
-          )
-          .join("\n");
-        const message = buildWhatsAppMessage("sale_receipt", {
-          storeNameAr,
-          customerName: customer.name,
-          invoiceNumber,
-          totalAmount: saleTotal,
-          currencySymbol,
-          items: itemsText,
-        });
-        if (confirm("هل تريد إرسال الفاتورة للعميل عبر واتساب؟")) {
-          openWhatsApp(customer.phone, message);
-        }
-      }
     } else {
       setError(result.success ? "حدث خطأ" : (result.error ?? "حدث خطأ"));
     }
