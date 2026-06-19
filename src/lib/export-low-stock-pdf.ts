@@ -301,8 +301,15 @@ function preparePdfClone(clonedDocument: Document): void {
 
   const wrapper = clonedDocument.querySelector<HTMLElement>(".pdf-render-root");
   if (wrapper) {
+    wrapper.style.position = "static";
+    wrapper.style.inset = "auto";
+    wrapper.style.width = "210mm";
+    wrapper.style.minHeight = "297mm";
+    wrapper.style.margin = "0";
+    wrapper.style.padding = "12mm";
     wrapper.style.background = "#ffffff";
     wrapper.style.color = "#4b3621";
+    wrapper.style.transform = "none";
   }
 }
 
