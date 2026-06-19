@@ -75,7 +75,6 @@ function buildReportHtml(
           <td class="number">${escapeHtml(item.stockQuantity)}</td>
           <td class="number">${escapeHtml(item.minStockLevel)}</td>
           <td class="number strong">${escapeHtml(reorderQty)}</td>
-          <td class="sku">${escapeHtml(item.sku)}</td>
         </tr>
       `;
     })
@@ -95,10 +94,10 @@ function buildReportHtml(
           min-height: 273mm;
           box-sizing: border-box;
           padding: 0;
-          color: #4b3621;
+          color: #000000;
           background: #ffffff;
           font-family: "ArabTypeReport", "Cairo", "Segoe UI", Tahoma, Arial, sans-serif;
-          font-size: 15px;
+          font-size: 17px;
           line-height: 1.65;
           direction: rtl;
           unicode-bidi: isolate;
@@ -116,14 +115,14 @@ function buildReportHtml(
 
         .pdf-title {
           margin: 0;
-          font-size: 29px;
+          font-size: 32px;
           font-weight: 700;
         }
 
         .pdf-subtitle {
           margin: 6px 0 0;
-          color: #6b5b4f;
-          font-size: 17px;
+          color: #000000;
+          font-size: 19px;
         }
 
         .pdf-meta {
@@ -142,13 +141,13 @@ function buildReportHtml(
         }
 
         .pdf-meta-label {
-          color: #6b5b4f;
-          font-size: 13px;
+          color: #000000;
+          font-size: 15px;
         }
 
         .pdf-meta-value {
           margin-top: 2px;
-          font-size: 16px;
+          font-size: 18px;
           font-weight: 700;
         }
 
@@ -179,7 +178,7 @@ function buildReportHtml(
         th {
           background: #f5f0e8;
           font-weight: 700;
-          font-size: 15px;
+          font-size: 17px;
         }
 
         tbody tr:nth-child(even) td {
@@ -188,11 +187,10 @@ function buildReportHtml(
 
         td {
           text-align: center;
-          font-size: 14px;
+          font-size: 16px;
         }
 
-        .number,
-        .sku {
+        .number {
           direction: ltr;
           unicode-bidi: embed;
           text-align: center;
@@ -200,33 +198,29 @@ function buildReportHtml(
         }
 
         .strong {
-          color: #4b3621;
+          color: #000000;
           font-weight: 700;
         }
 
         .product-column {
-          width: 31%;
+          width: 36%;
         }
 
         .small-column {
-          width: 11%;
+          width: 14%;
         }
 
         .number-column {
-          width: 10%;
-        }
-
-        .sku-column {
-          width: 17%;
+          width: 12%;
         }
 
         .pdf-footer {
           margin-top: 16px;
           padding-top: 10px;
           border-top: 1px solid #e8e0d5;
-          color: #6b5b4f;
+          color: #000000;
           text-align: center;
-          font-size: 13px;
+          font-size: 15px;
           break-inside: avoid;
         }
       </style>
@@ -260,7 +254,6 @@ function buildReportHtml(
             <th class="number-column">المتاح</th>
             <th class="number-column">الحد الأدنى</th>
             <th class="number-column">المقترح</th>
-            <th class="sku-column">SKU</th>
           </tr>
         </thead>
         <tbody>
@@ -285,7 +278,7 @@ function createReportElement(html: string): HTMLDivElement {
   wrapper.style.width = "210mm";
   wrapper.style.padding = "12mm";
   wrapper.style.background = "#ffffff";
-  wrapper.style.color = "#4b3621";
+  wrapper.style.color = "#000000";
   wrapper.style.pointerEvents = "none";
   wrapper.style.zIndex = "2147483647";
   wrapper.innerHTML = html;
@@ -301,9 +294,9 @@ function preparePdfClone(clonedDocument: Document): void {
   const html = clonedDocument.documentElement;
   const body = clonedDocument.body;
   html.style.background = "#ffffff";
-  html.style.color = "#4b3621";
+  html.style.color = "#000000";
   body.style.background = "#ffffff";
-  body.style.color = "#4b3621";
+  body.style.color = "#000000";
 
   const wrapper = clonedDocument.querySelector<HTMLElement>(".pdf-render-root");
   if (wrapper) {
@@ -315,7 +308,7 @@ function preparePdfClone(clonedDocument: Document): void {
     wrapper.style.margin = "0";
     wrapper.style.padding = "12mm";
     wrapper.style.background = "#ffffff";
-    wrapper.style.color = "#4b3621";
+    wrapper.style.color = "#000000";
     wrapper.style.pointerEvents = "auto";
     wrapper.style.zIndex = "auto";
     wrapper.style.overflow = "visible";
