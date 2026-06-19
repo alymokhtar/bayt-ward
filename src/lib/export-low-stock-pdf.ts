@@ -276,12 +276,16 @@ function buildReportHtml(
 function createReportElement(html: string): HTMLDivElement {
   const wrapper = document.createElement("div");
   wrapper.className = "pdf-render-root";
+  wrapper.setAttribute("aria-hidden", "true");
   wrapper.style.position = "fixed";
-  wrapper.style.inset = "0 auto auto -10000px";
+  wrapper.style.top = "0";
+  wrapper.style.left = "0";
   wrapper.style.width = "210mm";
   wrapper.style.padding = "12mm";
   wrapper.style.background = "#ffffff";
   wrapper.style.color = "#4b3621";
+  wrapper.style.pointerEvents = "none";
+  wrapper.style.zIndex = "2147483647";
   wrapper.innerHTML = html;
   document.body.appendChild(wrapper);
   return wrapper;
@@ -302,13 +306,17 @@ function preparePdfClone(clonedDocument: Document): void {
   const wrapper = clonedDocument.querySelector<HTMLElement>(".pdf-render-root");
   if (wrapper) {
     wrapper.style.position = "static";
-    wrapper.style.inset = "auto";
+    wrapper.style.top = "auto";
+    wrapper.style.left = "auto";
     wrapper.style.width = "210mm";
     wrapper.style.minHeight = "297mm";
     wrapper.style.margin = "0";
     wrapper.style.padding = "12mm";
     wrapper.style.background = "#ffffff";
     wrapper.style.color = "#4b3621";
+    wrapper.style.pointerEvents = "auto";
+    wrapper.style.zIndex = "auto";
+    wrapper.style.overflow = "visible";
     wrapper.style.transform = "none";
   }
 }
@@ -321,6 +329,8 @@ export async function exportLowStockToPdf(
 
   const { default: html2pdf } = await import("html2pdf.js");
   const reportElement = createReportElement(buildReportHtml(items, options));
+  const printableElement =
+    reportElement.querySelector<HTMLElement>(".pdf-report") ?? reportElement;
 
   try {
     await Promise.all([
@@ -346,7 +356,7 @@ export async function exportLowStockToPdf(
           orientation: "portrait",
         },
       })
-      .from(reportElement)
+      .from(printableElement)
       .save();
   } finally {
     reportElement.remove();
