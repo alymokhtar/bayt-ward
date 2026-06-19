@@ -57,7 +57,7 @@ export default function SalesChart({ data }: SalesChartProps) {
           }}
           labelFormatter={(label) => label}
         />
-        <Bar dataKey="total" fill="#b8860b" radius={[6, 6, 0, 0]} name="total" />
+        <Bar dataKey="total" fill="var(--color-gold)" radius={[6, 6, 0, 0]} name="total" />
       </BarChart>
     </ResponsiveContainer>
   );

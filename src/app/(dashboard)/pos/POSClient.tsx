@@ -584,7 +584,7 @@ export default function POSClient({
                     className={`
                       flex h-12 items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-all
                       ${selected
-                        ? "border-gold bg-gold text-white shadow-sm"
+                        ? "border-gold bg-gold text-primary-foreground shadow-sm"
                         : "border-border bg-white text-brown hover:border-gold hover:bg-gold/5"}
                     `}
                   >

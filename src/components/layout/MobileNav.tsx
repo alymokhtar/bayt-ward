@@ -100,7 +100,7 @@ export default function MobileNav({ role }: MobileNavProps) {
                       className={cn(
                         "flex flex-col items-center gap-1.5 rounded-xl p-3 text-center transition-colors",
                         isActive
-                          ? "bg-gold text-white"
+                          ? "bg-gold text-primary-foreground"
                           : "text-cream/80 hover:bg-cream/10"
                       )}
                     >

@@ -3,7 +3,7 @@ import { type ButtonHTMLAttributes, forwardRef } from "react";
 
 const variants = {
   primary:
-    "bg-gold text-white hover:bg-gold-dark shadow-sm hover:shadow-md border border-gold-dark/20",
+    "bg-gold text-primary-foreground hover:bg-gold-dark shadow-sm hover:shadow-md border border-gold-dark/20",
   secondary:
     "bg-brown text-cream hover:bg-brown-light shadow-sm border border-brown-light/20",
   outline:

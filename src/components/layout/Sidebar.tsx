@@ -56,7 +56,7 @@ export default function Sidebar({ role }: SidebarProps) {
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
                     isActive
-                      ? "bg-gold text-white shadow-md"
+                      ? "bg-gold text-primary-foreground shadow-md"
                       : "text-cream/80 hover:bg-cream/10 hover:text-cream"
                   )}
                 >
