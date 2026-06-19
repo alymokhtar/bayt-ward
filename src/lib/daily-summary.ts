@@ -8,7 +8,7 @@ import { formatCurrency } from "@/lib/utils";
 export async function getDailySummary() {
   const { start, end } = getEgyptBusinessDayBounds();
 
-  const [salesAgg, expensesAgg] = await Promise.all([
+  const [salesAgg, costOfGoodsSoldRows, expensesAgg] = await Promise.all([
     prisma.sale.aggregate({
       where: {
         status: "COMPLETED",
@@ -17,6 +17,15 @@ export async function getDailySummary() {
       _sum: { totalAmount: true },
       _count: true,
     }),
+    prisma.$queryRaw<[{ costOfGoodsSold: number }]>`
+      SELECT COALESCE(SUM(si.quantity * pv."costPrice"), 0)::float AS "costOfGoodsSold"
+      FROM "SaleItem" si
+      INNER JOIN "Sale" s ON si."saleId" = s.id
+      INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
+      WHERE s.status = 'COMPLETED'
+        AND s."createdAt" >= ${start}
+        AND s."createdAt" < ${end}
+    `,
     prisma.expense.aggregate({
       where: {
         expenseDate: { gte: start, lt: end },
@@ -28,12 +37,15 @@ export async function getDailySummary() {
   const totalSales = salesAgg._sum.totalAmount ?? 0;
   const invoicesCount = salesAgg._count;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
+  const costOfGoodsSold = costOfGoodsSoldRows[0]?.costOfGoodsSold ?? 0;
+  const grossProfit = totalSales - costOfGoodsSold;
 
   return {
     totalSales,
     invoicesCount,
     totalExpenses,
-    netProfit: totalSales - totalExpenses,
+    grossProfit,
+    netProfit: grossProfit - totalExpenses,
   };
 }
 
@@ -57,6 +69,7 @@ export function formatDailySummaryMessage(
     `إجمالي المبيعات: ${formatCurrency(summary.totalSales)}`,
     `عدد الفواتير: ${summary.invoicesCount}`,
     `إجمالي المصروفات: ${formatCurrency(summary.totalExpenses)}`,
+    `إجمالي الربح: ${formatCurrency(summary.grossProfit)}`,
     `صافي الربح: ${formatCurrency(summary.netProfit)}`,
     "",
     ...footerLines,
