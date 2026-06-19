@@ -69,8 +69,8 @@ function buildReportHtml(
 
       return `
         <tr>
-          <td>${escapeHtml(item.productName)}</td>
-          <td>${escapeHtml(item.color)}</td>
+          <td class="emphasis-cell">${escapeHtml(item.productName)}</td>
+          <td class="emphasis-cell">${escapeHtml(item.color)}</td>
           <td>${escapeHtml(item.size)}</td>
           <td class="number">${escapeHtml(item.stockQuantity)}</td>
           <td class="number">${escapeHtml(item.minStockLevel)}</td>
@@ -199,6 +199,11 @@ function buildReportHtml(
 
         .strong {
           color: #000000;
+          font-weight: 700;
+        }
+
+        .emphasis-cell {
+          font-size: 19px;
           font-weight: 700;
         }
 
