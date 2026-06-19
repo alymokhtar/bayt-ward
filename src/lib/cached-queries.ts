@@ -1,23 +1,19 @@
 import { unstable_cache } from "next/cache";
 import { Prisma, type ExpenseCategory } from "@prisma/client";
+import {
+  getEgyptBusinessDateKey,
+  getEgyptBusinessDayBounds,
+} from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
-
-function getDayBounds(date: Date) {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start, end };
-}
 
 /** Dashboard aggregates — cached 30s, invalidated on sales/inventory mutations */
 /** KPIs in a single SQL round-trip (replaces 5 separate Prisma calls) */
 export const getCachedDashboardKpis = unstable_cache(
   async () => {
     const now = new Date();
-    const { start: todayStart, end: todayEnd } = getDayBounds(now);
+    const { start: todayStart, end: todayEnd } = getEgyptBusinessDayBounds(now);
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
@@ -68,49 +64,46 @@ export const getCachedDashboardKpis = unstable_cache(
   }
 );
 
-/** 7-day chart via GROUP BY (replaces findMany of all week sales) */
+/** 7-day chart grouped by the 4 AM business-day boundary. */
 export const getCachedSalesChartData = unstable_cache(
   async () => {
     const now = new Date();
-    const weekStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate() - 6
-    );
-    weekStart.setHours(0, 0, 0, 0);
-
-    const dailyRows = await prisma.$queryRaw<
-      { day: Date; total: number; count: number }[]
-    >`
-      SELECT
-        DATE("createdAt") AS day,
-        COALESCE(SUM("totalAmount"), 0)::float AS total,
-        COUNT(*)::int AS count
-      FROM "Sale"
-      WHERE status = 'COMPLETED' AND "createdAt" >= ${weekStart}
-      GROUP BY DATE("createdAt")
-      ORDER BY day ASC
-    `;
-
-    const byDay = new Map(
-      dailyRows.map((r) => [
-        new Date(r.day).toISOString().split("T")[0],
-        { total: r.total, count: r.count },
-      ])
-    );
-
     const salesChartData: { date: string; total: number; count: number }[] = [];
+
     for (let i = 6; i >= 0; i--) {
       const day = new Date(now);
       day.setDate(day.getDate() - i);
-      const { start } = getDayBounds(day);
-      const key = start.toISOString().split("T")[0];
-      const entry = byDay.get(key);
+
       salesChartData.push({
-        date: key,
-        total: entry?.total ?? 0,
-        count: entry?.count ?? 0,
+        date: getEgyptBusinessDateKey(day),
+        total: 0,
+        count: 0,
       });
+    }
+
+    const firstDay = salesChartData[0]?.date;
+    const firstDayStart = firstDay
+      ? getEgyptBusinessDayBounds(new Date(`${firstDay}T12:00:00Z`)).start
+      : getEgyptBusinessDayBounds(now).start;
+    const rows = await prisma.sale.findMany({
+      where: {
+        status: "COMPLETED",
+        createdAt: { gte: firstDayStart },
+      },
+      select: {
+        createdAt: true,
+        totalAmount: true,
+      },
+    });
+    const byDay = new Map(salesChartData.map((day) => [day.date, day]));
+
+    for (const row of rows) {
+      const entry = byDay.get(getEgyptBusinessDateKey(row.createdAt));
+
+      if (entry) {
+        entry.total += row.totalAmount;
+        entry.count += 1;
+      }
     }
 
     return salesChartData;

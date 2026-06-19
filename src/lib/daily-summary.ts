@@ -1,19 +1,12 @@
+import {
+  BUSINESS_TIME_ZONE,
+  getEgyptBusinessDayBounds,
+} from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/utils";
 
-function getEgyptDayBounds(date = new Date()) {
-  const now = new Date(
-    date.toLocaleString("en-US", { timeZone: "Africa/Cairo" })
-  );
-  const start = new Date(now);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
-  return { start, end };
-}
-
 export async function getDailySummary() {
-  const { start, end } = getEgyptDayBounds();
+  const { start, end } = getEgyptBusinessDayBounds();
 
   const [salesAgg, expensesAgg] = await Promise.all([
     prisma.sale.aggregate({
@@ -50,7 +43,7 @@ export function formatDailySummaryMessage(
   footerLines: string[] = []
 ) {
   const egyptDate = new Date().toLocaleString("ar-EG", {
-    timeZone: "Africa/Cairo",
+    timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "long",
     day: "numeric",
