@@ -148,10 +148,20 @@ export default function LowStockReportPanel({
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={includeAllFiltered}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={includeAllFiltered}
+            >
               تضمين الكل
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={excludeAllFiltered}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={excludeAllFiltered}
+            >
               استبعاد الكل
             </Button>
           </div>

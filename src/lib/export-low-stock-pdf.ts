@@ -14,6 +14,12 @@ export type LowStockExportItem = {
 
 type PdfTextInput = string | number;
 
+const PDF_FONT_NAME = "ArabType";
+const PDF_FONT_FILE = "arabtype.ttf";
+const PDF_FONT_URL = "/fonts/arabtype.ttf";
+
+let arabicFontDataPromise: Promise<string> | null = null;
+
 export function suggestedReorderQuantity(
   stockQuantity: number,
   minStockLevel: number
@@ -53,8 +59,40 @@ function formatGeneratedAt(date: Date): string {
 }
 
 function pdfText(doc: jsPDF, value: PdfTextInput): string {
-  const text = String(value);
-  return doc.processArabic(text);
+  return doc.processArabic(String(value));
+}
+
+function arrayBufferToBinaryString(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+
+  return binary;
+}
+
+async function loadArabicFontData(): Promise<string> {
+  arabicFontDataPromise ??= fetch(PDF_FONT_URL).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`Failed to load PDF font: ${response.status}`);
+    }
+
+    return arrayBufferToBinaryString(await response.arrayBuffer());
+  });
+
+  return arabicFontDataPromise;
+}
+
+async function registerArabicFont(doc: jsPDF): Promise<void> {
+  const fontData = await loadArabicFontData();
+
+  doc.addFileToVFS(PDF_FONT_FILE, fontData);
+  doc.addFont(PDF_FONT_FILE, PDF_FONT_NAME, "normal");
+  doc.addFont(PDF_FONT_FILE, PDF_FONT_NAME, "bold");
+  doc.setFont(PDF_FONT_NAME, "normal");
 }
 
 export async function exportLowStockToPdf(
@@ -68,6 +106,8 @@ export async function exportLowStockToPdf(
     format: "a4",
     orientation: "portrait",
   });
+
+  await registerArabicFont(doc);
 
   doc.setLanguage("ar-EG");
   doc.setR2L(true);
@@ -86,13 +126,13 @@ export async function exportLowStockToPdf(
   doc.roundedRect(margin, 10, pageWidth - margin * 2, 28, 2, 2, "FD");
 
   doc.setTextColor(75, 54, 33);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(PDF_FONT_NAME, "bold");
   doc.setFontSize(17);
   doc.text(pdfText(doc, "بيت ورد - طلب إعادة مخزون"), pageWidth / 2, 21, {
     align: "center",
   });
 
-  doc.setFont("helvetica", "normal");
+  doc.setFont(PDF_FONT_NAME, "normal");
   doc.setFontSize(10);
   doc.setTextColor(107, 91, 79);
   doc.text(pdfText(doc, "منتجات بمخزون منخفض أو نافد"), pageWidth / 2, 30, {
@@ -113,14 +153,14 @@ export async function exportLowStockToPdf(
     doc.setDrawColor(232, 224, 213);
     doc.roundedRect(x, metaTop, metaBoxWidth, 18, 2, 2, "FD");
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(PDF_FONT_NAME, "normal");
     doc.setFontSize(8);
     doc.setTextColor(107, 91, 79);
     doc.text(pdfText(doc, label), x + metaBoxWidth - 3, metaTop + 6, {
       align: "right",
     });
 
-    doc.setFont("helvetica", "bold");
+    doc.setFont(PDF_FONT_NAME, "bold");
     doc.setFontSize(9);
     doc.setTextColor(75, 54, 33);
     doc.text(pdfText(doc, value), x + metaBoxWidth - 3, metaTop + 13, {
@@ -155,7 +195,7 @@ export async function exportLowStockToPdf(
     margin: { left: margin, right: margin },
     tableWidth: "auto",
     styles: {
-      font: "helvetica",
+      font: PDF_FONT_NAME,
       fontSize: 8,
       cellPadding: 2.2,
       halign: "right",
@@ -188,7 +228,7 @@ export async function exportLowStockToPdf(
       doc.setDrawColor(232, 224, 213);
       doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
 
-      doc.setFont("helvetica", "normal");
+      doc.setFont(PDF_FONT_NAME, "normal");
       doc.setFontSize(8);
       doc.setTextColor(107, 91, 79);
       doc.text(
