@@ -42,6 +42,11 @@ export const THEME_PRESETS: ThemePreset[] = [
     value: "#0F766E",
     description: "نظيف وحديث",
   },
+  {
+    name: "الرمادي الغامق",
+    value: "#374151",
+    description: "هادئ ومحايد",
+  },
 ];
 
 export function normalizeHexColor(value?: string | null): string {
@@ -89,7 +94,7 @@ export function getThemeContrastColor(hex: string): string {
 
 export function getThemeSidebarColor(hex: string): string {
   const { red, green, blue } = hexToRgb(hex);
-  const sidebarRatio = 0.52;
+  const sidebarRatio = 0.46;
 
   return `#${toHexChannel(red * sidebarRatio)}${toHexChannel(
     green * sidebarRatio
