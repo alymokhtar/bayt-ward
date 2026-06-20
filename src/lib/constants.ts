@@ -75,7 +75,7 @@ export const NAV_ITEMS = [
     title: "المرتجعات",
     href: "/returns",
     icon: RotateCcw,
-    roles: ["ADMIN", "MANAGER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER"],
   },
   {
     title: "العملاء",
@@ -123,7 +123,7 @@ export const NAV_ITEMS = [
     title: "الإعدادات",
     href: "/settings",
     icon: Settings,
-    roles: ["ADMIN"],
+    roles: ["ADMIN", "MANAGER", "CASHIER"],
   },
 ];
 

@@ -27,7 +27,7 @@ function revalidateSettingsPaths() {
 }
 
 export async function getSettings() {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
   const settings = await prisma.setting.findMany({
     orderBy: { key: "asc" },

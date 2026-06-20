@@ -8,10 +8,12 @@ import { useMemo, useState } from "react";
 
 interface ManualBackupPanelProps {
   logoutAfterExport?: boolean;
+  canRestore?: boolean;
 }
 
 export default function ManualBackupPanel({
   logoutAfterExport = false,
+  canRestore = false,
 }: ManualBackupPanelProps) {
   const router = useRouter();
   const [exporting, setExporting] = useState(false);
@@ -160,7 +162,8 @@ export default function ManualBackupPanel({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-5">
+      {canRestore && (
+        <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-lg font-bold text-brown">استرداد البيانات</h3>
@@ -200,7 +203,8 @@ export default function ManualBackupPanel({
             </Button>
           </div>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -67,7 +67,7 @@ export async function getReturns(options?: {
   customerId?: string;
   limit?: number;
 }) {
-  await requireRole(["ADMIN", "MANAGER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
   return getCachedReturnsList(JSON.stringify(options ?? {}));
 }
 
@@ -81,7 +81,7 @@ export async function createReturn(data: {
   notes?: string;
 }) {
   try {
-    const user = await requireRole(["ADMIN", "MANAGER"]);
+    const user = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
     if (!data.saleId) {
       return { success: false, error: "فاتورة البيع مطلوبة" };

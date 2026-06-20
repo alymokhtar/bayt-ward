@@ -74,7 +74,7 @@ function invalidateAllData() {
 
 export async function GET() {
   try {
-    await requireRole(["ADMIN"]);
+    await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
     const backup = await createBackupSnapshot();
     const filename = buildBackupFilename(new Date(backup.generatedAt));

@@ -13,7 +13,7 @@ interface SettingsPageProps {
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const session = await getSession();
-  if (session?.role !== "ADMIN") {
+  if (!session) {
     redirect("/dashboard");
   }
 
@@ -21,6 +21,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const logoutAfterExport = params?.logoutBackup === "1";
   const settings = await getSettings();
   const themeAccent = settings.theme_accent;
+  const canManageSettings = session.role === "ADMIN";
 
   return (
     <div className="space-y-6">
@@ -34,6 +35,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </div>
       </div>
 
+      {canManageSettings && (
+        <>
       <Card>
         <CardHeader>
           <CardTitle>المظهر</CardTitle>
@@ -51,13 +54,18 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <SettingsClient settings={settings} />
         </CardContent>
       </Card>
+        </>
+      )}
 
       <Card id="manual-backup">
         <CardHeader>
           <CardTitle>النسخ الاحتياطي اليدوي</CardTitle>
         </CardHeader>
         <CardContent>
-          <ManualBackupPanel logoutAfterExport={logoutAfterExport} />
+          <ManualBackupPanel
+            logoutAfterExport={logoutAfterExport}
+            canRestore={canManageSettings}
+          />
         </CardContent>
       </Card>
     </div>
