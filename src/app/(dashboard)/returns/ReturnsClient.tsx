@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { createReturn } from "@/lib/actions/returns";
+import ReturnDetailsModal from "@/app/(dashboard)/returns/ReturnDetailsModal";
 import { getSale } from "@/lib/actions/sales";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { Plus, Search } from "lucide-react";
@@ -68,6 +69,7 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedReturnId, setSelectedReturnId] = useState<string | null>(null);
 
   async function loadSale() {
     setError("");
@@ -181,7 +183,15 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
         <TableBody>
           {initial.map((r) => (
             <TableRow key={r.id}>
-              <TableCell className="font-medium">{r.returnNumber}</TableCell>
+              <TableCell>
+                <button
+                  type="button"
+                  onClick={() => setSelectedReturnId(r.id)}
+                  className="font-medium text-gold hover:underline"
+                >
+                  {r.returnNumber}
+                </button>
+              </TableCell>
               <TableCell>{r.sale.invoiceNumber}</TableCell>
               <TableCell>{r.customer?.name || "—"}</TableCell>
               <TableCell>{r._count.items}</TableCell>
@@ -305,6 +315,11 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
           </div>
         </form>
       </Modal>
+
+      <ReturnDetailsModal
+        returnId={selectedReturnId}
+        onClose={() => setSelectedReturnId(null)}
+      />
     </>
   );
 }

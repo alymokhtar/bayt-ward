@@ -91,6 +91,33 @@ export async function getPurchases(options?: {
   return getCachedPurchasesList(JSON.stringify(options ?? {}));
 }
 
+export async function getPurchase(id: string) {
+  await requireRole(["ADMIN", "MANAGER"]);
+
+  const purchase = await prisma.purchase.findUnique({
+    where: { id },
+    include: {
+      supplier: { select: { id: true, name: true, phone: true } },
+      user: { select: { id: true, name: true } },
+      items: {
+        include: {
+          variant: {
+            include: {
+              product: { select: { name: true, nameAr: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!purchase) {
+    throw new Error("أمر الشراء غير موجود");
+  }
+
+  return purchase;
+}
+
 export async function createPurchase(data: {
   supplierId: string;
   items: PurchaseItemInput[];

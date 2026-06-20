@@ -18,6 +18,7 @@ import {
   updateCustomer,
   deleteCustomer,
 } from "@/lib/actions/customers";
+import CustomerDetailsModal from "@/app/(dashboard)/customers/CustomerDetailsModal";
 import { formatCurrency } from "@/lib/utils";
 import CustomerWhatsAppButton from "@/components/whatsapp/CustomerWhatsAppButton";
 import PaginationNav from "@/components/ui/PaginationNav";
@@ -65,6 +66,7 @@ export default function CustomersClient({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   const hasSearch = Boolean(search?.trim());
 
@@ -176,7 +178,15 @@ export default function CustomersClient({
               <TableBody>
                 {customers.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableCell>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCustomerId(c.id)}
+                        className="font-medium text-gold hover:underline"
+                      >
+                        {c.name}
+                      </button>
+                    </TableCell>
                     <TableCell dir="ltr" className="text-start">
                       {c.phone}
                     </TableCell>
@@ -285,6 +295,11 @@ export default function CustomersClient({
           </div>
         </form>
       </Modal>
+
+      <CustomerDetailsModal
+        customerId={selectedCustomerId}
+        onClose={() => setSelectedCustomerId(null)}
+      />
     </div>
   );
 }

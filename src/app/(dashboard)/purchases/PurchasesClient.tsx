@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { createPurchase, receivePurchase } from "@/lib/actions/purchases";
+import PurchaseDetailsModal from "@/app/(dashboard)/purchases/PurchaseDetailsModal";
 import { searchVariants } from "@/lib/actions/products";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
@@ -66,6 +67,7 @@ export default function PurchasesClient({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
 
   const subtotal = items.reduce(
     (sum, i) => sum + i.unitCost * i.quantity,
@@ -241,7 +243,15 @@ export default function PurchasesClient({
         <TableBody>
           {initial.map((p) => (
             <TableRow key={p.id}>
-              <TableCell className="font-medium">{p.invoiceNumber}</TableCell>
+              <TableCell>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPurchaseId(p.id)}
+                  className="font-medium text-gold hover:underline"
+                >
+                  {p.invoiceNumber}
+                </button>
+              </TableCell>
               <TableCell>{p.supplier.name}</TableCell>
               <TableCell>{p._count.items}</TableCell>
               <TableCell className="text-gold font-medium">
@@ -455,6 +465,11 @@ export default function PurchasesClient({
           </div>
         </form>
       </Modal>
+
+      <PurchaseDetailsModal
+        purchaseId={selectedPurchaseId}
+        onClose={() => setSelectedPurchaseId(null)}
+      />
     </>
   );
 }

@@ -4,9 +4,13 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { updateSettings } from "@/lib/actions/settings";
 import {
+  applyThemeAccentToDocument,
+  readStoredThemeAccent,
+  storeThemeAccent,
+} from "@/lib/theme-client";
+import {
   DEFAULT_THEME_ACCENT,
   THEME_PRESETS,
-  getThemeContrastColor,
   getThemeSidebarColor,
   normalizeHexColor,
 } from "@/lib/theme";
@@ -16,38 +20,37 @@ import { useEffect, useMemo, useState } from "react";
 
 interface AppearanceSettingsPanelProps {
   themeAccent?: string;
-}
-
-function applyThemeAccent(accent: string) {
-  const normalizedAccent = normalizeHexColor(accent);
-  const accentForeground = getThemeContrastColor(normalizedAccent);
-  const sidebar = getThemeSidebarColor(normalizedAccent);
-
-  document.documentElement.style.setProperty("--theme-accent", normalizedAccent);
-  document.documentElement.style.setProperty(
-    "--theme-accent-foreground",
-    accentForeground
-  );
-  document.documentElement.style.setProperty("--theme-sidebar", sidebar);
-  window.localStorage.setItem("bayt-ward-theme-accent", normalizedAccent);
+  userId: string;
+  canSaveGlobally: boolean;
 }
 
 export default function AppearanceSettingsPanel({
   themeAccent,
+  userId,
+  canSaveGlobally,
 }: AppearanceSettingsPanelProps) {
   const router = useRouter();
-  const initialAccent = useMemo(
+  const serverAccent = useMemo(
     () => normalizeHexColor(themeAccent ?? DEFAULT_THEME_ACCENT),
     [themeAccent]
   );
-  const [accent, setAccent] = useState(initialAccent);
+  const [accent, setAccent] = useState(serverAccent);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const sidebarColor = useMemo(() => getThemeSidebarColor(accent), [accent]);
 
   useEffect(() => {
-    applyThemeAccent(accent);
+    if (!canSaveGlobally) {
+      const storedAccent = readStoredThemeAccent(userId);
+      if (storedAccent) {
+        setAccent(storedAccent);
+      }
+    }
+  }, [canSaveGlobally, userId]);
+
+  useEffect(() => {
+    applyThemeAccentToDocument(accent);
   }, [accent]);
 
   function choosePreset(value: string) {
@@ -62,15 +65,22 @@ export default function AppearanceSettingsPanel({
     setSuccess("");
 
     try {
-      const result = await updateSettings({ theme_accent: accent });
+      if (canSaveGlobally) {
+        const result = await updateSettings({ theme_accent: accent });
 
-      if (result.success) {
-        setSuccess("تم حفظ المظهر بنجاح");
-        router.refresh();
+        if (result.success) {
+          storeThemeAccent(accent, userId);
+          setSuccess("تم حفظ المظهر لجميع المستخدمين");
+          router.refresh();
+          return;
+        }
+
+        setError(result.error ?? "تعذر حفظ المظهر");
         return;
       }
 
-      setError(result.error ?? "تعذر حفظ المظهر");
+      storeThemeAccent(accent, userId);
+      setSuccess("تم حفظ المظهر على هذا الجهاز");
     } catch {
       setError("تعذر حفظ المظهر");
     } finally {
@@ -105,7 +115,9 @@ export default function AppearanceSettingsPanel({
               <div>
                 <h3 className="text-lg font-bold text-brown">مظهر التطبيق</h3>
                 <p className="text-sm text-muted">
-                  يطبّق اللون المختار على كامل التطبيق مع درجات متناسقة تلقائيًا.
+                  {canSaveGlobally
+                    ? "يُطبَّق اللون المختار على كامل التطبيق لجميع المستخدمين."
+                    : "اختر المظهر المناسب لك. يُحفظ على هذا الجهاز فقط ولا يؤثر على باقي المستخدمين."}
                 </p>
               </div>
             </div>
@@ -213,7 +225,7 @@ export default function AppearanceSettingsPanel({
 
             <Button type="button" onClick={handleSave} loading={loading} className="w-full">
               <Save className="h-4 w-4" />
-              حفظ المظهر
+              {canSaveGlobally ? "حفظ المظهر للجميع" : "حفظ المظهر"}
             </Button>
           </div>
         </div>

@@ -71,6 +71,36 @@ export async function getReturns(options?: {
   return getCachedReturnsList(JSON.stringify(options ?? {}));
 }
 
+export async function getReturn(id: string) {
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+
+  const returnRecord = await prisma.return.findUnique({
+    where: { id },
+    include: {
+      sale: {
+        select: { id: true, invoiceNumber: true, totalAmount: true },
+      },
+      customer: { select: { id: true, name: true, phone: true } },
+      user: { select: { id: true, name: true } },
+      items: {
+        include: {
+          variant: {
+            include: {
+              product: { select: { name: true, nameAr: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!returnRecord) {
+    throw new Error("المرتجع غير موجود");
+  }
+
+  return returnRecord;
+}
+
 export async function createReturn(data: {
   saleId: string;
   customerId?: string;

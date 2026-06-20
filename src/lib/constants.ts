@@ -105,7 +105,7 @@ export const NAV_ITEMS = [
     title: "المصروفات",
     href: "/expenses",
     icon: Wallet,
-    roles: ["ADMIN", "MANAGER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER"],
   },
   {
     title: "التقارير",

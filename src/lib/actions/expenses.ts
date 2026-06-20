@@ -71,7 +71,7 @@ export async function getExpenses(options?: {
   to?: string;
   limit?: number;
 }) {
-  await requireRole(["ADMIN", "MANAGER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
   return getCachedExpensesList(
     JSON.stringify({
       category: options?.category,
@@ -80,6 +80,35 @@ export async function getExpenses(options?: {
       limit: options?.limit,
     })
   );
+}
+
+export async function getExpense(id: string) {
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+
+  const expense = await prisma.expense.findUnique({
+    where: { id },
+    include: {
+      user: { select: { id: true, name: true } },
+      employee: { select: { id: true, name: true } },
+      adjustments: {
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          title: true,
+          notes: true,
+          adjustmentDate: true,
+        },
+        orderBy: { adjustmentDate: "desc" },
+      },
+    },
+  });
+
+  if (!expense) {
+    throw new Error("المصروف غير موجود");
+  }
+
+  return expense;
 }
 
 export async function createExpense(data: {
@@ -91,7 +120,7 @@ export async function createExpense(data: {
   employeeId?: string;
 }) {
   try {
-    const user = await requireRole(["ADMIN", "MANAGER"]);
+    const user = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
     if (!data.title?.trim()) {
       return { success: false, error: "عنوان المصروف مطلوب" };
@@ -202,7 +231,7 @@ export async function createExpense(data: {
 
 export async function deleteExpense(id: string) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
     const existing = await prisma.expense.findUnique({ where: { id } });
     if (!existing) {

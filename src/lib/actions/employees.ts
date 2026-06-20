@@ -64,7 +64,7 @@ export async function getEmployees() {
 }
 
 export async function getPayrollEmployees() {
-  await requireRole(["ADMIN", "MANAGER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
   return prisma.user.findMany({
     where: { isActive: true },
@@ -74,7 +74,7 @@ export async function getPayrollEmployees() {
 }
 
 export async function getEmployeePayrollSummary(employeeId: string) {
-  await requireRole(["ADMIN", "MANAGER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },

@@ -21,7 +21,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const logoutAfterExport = params?.logoutBackup === "1";
   const settings = await getSettings();
   const themeAccent = settings.theme_accent;
-  const canManageSettings = session.role === "ADMIN";
+  const canManageStoreSettings = session.role === "ADMIN";
 
   return (
     <div className="space-y-6">
@@ -31,30 +31,34 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </div>
         <div>
           <h1 className="text-2xl font-bold text-brown">الإعدادات</h1>
-          <p className="text-sm text-muted mt-1">إعدادات المتجر</p>
+          <p className="text-sm text-muted mt-1">
+            {canManageStoreSettings ? "إعدادات المتجر" : "إعداداتك الشخصية"}
+          </p>
         </div>
       </div>
 
-      {canManageSettings && (
-        <>
       <Card>
         <CardHeader>
           <CardTitle>المظهر</CardTitle>
         </CardHeader>
         <CardContent>
-          <AppearanceSettingsPanel themeAccent={themeAccent} />
+          <AppearanceSettingsPanel
+            themeAccent={themeAccent}
+            userId={session.id}
+            canSaveGlobally={canManageStoreSettings}
+          />
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>بيانات المتجر</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <SettingsClient settings={settings} />
-        </CardContent>
-      </Card>
-        </>
+      {canManageStoreSettings && (
+        <Card>
+          <CardHeader>
+            <CardTitle>بيانات المتجر</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SettingsClient settings={settings} />
+          </CardContent>
+        </Card>
       )}
 
       <Card id="manual-backup">
@@ -64,7 +68,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <CardContent>
           <ManualBackupPanel
             logoutAfterExport={logoutAfterExport}
-            canRestore={canManageSettings}
+            canRestore={canManageStoreSettings}
           />
         </CardContent>
       </Card>

@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { createExpense, deleteExpense } from "@/lib/actions/expenses";
+import ExpenseDetailsModal from "@/app/(dashboard)/expenses/ExpenseDetailsModal";
 import { getEmployeePayrollSummary } from "@/lib/actions/employees";
 import {
   BUSINESS_TIME_ZONE,
@@ -71,6 +72,7 @@ export default function ExpensesClient({
   const [loadingPayroll, setLoadingPayroll] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
 
   const total = initial.reduce((s, e) => s + e.amount, 0);
   const isSalaryExpense = category === "SALARIES";
@@ -208,7 +210,13 @@ export default function ExpensesClient({
           {initial.map((e) => (
             <TableRow key={e.id}>
               <TableCell>
-                <p className="font-medium">{e.title}</p>
+                <button
+                  type="button"
+                  onClick={() => setSelectedExpenseId(e.id)}
+                  className="font-medium text-gold hover:underline text-start"
+                >
+                  {e.title}
+                </button>
                 {e.description && (
                   <p className="text-xs text-muted">{e.description}</p>
                 )}
@@ -383,6 +391,11 @@ export default function ExpensesClient({
           </div>
         </form>
       </Modal>
+
+      <ExpenseDetailsModal
+        expenseId={selectedExpenseId}
+        onClose={() => setSelectedExpenseId(null)}
+      />
     </>
   );
 }
