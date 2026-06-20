@@ -1,5 +1,7 @@
 import {
   BUSINESS_TIME_ZONE,
+  dateKeyToUtcNoon,
+  getEgyptBusinessDateKey,
   getEgyptBusinessDayBounds,
 } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
@@ -54,7 +56,17 @@ export function formatDailySummaryMessage(
   title = "📊 ملخص اليوم",
   footerLines: string[] = []
 ) {
-  const egyptDate = new Date().toLocaleString("ar-EG", {
+  const businessDateKey = getEgyptBusinessDateKey();
+  const businessDateLabel = dateKeyToUtcNoon(businessDateKey).toLocaleDateString(
+    "ar-EG",
+    {
+      timeZone: BUSINESS_TIME_ZONE,
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }
+  );
+  const sentAt = new Date().toLocaleString("ar-EG", {
     timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "long",
@@ -73,6 +85,7 @@ export function formatDailySummaryMessage(
     `صافي الربح: ${formatCurrency(summary.netProfit)}`,
     "",
     ...footerLines,
-    `التاريخ: ${egyptDate}`,
+    `يوم العمل: ${businessDateLabel}`,
+    `وقت الإرسال: ${sentAt}`,
   ].join("\n");
 }

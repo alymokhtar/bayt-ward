@@ -7,7 +7,7 @@ import Select from "@/components/ui/Select";
 import { addEmployeeAdjustment } from "@/lib/actions/employees";
 import {
   dateKeyToUtcNoon,
-  getEgyptCalendarDateKey,
+  getEgyptBusinessDateKey,
 } from "@/lib/business-day";
 import { EMPLOYEE_ADJUSTMENT_TYPES } from "@/lib/constants";
 import type { EmployeeAdjustmentType } from "@prisma/client";
@@ -28,7 +28,7 @@ export default function EmployeeAdjustmentModal({
   const [amount, setAmount] = useState("");
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
-  const [adjustmentDate, setAdjustmentDate] = useState(getEgyptCalendarDateKey);
+  const [adjustmentDate, setAdjustmentDate] = useState(getEgyptBusinessDateKey);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 

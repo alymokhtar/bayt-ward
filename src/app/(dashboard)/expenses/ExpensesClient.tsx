@@ -19,7 +19,7 @@ import { getEmployeePayrollSummary } from "@/lib/actions/employees";
 import {
   BUSINESS_TIME_ZONE,
   dateKeyToUtcNoon,
-  getEgyptCalendarDateKey,
+  getEgyptBusinessDateKey,
   parseDateKey,
 } from "@/lib/business-day";
 import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES } from "@/lib/constants";
@@ -65,7 +65,7 @@ export default function ExpensesClient({
   const [category, setCategory] = useState("OTHER");
   const [description, setDescription] = useState("");
   const [employeeId, setEmployeeId] = useState("");
-  const [expenseDate, setExpenseDate] = useState(getEgyptCalendarDateKey);
+  const [expenseDate, setExpenseDate] = useState(getEgyptBusinessDateKey);
   const [payrollSummary, setPayrollSummary] = useState<PayrollSummary | null>(
     null
   );
@@ -125,7 +125,7 @@ export default function ExpensesClient({
     setCategory("OTHER");
     setDescription("");
     setEmployeeId("");
-    setExpenseDate(getEgyptCalendarDateKey());
+    setExpenseDate(getEgyptBusinessDateKey());
     setPayrollSummary(null);
     setError("");
     setModalOpen(true);

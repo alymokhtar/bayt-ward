@@ -5,8 +5,8 @@ import {
   getBusinessDayBoundsFromDateKeys,
   getEgyptBusinessDateKey,
   getEgyptBusinessDayBounds,
-  getEgyptMonthBounds,
   getOffsetBusinessDateKey,
+  getReportPeriodRange,
 } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
@@ -18,7 +18,11 @@ export const getCachedDashboardKpis = unstable_cache(
   async () => {
     const now = new Date();
     const { start: todayStart, end: todayEnd } = getEgyptBusinessDayBounds(now);
-    const { start: monthStart, end: monthEnd } = getEgyptMonthBounds(now);
+    const monthRange = getReportPeriodRange("month");
+    const { start: monthStart, end: monthEnd } = getBusinessDayBoundsFromDateKeys(
+      monthRange.from,
+      monthRange.to
+    );
 
     const [row] = await prisma.$queryRaw<
       [
@@ -67,7 +71,7 @@ export const getCachedDashboardKpis = unstable_cache(
   }
 );
 
-/** 7-day chart grouped by Egypt calendar day (midnight → midnight Cairo). */
+/** 7-day chart grouped by Egypt business day (03:00 → 03:00 Cairo). */
 export const getCachedSalesChartData = unstable_cache(
   async () => {
     const now = new Date();

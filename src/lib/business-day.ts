@@ -1,5 +1,8 @@
 export const BUSINESS_TIME_ZONE = "Africa/Cairo";
 
+/** Business day starts at 03:00 Cairo and ends at 02:59:59 on the next civil day. */
+export const BUSINESS_DAY_START_HOUR = 3;
+
 const EGYPT_DATE_FORMAT: Intl.DateTimeFormatOptions = {
   timeZone: BUSINESS_TIME_ZONE,
   year: "numeric",
@@ -86,9 +89,22 @@ export function getEgyptCalendarDateParts(date = new Date()) {
   return getZonedDateParts(date);
 }
 
-/** Business date key — aligned with Egypt civil calendar (midnight → midnight Cairo). */
+/** Business date in Egypt — 03:00 → 03:00 Cairo (00:00–02:59 belong to the previous day). */
 export function getEgyptBusinessDateParts(date = new Date()) {
-  return getEgyptCalendarDateParts(date);
+  const calendar = getEgyptCalendarDateParts(date);
+
+  if (calendar.hour < BUSINESS_DAY_START_HOUR) {
+    const adjusted = addDaysToDateParts(
+      calendar.year,
+      calendar.month,
+      calendar.day,
+      -1
+    );
+
+    return { ...calendar, ...adjusted };
+  }
+
+  return calendar;
 }
 
 export function getEgyptCalendarDateKey(date = new Date()) {
@@ -98,7 +114,9 @@ export function getEgyptCalendarDateKey(date = new Date()) {
 }
 
 export function getEgyptBusinessDateKey(date = new Date()) {
-  return getEgyptCalendarDateKey(date);
+  const { year, month, day } = getEgyptBusinessDateParts(date);
+
+  return formatDateKey(year, month, day);
 }
 
 export function getEgyptCalendarDateStamp(date = new Date()) {
@@ -125,18 +143,23 @@ export function getBusinessDayBoundsForDateKey(dateKey: string) {
   const nextDay = addDaysToDateParts(year, month, day, 1);
 
   return {
-    start: zonedTimeToUtc(year, month, day, 0),
-    end: zonedTimeToUtc(nextDay.year, nextDay.month, nextDay.day, 0),
+    start: zonedTimeToUtc(year, month, day, BUSINESS_DAY_START_HOUR),
+    end: zonedTimeToUtc(
+      nextDay.year,
+      nextDay.month,
+      nextDay.day,
+      BUSINESS_DAY_START_HOUR
+    ),
   };
 }
 
 export function getEgyptBusinessDayBounds(date = new Date()) {
-  return getBusinessDayBoundsForDateKey(getEgyptCalendarDateKey(date));
+  return getBusinessDayBoundsForDateKey(getEgyptBusinessDateKey(date));
 }
 
 export function getBusinessDayBoundsFromDateKeys(from?: string, to?: string) {
-  const todayKey = getEgyptCalendarDateKey();
-  const { year, month } = getEgyptCalendarDateParts();
+  const todayKey = getEgyptBusinessDateKey();
+  const { year, month } = getEgyptBusinessDateParts();
   const defaultFrom = formatDateKey(year, month, 1);
   const fromKey = from || defaultFrom;
   const toKey = to || todayKey;
