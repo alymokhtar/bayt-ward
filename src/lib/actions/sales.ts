@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { getCachedSalesPage } from "@/lib/cached-queries";
+import { getCashRegisterReview as fetchCashRegisterReview } from "@/lib/cash-register";
 import { invalidateSalesData } from "@/lib/revalidate-tags";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
@@ -88,6 +89,11 @@ export async function getSales(options?: {
       pageSize: pageSize ?? limit ?? 50,
     })
   );
+}
+
+export async function getCashRegisterReview(from?: string, to?: string) {
+  await requireAuth();
+  return fetchCashRegisterReview(from, to);
 }
 
 export async function getSale(id: string) {

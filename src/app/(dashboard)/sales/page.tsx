@@ -16,7 +16,7 @@ import {
   formatDateTime,
   getPaymentMethodLabel,
 } from "@/lib/utils";
-import { Search } from "lucide-react";
+import { Search, Wallet } from "lucide-react";
 import Link from "next/link";
 
 const statusLabels: Record<string, string> = {
@@ -50,9 +50,17 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-brown">المبيعات</h1>
-        <p className="text-sm text-muted mt-1">{salesResult.total} فاتورة</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-brown">المبيعات</h1>
+          <p className="text-sm text-muted mt-1">{salesResult.total} فاتورة</p>
+        </div>
+        <Link href="/sales/cash-register">
+          <Button variant="secondary" className="gap-2">
+            <Wallet className="h-4 w-4" />
+            مراجعة الخزنة
+          </Button>
+        </Link>
       </div>
 
       <Card>
