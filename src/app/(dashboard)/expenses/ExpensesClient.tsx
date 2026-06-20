@@ -15,6 +15,12 @@ import {
 } from "@/components/ui/Table";
 import { createExpense, deleteExpense } from "@/lib/actions/expenses";
 import { getEmployeePayrollSummary } from "@/lib/actions/employees";
+import {
+  BUSINESS_TIME_ZONE,
+  dateKeyToUtcNoon,
+  getEgyptCalendarDateKey,
+  parseDateKey,
+} from "@/lib/business-day";
 import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
@@ -58,9 +64,7 @@ export default function ExpensesClient({
   const [category, setCategory] = useState("OTHER");
   const [description, setDescription] = useState("");
   const [employeeId, setEmployeeId] = useState("");
-  const [expenseDate, setExpenseDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [expenseDate, setExpenseDate] = useState(getEgyptCalendarDateKey);
   const [payrollSummary, setPayrollSummary] = useState<PayrollSummary | null>(
     null
   );
@@ -89,10 +93,15 @@ export default function ExpensesClient({
         if (!cancelled) {
           setPayrollSummary(summary);
           setAmount(summary.netSalary.toString());
-          const monthLabel = new Date(expenseDate).toLocaleDateString("ar-EG", {
-            month: "long",
-            year: "numeric",
-          });
+          const { year, month } = parseDateKey(expenseDate);
+          const monthLabel = new Date(Date.UTC(year, month - 1, 1, 12)).toLocaleDateString(
+            "ar-EG",
+            {
+              timeZone: BUSINESS_TIME_ZONE,
+              month: "long",
+              year: "numeric",
+            }
+          );
           setTitle(`راتب ${summary.employee.name} - ${monthLabel}`);
         }
       } catch {
@@ -114,7 +123,7 @@ export default function ExpensesClient({
     setCategory("OTHER");
     setDescription("");
     setEmployeeId("");
-    setExpenseDate(new Date().toISOString().split("T")[0]);
+    setExpenseDate(getEgyptCalendarDateKey());
     setPayrollSummary(null);
     setError("");
     setModalOpen(true);
@@ -147,7 +156,7 @@ export default function ExpensesClient({
         | "MAINTENANCE"
         | "OTHER",
       description: description || undefined,
-      expenseDate: new Date(expenseDate),
+      expenseDate: dateKeyToUtcNoon(expenseDate),
       employeeId: isSalaryExpense ? employeeId : undefined,
     });
 

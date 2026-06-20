@@ -17,8 +17,8 @@ export default async function ExpensesSection({
   const [expenses, payrollEmployees] = await Promise.all([
     getExpenses({
       category,
-      from: from ? new Date(from) : undefined,
-      to: to ? new Date(to + "T23:59:59") : undefined,
+      from,
+      to,
     }),
     getPayrollEmployees(),
   ]);

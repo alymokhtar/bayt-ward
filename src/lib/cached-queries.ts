@@ -1,8 +1,12 @@
 import { unstable_cache } from "next/cache";
 import { Prisma, type ExpenseCategory } from "@prisma/client";
 import {
+  getBusinessDayBoundsForDateKey,
+  getBusinessDayBoundsFromDateKeys,
   getEgyptBusinessDateKey,
   getEgyptBusinessDayBounds,
+  getEgyptMonthBounds,
+  getOffsetBusinessDateKey,
 } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
@@ -14,8 +18,7 @@ export const getCachedDashboardKpis = unstable_cache(
   async () => {
     const now = new Date();
     const { start: todayStart, end: todayEnd } = getEgyptBusinessDayBounds(now);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const { start: monthStart, end: monthEnd } = getEgyptMonthBounds(now);
 
     const [row] = await prisma.$queryRaw<
       [
@@ -64,18 +67,15 @@ export const getCachedDashboardKpis = unstable_cache(
   }
 );
 
-/** 7-day chart grouped by the 4 AM business-day boundary. */
+/** 7-day chart grouped by Egypt calendar day (midnight → midnight Cairo). */
 export const getCachedSalesChartData = unstable_cache(
   async () => {
     const now = new Date();
     const salesChartData: { date: string; total: number; count: number }[] = [];
 
     for (let i = 6; i >= 0; i--) {
-      const day = new Date(now);
-      day.setDate(day.getDate() - i);
-
       salesChartData.push({
-        date: getEgyptBusinessDateKey(day),
+        date: getOffsetBusinessDateKey(-i, now),
         total: 0,
         count: 0,
       });
@@ -83,7 +83,7 @@ export const getCachedSalesChartData = unstable_cache(
 
     const firstDay = salesChartData[0]?.date;
     const firstDayStart = firstDay
-      ? getEgyptBusinessDayBounds(new Date(`${firstDay}T12:00:00Z`)).start
+      ? getBusinessDayBoundsForDateKey(firstDay).start
       : getEgyptBusinessDayBounds(now).start;
     const rows = await prisma.sale.findMany({
       where: {
@@ -332,10 +332,11 @@ export const getCachedSalesPage = unstable_cache(
     if (options.status) where.status = options.status;
 
     if (options.from || options.to) {
-      where.createdAt = {
-        ...(options.from ? { gte: new Date(options.from) } : {}),
-        ...(options.to ? { lte: new Date(options.to) } : {}),
-      };
+      const { start, end } = getBusinessDayBoundsFromDateKeys(
+        options.from,
+        options.to
+      );
+      where.createdAt = { gte: start, lt: end };
     }
 
     if (options.search?.trim()) {
@@ -583,13 +584,7 @@ export const getCachedStockMovementsPage = unstable_cache(
 );
 
 function getReportDateRange(from?: string, to?: string) {
-  const start = from ? new Date(from) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  start.setHours(0, 0, 0, 0);
-
-  const end = to ? new Date(to) : new Date();
-  end.setHours(23, 59, 59, 999);
-
-  return { start, end };
+  return getBusinessDayBoundsFromDateKeys(from, to);
 }
 
 export const getCachedPurchasesList = unstable_cache(
@@ -695,7 +690,7 @@ export const getCachedSalesReport = unstable_cache(
       prisma.sale.aggregate({
         where: {
           status: "COMPLETED",
-          createdAt: { gte: start, lte: end },
+          createdAt: { gte: start, lt: end },
         },
         _sum: {
           totalAmount: true,
@@ -709,7 +704,7 @@ export const getCachedSalesReport = unstable_cache(
       prisma.return.aggregate({
         where: {
           status: "APPROVED",
-          createdAt: { gte: start, lte: end },
+          createdAt: { gte: start, lt: end },
         },
         _sum: { refundAmount: true, totalAmount: true },
         _count: true,
@@ -718,7 +713,7 @@ export const getCachedSalesReport = unstable_cache(
         by: ["paymentMethod"],
         where: {
           status: "COMPLETED",
-          createdAt: { gte: start, lte: end },
+          createdAt: { gte: start, lt: end },
         },
         _sum: { totalAmount: true },
         _count: true,
@@ -874,7 +869,7 @@ export const getCachedProfitReport = unstable_cache(
         prisma.sale.aggregate({
           where: {
             status: "COMPLETED",
-            createdAt: { gte: start, lte: end },
+            createdAt: { gte: start, lt: end },
           },
           _sum: { totalAmount: true },
         }),
@@ -885,18 +880,18 @@ export const getCachedProfitReport = unstable_cache(
           INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
           WHERE s.status = 'COMPLETED'
             AND s."createdAt" >= ${start}
-            AND s."createdAt" <= ${end}
+            AND s."createdAt" < ${end}
         `,
         prisma.return.aggregate({
           where: {
             status: "APPROVED",
-            createdAt: { gte: start, lte: end },
+            createdAt: { gte: start, lt: end },
           },
           _sum: { refundAmount: true },
         }),
         prisma.expense.aggregate({
           where: {
-            expenseDate: { gte: start, lte: end },
+            expenseDate: { gte: start, lt: end },
           },
           _sum: { amount: true },
           _count: true,
@@ -904,7 +899,7 @@ export const getCachedProfitReport = unstable_cache(
         prisma.purchase.aggregate({
           where: {
             status: "RECEIVED",
-            receivedAt: { gte: start, lte: end },
+            receivedAt: { gte: start, lt: end },
           },
           _sum: { totalAmount: true },
           _count: true,
@@ -975,7 +970,7 @@ export const getCachedTopProducts = unstable_cache(
       INNER JOIN "Product" p ON pv."productId" = p.id
       WHERE s.status = 'COMPLETED'
         AND s."createdAt" >= ${start}
-        AND s."createdAt" <= ${end}
+        AND s."createdAt" < ${end}
       GROUP BY p.id, p."nameAr", p.name
       ORDER BY revenue DESC
       LIMIT ${limit}
@@ -1030,12 +1025,13 @@ export const getCachedExpensesList = unstable_cache(
           ? { category: options.category as ExpenseCategory }
           : {}),
         ...(options.from || options.to
-          ? {
-              expenseDate: {
-                ...(options.from ? { gte: new Date(options.from) } : {}),
-                ...(options.to ? { lte: new Date(options.to) } : {}),
-              },
-            }
+          ? (() => {
+              const { start, end } = getBusinessDayBoundsFromDateKeys(
+                options.from,
+                options.to
+              );
+              return { expenseDate: { gte: start, lt: end } };
+            })()
           : {}),
       },
       orderBy: { expenseDate: "desc" },

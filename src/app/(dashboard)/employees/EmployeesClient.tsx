@@ -20,6 +20,10 @@ import {
   updateEmployee,
   deleteEmployee,
 } from "@/lib/actions/employees";
+import {
+  dateKeyToUtcNoon,
+  getEgyptCalendarDateKey,
+} from "@/lib/business-day";
 import { USER_ROLES } from "@/lib/constants";
 import { formatCurrency, formatDate, getRoleLabel } from "@/lib/utils";
 import { Banknote, Pencil, Plus, Trash2 } from "lucide-react";
@@ -60,9 +64,7 @@ export default function EmployeesClient({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("CASHIER");
   const [salary, setSalary] = useState("");
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [startDate, setStartDate] = useState(getEgyptCalendarDateKey);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -74,7 +76,7 @@ export default function EmployeesClient({
     setPassword("");
     setRole("CASHIER");
     setSalary("");
-    setStartDate(new Date().toISOString().split("T")[0]);
+    setStartDate(getEgyptCalendarDateKey());
     setError("");
     setModalOpen(true);
   }
@@ -88,9 +90,7 @@ export default function EmployeesClient({
     setRole(emp.role);
     setSalary(emp.salary.toString());
     setStartDate(
-      emp.startDate
-        ? new Date(emp.startDate).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0]
+      emp.startDate ? getEgyptCalendarDateKey(emp.startDate) : getEgyptCalendarDateKey()
     );
     setError("");
     setModalOpen(true);
@@ -102,7 +102,7 @@ export default function EmployeesClient({
     setError("");
 
     const salaryValue = parseFloat(salary) || 0;
-    const startDateValue = startDate ? new Date(startDate) : undefined;
+    const startDateValue = startDate ? dateKeyToUtcNoon(startDate) : undefined;
     const result = editing
       ? await updateEmployee(editing.id, {
           name,

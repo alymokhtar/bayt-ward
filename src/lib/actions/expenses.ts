@@ -67,16 +67,16 @@ function buildExpenseTelegramMessage(expense: {
 
 export async function getExpenses(options?: {
   category?: ExpenseCategory;
-  from?: Date;
-  to?: Date;
+  from?: string;
+  to?: string;
   limit?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
   return getCachedExpensesList(
     JSON.stringify({
       category: options?.category,
-      from: options?.from?.toISOString(),
-      to: options?.to?.toISOString(),
+      from: options?.from,
+      to: options?.to,
       limit: options?.limit,
     })
   );

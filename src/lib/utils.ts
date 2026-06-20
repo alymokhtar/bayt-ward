@@ -1,3 +1,7 @@
+import {
+  BUSINESS_TIME_ZONE,
+  getEgyptCalendarDateStamp,
+} from "@/lib/business-day";
 import { type ClassValue, clsx } from "clsx";
 
 export function cn(...inputs: ClassValue[]) {
@@ -61,6 +65,7 @@ export function formatCurrency(amount: number, symbol = "ج.م"): string {
 
 export function formatDate(date: Date | string): string {
   return new Date(date).toLocaleDateString("ar-EG", {
+    timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -69,6 +74,7 @@ export function formatDate(date: Date | string): string {
 
 export function formatDateTime(date: Date | string): string {
   return new Date(date).toLocaleString("ar-EG", {
+    timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -78,8 +84,7 @@ export function formatDateTime(date: Date | string): string {
 }
 
 export function generateInvoiceNumber(prefix: string): string {
-  const now = new Date();
-  const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  const date = getEgyptCalendarDateStamp();
   const random = Math.floor(Math.random() * 10000)
     .toString()
     .padStart(4, "0");

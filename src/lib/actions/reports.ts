@@ -21,14 +21,11 @@ function handleError(error: unknown): never {
   throw new Error("حدث خطأ غير متوقع");
 }
 
-function toReportParams(from?: Date, to?: Date) {
-  return JSON.stringify({
-    from: from?.toISOString(),
-    to: to?.toISOString(),
-  });
+function toReportParams(from?: string, to?: string) {
+  return JSON.stringify({ from, to });
 }
 
-export async function getSalesReport(from?: Date, to?: Date) {
+export async function getSalesReport(from?: string, to?: string) {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
     return getCachedSalesReport(toReportParams(from, to));
@@ -46,7 +43,7 @@ export async function getInventoryReport() {
   }
 }
 
-export async function getProfitReport(from?: Date, to?: Date) {
+export async function getProfitReport(from?: string, to?: string) {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
     return getCachedProfitReport(toReportParams(from, to));
@@ -55,13 +52,13 @@ export async function getProfitReport(from?: Date, to?: Date) {
   }
 }
 
-export async function getTopProducts(from?: Date, to?: Date, limit = 10) {
+export async function getTopProducts(from?: string, to?: string, limit = 10) {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
     return getCachedTopProducts(
       JSON.stringify({
-        from: from?.toISOString(),
-        to: to?.toISOString(),
+        from,
+        to,
         limit,
       })
     );

@@ -1,4 +1,4 @@
-import { formatCurrency, getPaymentMethodLabel } from "@/lib/utils";
+import { formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
 
 export type ReceiptItem = {
   name: string;
@@ -29,13 +29,7 @@ export type ReceiptData = {
 };
 
 function formatReceiptDateTime(date: Date) {
-  return date.toLocaleString("ar-EG", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTime(date);
 }
 
 function DashedLine() {

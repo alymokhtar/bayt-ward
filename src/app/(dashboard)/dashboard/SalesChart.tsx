@@ -1,5 +1,7 @@
 "use client";
 
+import { formatEgyptChartDateLabel } from "@/lib/business-day";
+
 import {
   Bar,
   BarChart,
@@ -17,10 +19,7 @@ interface SalesChartProps {
 export default function SalesChart({ data }: SalesChartProps) {
   const chartData = data.map((d) => ({
     ...d,
-    label: new Date(d.date).toLocaleDateString("ar-EG", {
-      weekday: "short",
-      day: "numeric",
-    }),
+    label: formatEgyptChartDateLabel(d.date),
   }));
 
   return (

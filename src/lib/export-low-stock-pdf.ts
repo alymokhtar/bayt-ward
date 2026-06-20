@@ -1,3 +1,8 @@
+import {
+  BUSINESS_TIME_ZONE,
+  getEgyptCalendarDateKey,
+} from "@/lib/business-day";
+
 export type LowStockExportItem = {
   id: string;
   sku: string;
@@ -17,7 +22,7 @@ export function suggestedReorderQuantity(
 }
 
 function buildPdfFilename(date: Date): string {
-  const stamp = date.toISOString().slice(0, 10);
+  const stamp = getEgyptCalendarDateKey(date);
   return `bayt-ward-reorder-${stamp}.pdf`;
 }
 
@@ -35,11 +40,13 @@ function sortLowStockItems(items: LowStockExportItem[]): LowStockExportItem[] {
 
 function formatGeneratedAt(date: Date): string {
   const dateLabel = date.toLocaleDateString("ar-EG", {
+    timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "long",
     day: "numeric",
   });
   const timeLabel = date.toLocaleTimeString("ar-EG", {
+    timeZone: BUSINESS_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
   });

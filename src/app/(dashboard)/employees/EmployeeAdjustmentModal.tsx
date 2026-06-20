@@ -5,6 +5,10 @@ import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
 import { addEmployeeAdjustment } from "@/lib/actions/employees";
+import {
+  dateKeyToUtcNoon,
+  getEgyptCalendarDateKey,
+} from "@/lib/business-day";
 import { EMPLOYEE_ADJUSTMENT_TYPES } from "@/lib/constants";
 import type { EmployeeAdjustmentType } from "@prisma/client";
 import { useRouter } from "next/navigation";
@@ -24,9 +28,7 @@ export default function EmployeeAdjustmentModal({
   const [amount, setAmount] = useState("");
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
-  const [adjustmentDate, setAdjustmentDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [adjustmentDate, setAdjustmentDate] = useState(getEgyptCalendarDateKey);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -43,7 +45,7 @@ export default function EmployeeAdjustmentModal({
       amount: parseFloat(amount) || 0,
       title: title || undefined,
       notes: notes || undefined,
-      adjustmentDate: new Date(adjustmentDate),
+      adjustmentDate: dateKeyToUtcNoon(adjustmentDate),
     });
 
     setLoading(false);

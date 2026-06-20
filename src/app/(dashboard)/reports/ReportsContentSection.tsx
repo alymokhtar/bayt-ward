@@ -27,11 +27,8 @@ export default async function ReportsContentSection({
   from,
   to,
 }: ReportsContentSectionProps) {
-  const fromDate = new Date(from);
-  const toDate = new Date(to + "T23:59:59");
-
   if (activeTab === "sales") {
-    const salesReport = await getSalesReport(fromDate, toDate);
+    const salesReport = await getSalesReport(from, to);
     if (!salesReport) return null;
 
     return (
@@ -118,7 +115,7 @@ export default async function ReportsContentSection({
   }
 
   if (activeTab === "profit") {
-    const profitReport = await getProfitReport(fromDate, toDate);
+    const profitReport = await getProfitReport(from, to);
     if (!profitReport) return null;
 
     return (
@@ -154,7 +151,7 @@ export default async function ReportsContentSection({
   }
 
   if (activeTab === "top") {
-    const topProducts = await getTopProducts(fromDate, toDate);
+    const topProducts = await getTopProducts(from, to);
     if (!topProducts) return null;
 
     return (

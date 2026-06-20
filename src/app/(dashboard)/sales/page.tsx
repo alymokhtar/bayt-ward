@@ -41,8 +41,8 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
   const salesResult = await getSales({
     search: params.search,
     status: params.status,
-    from: params.from ? new Date(params.from) : undefined,
-    to: params.to ? new Date(params.to + "T23:59:59") : undefined,
+    from: params.from,
+    to: params.to,
     page: params.page ? Number(params.page) : 1,
     pageSize: 50,
   });

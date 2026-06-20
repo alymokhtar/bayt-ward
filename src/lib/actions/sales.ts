@@ -70,8 +70,8 @@ function formatSaleTelegramMessage(sale: {
 export async function getSales(options?: {
   search?: string;
   status?: string;
-  from?: Date;
-  to?: Date;
+  from?: string;
+  to?: string;
   limit?: number;
   page?: number;
   pageSize?: number;
@@ -82,8 +82,8 @@ export async function getSales(options?: {
   return getCachedSalesPage(
     JSON.stringify({
       ...rest,
-      from: from?.toISOString(),
-      to: to?.toISOString(),
+      from,
+      to,
       page,
       pageSize: pageSize ?? limit ?? 50,
     })
