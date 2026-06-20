@@ -96,6 +96,55 @@ export function getEgyptBusinessDateKey(date = new Date()) {
   );
 }
 
+export type ReportPeriod = "today" | "week" | "month" | "custom";
+
+function getOffsetBusinessDateKey(daysOffset: number, date = new Date()) {
+  const businessDate = getEgyptBusinessDateParts(date);
+  const offset = addDaysToDateParts(
+    businessDate.year,
+    businessDate.month,
+    businessDate.day,
+    daysOffset
+  );
+
+  return formatDateKey(offset.year, offset.month, offset.day);
+}
+
+export function getReportPeriodRange(period: Exclude<ReportPeriod, "custom">) {
+  const today = getEgyptBusinessDateKey();
+  const businessDate = getEgyptBusinessDateParts();
+
+  if (period === "today") {
+    return { from: today, to: today };
+  }
+
+  if (period === "week") {
+    return { from: getOffsetBusinessDateKey(-6), to: today };
+  }
+
+  return {
+    from: formatDateKey(businessDate.year, businessDate.month, 1),
+    to: today,
+  };
+}
+
+export function detectReportPeriod(from: string, to: string): ReportPeriod {
+  const presets: Array<Exclude<ReportPeriod, "custom">> = [
+    "today",
+    "week",
+    "month",
+  ];
+
+  for (const preset of presets) {
+    const range = getReportPeriodRange(preset);
+    if (from === range.from && to === range.to) {
+      return preset;
+    }
+  }
+
+  return "custom";
+}
+
 export function getEgyptBusinessDayBounds(date = new Date()) {
   const businessDate = getEgyptBusinessDateParts(date);
   const nextBusinessDate = addDaysToDateParts(

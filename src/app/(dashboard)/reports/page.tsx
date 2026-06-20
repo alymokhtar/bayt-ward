@@ -2,12 +2,17 @@ import { Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/Card";
 import ReportsTabsClient from "@/app/(dashboard)/reports/ReportsTabsClient";
 import ReportsContentSection from "@/app/(dashboard)/reports/ReportsContentSection";
+import {
+  detectReportPeriod,
+  getReportPeriodRange,
+} from "@/lib/business-day";
 
 interface ReportsPageProps {
   searchParams: Promise<{
     tab?: string;
     from?: string;
     to?: string;
+    period?: string;
   }>;
 }
 
@@ -28,13 +33,14 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const params = await searchParams;
   const activeTab = params.tab || "sales";
 
-  const now = new Date();
-  const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1)
-    .toISOString()
-    .split("T")[0];
-  const defaultTo = now.toISOString().split("T")[0];
-  const from = params.from || defaultFrom;
-  const to = params.to || defaultTo;
+  const todayRange = getReportPeriodRange("today");
+  const from = params.from || todayRange.from;
+  const to = params.to || todayRange.to;
+  const period =
+    params.period ||
+    (params.from || params.to
+      ? detectReportPeriod(from, to)
+      : "today");
 
   return (
     <div className="space-y-6">
@@ -46,7 +52,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       </div>
       <Card>
         <CardContent className="pt-6 space-y-6">
-          <ReportsTabsClient activeTab={activeTab} from={from} to={to} />
+          <ReportsTabsClient
+            activeTab={activeTab}
+            from={from}
+            to={to}
+            period={period}
+          />
           <Suspense
             key={`${activeTab}-${from}-${to}`}
             fallback={<ContentSkeleton />}
