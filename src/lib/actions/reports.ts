@@ -27,7 +27,7 @@ function toReportParams(from?: string, to?: string) {
 
 export async function getSalesReport(from?: string, to?: string) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    await requireRole(["ADMIN"]);
     return getCachedSalesReport(toReportParams(from, to));
   } catch (error) {
     handleError(error);
@@ -36,7 +36,7 @@ export async function getSalesReport(from?: string, to?: string) {
 
 export async function getInventoryReport() {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    await requireRole(["ADMIN"]);
     return getCachedInventoryReport();
   } catch (error) {
     handleError(error);
@@ -45,7 +45,7 @@ export async function getInventoryReport() {
 
 export async function getProfitReport(from?: string, to?: string) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    await requireRole(["ADMIN"]);
     return getCachedProfitReport(toReportParams(from, to));
   } catch (error) {
     handleError(error);
@@ -54,7 +54,7 @@ export async function getProfitReport(from?: string, to?: string) {
 
 export async function getTopProducts(from?: string, to?: string, limit = 10) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    await requireRole(["ADMIN"]);
     return getCachedTopProducts(
       JSON.stringify({
         from,

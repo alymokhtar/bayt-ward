@@ -22,6 +22,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const settings = await getSettings();
   const themeAccent = settings.theme_accent;
   const canManageStoreSettings = session.role === "ADMIN";
+  const canChangeAppearance = session.role !== "CASHIER";
 
   return (
     <div className="space-y-6">
@@ -37,18 +38,20 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>المظهر</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AppearanceSettingsPanel
-            themeAccent={themeAccent}
-            userId={session.id}
-            canSaveGlobally={canManageStoreSettings}
-          />
-        </CardContent>
-      </Card>
+      {canChangeAppearance && (
+        <Card>
+          <CardHeader>
+            <CardTitle>المظهر</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AppearanceSettingsPanel
+              themeAccent={themeAccent}
+              userId={session.id}
+              canSaveGlobally={canManageStoreSettings}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {canManageStoreSettings && (
         <Card>

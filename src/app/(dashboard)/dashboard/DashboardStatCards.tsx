@@ -1,10 +1,15 @@
 import { Card, CardContent } from "@/components/ui/Card";
 import { getDashboardKpis } from "@/lib/actions/dashboard";
+import { getSession } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
 import { Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
 
 export default async function DashboardStatCards() {
-  const kpis = await getDashboardKpis();
+  const [kpis, session] = await Promise.all([
+    getDashboardKpis(),
+    getSession(),
+  ]);
+  const isCashier = session?.role === "CASHIER";
 
   const statCards = [
     {
@@ -14,13 +19,17 @@ export default async function DashboardStatCards() {
       icon: ShoppingCart,
       color: "bg-gold/10 text-gold",
     },
-    {
-      title: "مبيعات الشهر",
-      value: formatCurrency(kpis.monthSales),
-      sub: `${kpis.monthSalesCount} فاتورة`,
-      icon: TrendingUp,
-      color: "bg-green-100 text-green-700",
-    },
+    ...(!isCashier
+      ? [
+          {
+            title: "مبيعات الشهر",
+            value: formatCurrency(kpis.monthSales),
+            sub: `${kpis.monthSalesCount} فاتورة`,
+            icon: TrendingUp,
+            color: "bg-green-100 text-green-700",
+          },
+        ]
+      : []),
     {
       title: "المنتجات النشطة",
       value: kpis.totalProducts.toString(),

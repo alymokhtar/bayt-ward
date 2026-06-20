@@ -6,6 +6,8 @@ import {
   detectReportPeriod,
   getReportPeriodRange,
 } from "@/lib/business-day";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 interface ReportsPageProps {
   searchParams: Promise<{
@@ -30,6 +32,11 @@ function ContentSkeleton() {
 }
 
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
+  const session = await getSession();
+  if (session?.role !== "ADMIN") {
+    redirect("/dashboard");
+  }
+
   const params = await searchParams;
   const activeTab = params.tab || "sales";
 

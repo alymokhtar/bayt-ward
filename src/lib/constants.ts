@@ -114,13 +114,13 @@ export const NAV_ITEMS = [
     title: "التقارير",
     href: "/reports",
     icon: BarChart3,
-    roles: ["ADMIN", "MANAGER"],
+    roles: ["ADMIN"],
   },
   {
     title: "الموظفين",
     href: "/employees",
     icon: UserCog,
-    roles: ["ADMIN"],
+    roles: ["ADMIN", "MANAGER", "CASHIER"],
   },
   {
     title: "الإعدادات",

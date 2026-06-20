@@ -45,10 +45,12 @@ type Employee = {
 
 interface EmployeesClientProps {
   employees: Employee[];
+  canManage?: boolean;
 }
 
 export default function EmployeesClient({
   employees: initial,
+  canManage = false,
 }: EmployeesClientProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
@@ -148,12 +150,14 @@ export default function EmployeesClient({
 
   return (
     <>
-      <div className="flex justify-end mb-4">
-        <Button onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          موظف جديد
-        </Button>
-      </div>
+      {canManage && (
+        <div className="flex justify-end mb-4">
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" />
+            موظف جديد
+          </Button>
+        </div>
+      )}
 
       <Table>
         <TableHeader>
@@ -165,7 +169,7 @@ export default function EmployeesClient({
             <TableHead>استقطاعات معلقة</TableHead>
             <TableHead>الحالة</TableHead>
             <TableHead>بدء العمل</TableHead>
-            <TableHead>الإجراءات</TableHead>
+            {canManage && <TableHead>الإجراءات</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -199,39 +203,47 @@ export default function EmployeesClient({
                 )}
               </TableCell>
               <TableCell>
-                <button type="button" onClick={() => toggleActive(emp)}>
+                {canManage ? (
+                  <button type="button" onClick={() => toggleActive(emp)}>
+                    <Badge variant={emp.isActive ? "success" : "danger"}>
+                      {emp.isActive ? "نشط" : "معطل"}
+                    </Badge>
+                  </button>
+                ) : (
                   <Badge variant={emp.isActive ? "success" : "danger"}>
                     {emp.isActive ? "نشط" : "معطل"}
                   </Badge>
-                </button>
+                )}
               </TableCell>
               <TableCell className="text-sm text-muted">
                 {emp.startDate ? formatDate(emp.startDate) : "—"}
               </TableCell>
-              <TableCell>
-                <div className="flex gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setAdjustmentEmployee({ id: emp.id, name: emp.name })
-                    }
-                    title="سلفة / خصم / غياب"
-                  >
-                    <Banknote className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(emp.id)}
-                  >
-                    <Trash2 className="h-4 w-4 text-danger" />
-                  </Button>
-                </div>
-              </TableCell>
+              {canManage && (
+                <TableCell>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setAdjustmentEmployee({ id: emp.id, name: emp.name })
+                      }
+                      title="سلفة / خصم / غياب"
+                    >
+                      <Banknote className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => openEdit(emp)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(emp.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-danger" />
+                    </Button>
+                  </div>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

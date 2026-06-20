@@ -43,7 +43,7 @@ const userSelect = {
 } as const;
 
 export async function getEmployees() {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
   const employees = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
@@ -121,7 +121,7 @@ export async function getEmployeePayrollSummary(employeeId: string) {
 }
 
 export async function getEmployeeDetails(employeeId: string) {
-  await requireRole(["ADMIN"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
