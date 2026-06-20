@@ -20,6 +20,9 @@ import {
 export const STORE_NAME = "Bayt Ward";
 export const STORE_NAME_AR = "بيت ورد";
 
+/** Arabic UI with Western (Latin) digits: 1234567890 */
+export const DISPLAY_LOCALE = "ar-EG-u-nu-latn";
+
 export const BRAND_COLORS = {
   cream: "#FDF5E6",
   brown: "#4B3621",

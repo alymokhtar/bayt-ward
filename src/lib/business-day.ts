@@ -1,3 +1,5 @@
+import { DISPLAY_LOCALE } from "@/lib/constants";
+
 export const BUSINESS_TIME_ZONE = "Africa/Cairo";
 
 /** Business day starts at 03:00 Cairo and ends at 02:59:59 on the next civil day. */
@@ -189,7 +191,7 @@ export function formatEgyptChartDateLabel(dateKey: string) {
   const { year, month, day } = parseDateKey(dateKey);
   const anchor = zonedTimeToUtc(year, month, day, 12);
 
-  return anchor.toLocaleDateString("ar-EG", {
+  return anchor.toLocaleDateString(DISPLAY_LOCALE, {
     timeZone: BUSINESS_TIME_ZONE,
     weekday: "short",
     day: "numeric",

@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { generateInvoiceNumber } from "@/lib/utils";
+import { generateInvoiceNumber, formatCurrency, formatDateTime } from "@/lib/utils";
 import { getCachedSalesPage } from "@/lib/cached-queries";
 import { getCashRegisterReview as fetchCashRegisterReview } from "@/lib/cash-register";
 import { invalidateSalesData } from "@/lib/revalidate-tags";
@@ -47,14 +47,7 @@ function formatSaleTelegramMessage(sale: {
   items: { quantity: number }[];
 }) {
   const totalQuantity = sale.items.reduce((sum, item) => sum + item.quantity, 0);
-  const dateTime = new Date().toLocaleString("ar-EG", {
-    timeZone: "Africa/Cairo",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dateTime = formatDateTime(new Date());
 
   return [
     "🛒 عملية بيع جديدة",
@@ -62,7 +55,7 @@ function formatSaleTelegramMessage(sale: {
     `رقم الفاتورة: ${sale.invoiceNumber}`,
     `اسم العميل: ${sale.customer?.name || "عميل نقدي"}`,
     `عدد المنتجات: ${totalQuantity}`,
-    `إجمالي الفاتورة: ${sale.totalAmount.toLocaleString("ar-EG")} ج.م`,
+    `إجمالي الفاتورة: ${formatCurrency(sale.totalAmount)}`,
     `اسم المستخدم: ${sale.user?.name || "—"}`,
     `التاريخ والوقت: ${dateTime}`,
   ].join("\n");
@@ -433,16 +426,9 @@ export async function cancelSale(id: string, reason?: string) {
         "🔁 إلغاء عملية بيع",
         "",
         `رقم الفاتورة: ${cancelled.invoiceNumber}`,
-        `الإجمالي: ${cancelled.totalAmount.toLocaleString("ar-EG")} ج.م`,
+        `الإجمالي: ${formatCurrency(cancelled.totalAmount)}`,
         `اسم المستخدم: ${cancelled.user.name}`,
-        `التاريخ والوقت: ${new Date().toLocaleString("ar-EG", {
-          timeZone: "Africa/Cairo",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`,
+        `التاريخ والوقت: ${formatDateTime(new Date())}`,
       ].join("\n")
     );
 

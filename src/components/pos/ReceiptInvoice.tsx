@@ -1,4 +1,4 @@
-import { formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
+import { formatCurrency, formatDateTime, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
 export type ReceiptItem = {
   name: string;
@@ -108,10 +108,10 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
               <span />
               <span className="text-center">{item.quantity}</span>
               <span className="text-end" dir="ltr">
-                {item.unitPrice.toLocaleString("ar-EG")}
+                {formatNumber(item.unitPrice)}
               </span>
               <span className="text-end font-semibold" dir="ltr">
-                {item.totalPrice.toLocaleString("ar-EG")}
+                {formatNumber(item.totalPrice)}
               </span>
             </div>
           </div>

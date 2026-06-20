@@ -2,6 +2,7 @@ import {
   BUSINESS_TIME_ZONE,
   getEgyptCalendarDateStamp,
 } from "@/lib/business-day";
+import { DISPLAY_LOCALE } from "@/lib/constants";
 import { type ClassValue, clsx } from "clsx";
 
 export function cn(...inputs: ClassValue[]) {
@@ -59,12 +60,22 @@ export function toPaginatedResult<T>(
   };
 }
 
+export function formatNumber(
+  value: number,
+  options?: Intl.NumberFormatOptions
+): string {
+  return value.toLocaleString(DISPLAY_LOCALE, options);
+}
+
 export function formatCurrency(amount: number, symbol = "ج.م"): string {
-  return `${amount.toLocaleString("ar-EG", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${symbol}`;
+  return `${formatNumber(amount, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })} ${symbol}`;
 }
 
 export function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString("ar-EG", {
+  return new Date(date).toLocaleDateString(DISPLAY_LOCALE, {
     timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "long",
@@ -73,7 +84,7 @@ export function formatDate(date: Date | string): string {
 }
 
 export function formatDateTime(date: Date | string): string {
-  return new Date(date).toLocaleString("ar-EG", {
+  return new Date(date).toLocaleString(DISPLAY_LOCALE, {
     timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "short",

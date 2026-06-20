@@ -1,6 +1,7 @@
 "use client";
 
 import { formatEgyptChartDateLabel } from "@/lib/business-day";
+import { formatNumber } from "@/lib/utils";
 
 import {
   Bar,
@@ -49,7 +50,7 @@ export default function SalesChart({ data }: SalesChartProps) {
             const label = String(name);
             return [
               label === "total"
-                ? `${num.toLocaleString("ar-EG")} ج.م`
+                ? `${formatNumber(num)} ج.م`
                 : num,
               label === "total" ? "المبيعات" : "العدد",
             ];

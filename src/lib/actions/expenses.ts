@@ -6,6 +6,7 @@ import type { ExpenseCategory } from "@prisma/client";
 import { invalidateExpensesData } from "@/lib/revalidate-tags";
 import { getCachedExpensesList } from "@/lib/cached-queries";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -35,14 +36,7 @@ function buildExpenseTelegramMessage(expense: {
   description: string | null;
   user?: { name: string } | null;
 }) {
-  const dateTime = new Date().toLocaleString("ar-EG", {
-    timeZone: "Africa/Cairo",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dateTime = formatDateTime(new Date());
 
   return [
     "💰 مصروف جديد",
@@ -58,7 +52,7 @@ function buildExpenseTelegramMessage(expense: {
         OTHER: "أخرى",
       }[expense.category] || expense.category
     }`,
-    `المبلغ: ${expense.amount.toLocaleString("ar-EG")} ج.م`,
+    `المبلغ: ${formatCurrency(expense.amount)}`,
     `الوصف: ${expense.description || expense.title}`,
     `اسم المستخدم: ${expense.user?.name || "—"}`,
     `التاريخ والوقت: ${dateTime}`,

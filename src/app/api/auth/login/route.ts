@@ -5,6 +5,7 @@ import {
 } from "@/lib/auth";
 import { isDatabaseConfigured } from "@/lib/env";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { formatDateTime } from "@/lib/utils";
 import { NextResponse } from "next/server";
 
 function formatSystemOpenMessage(user: {
@@ -12,14 +13,7 @@ function formatSystemOpenMessage(user: {
   email: string;
   role: string;
 }) {
-  const openedAt = new Date().toLocaleString("ar-EG", {
-    timeZone: "Africa/Cairo",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const openedAt = formatDateTime(new Date());
 
   return [
     "🔔 تم فتح النظام",

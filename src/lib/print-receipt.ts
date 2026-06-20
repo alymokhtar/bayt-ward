@@ -1,5 +1,5 @@
 import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
-import { formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
+import { formatCurrency, formatDateTime, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
 function escapeHtml(value: string) {
   return value
@@ -39,8 +39,8 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
           <div class="item-row">
             <span></span>
             <span class="center">${item.quantity}</span>
-            <span class="num">${item.unitPrice.toLocaleString("ar-EG")}</span>
-            <span class="num bold">${item.totalPrice.toLocaleString("ar-EG")}</span>
+            <span class="num">${escapeHtml(formatNumber(item.unitPrice))}</span>
+            <span class="num bold">${escapeHtml(formatNumber(item.totalPrice))}</span>
           </div>
         </div>
       `;

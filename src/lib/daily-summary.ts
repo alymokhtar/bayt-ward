@@ -1,11 +1,10 @@
 import {
-  BUSINESS_TIME_ZONE,
   dateKeyToUtcNoon,
   getEgyptBusinessDateKey,
   getEgyptBusinessDayBounds,
 } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 export async function getDailySummary() {
   const { start, end } = getEgyptBusinessDayBounds();
@@ -57,23 +56,8 @@ export function formatDailySummaryMessage(
   footerLines: string[] = []
 ) {
   const businessDateKey = getEgyptBusinessDateKey();
-  const businessDateLabel = dateKeyToUtcNoon(businessDateKey).toLocaleDateString(
-    "ar-EG",
-    {
-      timeZone: BUSINESS_TIME_ZONE,
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }
-  );
-  const sentAt = new Date().toLocaleString("ar-EG", {
-    timeZone: BUSINESS_TIME_ZONE,
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const businessDateLabel = formatDate(dateKeyToUtcNoon(businessDateKey));
+  const sentAt = formatDateTime(new Date());
 
   return [
     title,

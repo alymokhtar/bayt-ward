@@ -1,3 +1,5 @@
+import { formatCurrency } from "@/lib/utils";
+
 export type WhatsAppMessageType =
   | "sale_receipt"
   | "promotion"
@@ -42,7 +44,7 @@ export function buildWhatsAppMessage(
         `مرحباً ${name} 👋\n\n` +
         `شكراً لتسوقك معنا!\n\n` +
         `📋 *فاتورة:* ${params.invoiceNumber || "—"}\n` +
-        `💰 *الإجمالي:* ${params.totalAmount?.toLocaleString("ar-EG")} ${currency}\n` +
+        `💰 *الإجمالي:* ${formatCurrency(params.totalAmount ?? 0, currency)}\n` +
         (params.items ? `\n🛍️ *التفاصيل:*\n${params.items}\n` : "") +
         `\nنتمنى لكِ يوماً سعيداً 💕\n` +
         `— ${store}`

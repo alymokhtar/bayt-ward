@@ -2,6 +2,7 @@ import {
   BUSINESS_TIME_ZONE,
   getEgyptCalendarDateKey,
 } from "@/lib/business-day";
+import { DISPLAY_LOCALE } from "@/lib/constants";
 
 export type LowStockExportItem = {
   id: string;
@@ -39,13 +40,13 @@ function sortLowStockItems(items: LowStockExportItem[]): LowStockExportItem[] {
 }
 
 function formatGeneratedAt(date: Date): string {
-  const dateLabel = date.toLocaleDateString("ar-EG", {
+  const dateLabel = date.toLocaleDateString(DISPLAY_LOCALE, {
     timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-  const timeLabel = date.toLocaleTimeString("ar-EG", {
+  const timeLabel = date.toLocaleTimeString(DISPLAY_LOCALE, {
     timeZone: BUSINESS_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",

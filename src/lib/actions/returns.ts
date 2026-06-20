@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { generateInvoiceNumber } from "@/lib/utils";
+import { generateInvoiceNumber, formatCurrency, formatDateTime } from "@/lib/utils";
 import { invalidateReturnsData } from "@/lib/revalidate-tags";
 import { getCachedReturnsList } from "@/lib/cached-queries";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
@@ -42,21 +42,14 @@ function buildReturnTelegramMessage(returnRecord: {
   refundAmount: number;
   user?: { name: string } | null;
 }) {
-  const dateTime = new Date().toLocaleString("ar-EG", {
-    timeZone: "Africa/Cairo",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const dateTime = formatDateTime(new Date());
 
   return [
     "🔁 مرتجع جديد",
     "",
     `رقم المرتجع: ${returnRecord.returnNumber}`,
     `رقم الفاتورة الأصلية: ${returnRecord.sale.invoiceNumber}`,
-    `المبلغ المسترد: ${returnRecord.refundAmount.toLocaleString("ar-EG")} ج.م`,
+    `المبلغ المسترد: ${formatCurrency(returnRecord.refundAmount)}`,
     `اسم المستخدم: ${returnRecord.user?.name || "—"}`,
     `التاريخ والوقت: ${dateTime}`,
   ].join("\n");

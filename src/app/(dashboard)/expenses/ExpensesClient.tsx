@@ -22,7 +22,7 @@ import {
   getEgyptBusinessDateKey,
   parseDateKey,
 } from "@/lib/business-day";
-import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES } from "@/lib/constants";
+import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES, DISPLAY_LOCALE } from "@/lib/constants";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -97,7 +97,7 @@ export default function ExpensesClient({
           setAmount(summary.netSalary.toString());
           const { year, month } = parseDateKey(expenseDate);
           const monthLabel = new Date(Date.UTC(year, month - 1, 1, 12)).toLocaleDateString(
-            "ar-EG",
+            DISPLAY_LOCALE,
             {
               timeZone: BUSINESS_TIME_ZONE,
               month: "long",
