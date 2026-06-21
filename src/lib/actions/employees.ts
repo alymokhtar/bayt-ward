@@ -43,7 +43,7 @@ const userSelect = {
 } as const;
 
 export async function getEmployees() {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  await requireRole(["ADMIN", "MANAGER"]);
 
   const employees = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
@@ -121,7 +121,7 @@ export async function getEmployeePayrollSummary(employeeId: string) {
 }
 
 export async function getEmployeeDetails(employeeId: string) {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  await requireRole(["ADMIN", "MANAGER"]);
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
@@ -201,7 +201,7 @@ export async function createEmployee(data: {
   startDate?: Date;
 }) {
   try {
-    await requireRole(["ADMIN"]);
+    await requireRole(["ADMIN", "MANAGER"]);
 
     if (!data.name?.trim()) {
       return { success: false, error: "اسم الموظف مطلوب" };
@@ -251,7 +251,7 @@ export async function updateEmployee(
   }
 ) {
   try {
-    const session = await requireRole(["ADMIN"]);
+    const session = await requireRole(["ADMIN", "MANAGER"]);
 
     const existing = await prisma.user.findUnique({ where: { id } });
     if (!existing) {
@@ -307,7 +307,7 @@ export async function addEmployeeAdjustment(data: {
   adjustmentDate?: Date;
 }) {
   try {
-    const admin = await requireRole(["ADMIN"]);
+    const session = await requireRole(["ADMIN", "MANAGER"]);
 
     if (!data.userId) {
       return { success: false, error: "الموظف مطلوب" };
@@ -329,7 +329,7 @@ export async function addEmployeeAdjustment(data: {
     const adjustment = await prisma.employeeAdjustment.create({
       data: {
         userId: data.userId,
-        createdById: admin.id,
+        createdById: session.id,
         type: data.type,
         amount: data.amount,
         title: data.title?.trim(),
@@ -347,7 +347,7 @@ export async function addEmployeeAdjustment(data: {
 
 export async function deleteEmployeeAdjustment(id: string) {
   try {
-    await requireRole(["ADMIN"]);
+    await requireRole(["ADMIN", "MANAGER"]);
 
     const existing = await prisma.employeeAdjustment.findUnique({
       where: { id },
@@ -372,7 +372,7 @@ export async function deleteEmployeeAdjustment(id: string) {
 
 export async function deleteEmployee(id: string) {
   try {
-    const session = await requireRole(["ADMIN"]);
+    const session = await requireRole(["ADMIN", "MANAGER"]);
 
     if (session.id === id) {
       return { success: false, error: "لا يمكن حذف حسابك الحالي" };

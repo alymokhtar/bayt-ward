@@ -120,7 +120,7 @@ export const NAV_ITEMS = [
     title: "الموظفين",
     href: "/employees",
     icon: UserCog,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER"],
   },
   {
     title: "الإعدادات",
