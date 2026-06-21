@@ -32,7 +32,7 @@ export default function LoginPage() {
             {STORE_NAME}
           </p>
           <p className="text-cream/70 text-base leading-relaxed">
-            نظام إدارة متكامل لمتجر الملابس النسائية — مبيعات، مخزون، عملاء،
+            نظام إدارة متكامل لمتجر الملابس الحريمي — مبيعات، مخزون، عملاء،
             وتقارير
           </p>
           <div className="mt-10 flex gap-3">
