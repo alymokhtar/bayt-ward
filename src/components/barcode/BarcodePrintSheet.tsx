@@ -1,8 +1,9 @@
 "use client";
 
 import Button from "@/components/ui/Button";
-import { formatCurrency } from "@/lib/utils";
+import { formatBarcodeLabelPrice } from "@/lib/barcode";
 import { Printer } from "lucide-react";
+import { useMemo } from "react";
 import BarcodeLabel from "./BarcodeLabel";
 
 export interface LabelData {
@@ -21,11 +22,16 @@ interface BarcodePrintSheetProps {
 }
 
 export default function BarcodePrintSheet({ labels }: BarcodePrintSheetProps) {
-  const expandedLabels = labels.flatMap((label) =>
-    Array.from({ length: label.quantity }, (_, i) => ({
-      ...label,
-      key: `${label.id}-${i}`,
-    }))
+  const expandedLabels = useMemo(
+    () =>
+      labels.flatMap((label) =>
+        Array.from({ length: label.quantity }, (_, i) => ({
+          ...label,
+          key: `${label.id}-${i}`,
+          priceDisplay: formatBarcodeLabelPrice(label.price),
+        }))
+      ),
+    [labels]
   );
 
   function handlePrint() {
@@ -64,8 +70,11 @@ export default function BarcodePrintSheet({ labels }: BarcodePrintSheetProps) {
             <div className="flex justify-center mb-1">
               <BarcodeLabel value={label.barcode || label.sku} />
             </div>
-            <p className="text-sm font-bold text-gold">
-              {formatCurrency(label.price)}
+            <p
+              className="text-sm font-bold text-brown font-mono tracking-wider"
+              dir="ltr"
+            >
+              {label.priceDisplay}
             </p>
           </div>
         ))}

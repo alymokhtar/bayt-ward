@@ -34,3 +34,20 @@ export function resolveStoredBarcode(sku: string, barcode?: string | null): stri
 
   return trimmedSku;
 }
+
+function randomTwoDigits() {
+  return String(Math.floor(Math.random() * 100)).padStart(2, "0");
+}
+
+function formatBarcodePriceDigits(price: number) {
+  if (Number.isInteger(price)) {
+    return String(price);
+  }
+
+  return price.toFixed(2).replace(/\.?0+$/, "");
+}
+
+/** Price on printed labels: XX + price + XX (no currency symbol). */
+export function formatBarcodeLabelPrice(price: number) {
+  return `${randomTwoDigits()}${formatBarcodePriceDigits(price)}${randomTwoDigits()}`;
+}
