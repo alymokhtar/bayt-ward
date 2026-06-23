@@ -24,6 +24,7 @@ const statusLabels: Record<string, string> = {
   PENDING: "قيد الانتظار",
   CANCELLED: "ملغاة",
   REFUNDED: "مستردة",
+  PARTIALLY_REFUNDED: "جزئي",
 };
 
 interface SalesPageProps {
@@ -84,6 +85,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
               <option value="COMPLETED">مكتملة</option>
               <option value="CANCELLED">ملغاة</option>
               <option value="REFUNDED">مستردة</option>
+              <option value="PARTIALLY_REFUNDED">جزئي</option>
             </select>
             <input
               type="date"

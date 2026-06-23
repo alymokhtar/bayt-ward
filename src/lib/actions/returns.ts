@@ -127,7 +127,7 @@ export async function createReturn(data: {
       return { success: false, error: "فاتورة البيع غير موجودة" };
     }
 
-    if (sale.status !== "COMPLETED" && sale.status !== "REFUNDED") {
+    if (sale.status !== "COMPLETED" && sale.status !== "REFUNDED" && sale.status !== "PARTIALLY_REFUNDED") {
       return { success: false, error: "لا يمكن إرجاع منتجات من هذه الفاتورة" };
     }
 
@@ -222,10 +222,17 @@ export async function createReturn(data: {
         _sum: { refundAmount: true },
       });
 
-      if ((totalReturned._sum.refundAmount ?? 0) >= sale.totalAmount) {
+      const returnedAmount = totalReturned._sum.refundAmount ?? 0;
+
+      if (returnedAmount >= sale.totalAmount) {
         await tx.sale.update({
           where: { id: data.saleId },
           data: { status: "REFUNDED" },
+        });
+      } else if (returnedAmount > 0) {
+        await tx.sale.update({
+          where: { id: data.saleId },
+          data: { status: "PARTIALLY_REFUNDED" },
         });
       }
 

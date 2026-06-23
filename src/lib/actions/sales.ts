@@ -147,7 +147,25 @@ export async function getSale(id: string) {
           totalAmount: true,
           refundAmount: true,
           status: true,
+          reason: true,
+          notes: true,
           createdAt: true,
+          items: {
+            select: {
+              id: true,
+              quantity: true,
+              unitPrice: true,
+              totalPrice: true,
+              variant: {
+                select: {
+                  id: true,
+                  size: true,
+                  color: true,
+                  product: { select: { id: true, name: true, nameAr: true } },
+                },
+              },
+            },
+          },
         },
       },
     },

@@ -28,6 +28,7 @@ enum SaleStatus {
   PENDING
   CANCELLED
   REFUNDED
+  PARTIALLY_REFUNDED
 }
 
 enum PurchaseStatus {

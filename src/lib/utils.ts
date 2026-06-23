@@ -129,6 +129,7 @@ export function getSaleStatusLabel(status: string): string {
     PENDING: "قيد الانتظار",
     CANCELLED: "ملغاة",
     REFUNDED: "مستردة",
+    PARTIALLY_REFUNDED: "جزئي",
   };
   return labels[status] || status;
 }
@@ -139,6 +140,7 @@ export function getStatusBadgeColor(status: string): string {
     PENDING: "bg-yellow-100 text-yellow-800",
     CANCELLED: "bg-red-100 text-red-800",
     REFUNDED: "bg-purple-100 text-purple-800",
+    PARTIALLY_REFUNDED: "bg-orange-100 text-orange-800",
     RECEIVED: "bg-green-100 text-green-800",
     APPROVED: "bg-green-100 text-green-800",
     REJECTED: "bg-red-100 text-red-800",
