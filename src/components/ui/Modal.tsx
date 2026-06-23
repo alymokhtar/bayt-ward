@@ -61,7 +61,7 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
         className={cn(
-          "relative z-10 w-full rounded-xl border border-border bg-white shadow-2xl",
+          "relative z-10 w-full max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-white shadow-2xl",
           sizeClasses[size]
         )}
       >
