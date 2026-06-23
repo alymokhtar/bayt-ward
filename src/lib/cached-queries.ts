@@ -12,10 +12,20 @@ import { prisma } from "@/lib/prisma";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
+type KpiData = {
+  todaySales: number;
+  todaySalesCount: number;
+  monthSales: number;
+  monthSalesCount: number;
+  totalProducts: number;
+  totalCustomers: number;
+  lowStockCount: number;
+};
+
 /** Dashboard aggregates — cached 30s, invalidated on sales/inventory mutations */
 /** KPIs in a single SQL round-trip (replaces 5 separate Prisma calls) */
 export const getCachedDashboardKpis = unstable_cache(
-  async () => {
+  async (): Promise<KpiData> => {
     const now = new Date();
     const { start: todayStart, end: todayEnd } = getEgyptBusinessDayBounds(now);
     const monthRange = getReportPeriodRange("month");
