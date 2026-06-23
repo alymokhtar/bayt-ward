@@ -47,7 +47,24 @@ export async function getCustomer(id: string) {
       sales: {
         orderBy: { createdAt: "desc" },
         take: 20,
-        include: { _count: { select: { items: true } } },
+        include: {
+          _count: { select: { items: true } },
+          items: {
+            select: {
+              quantity: true,
+              unitPrice: true,
+              totalPrice: true,
+              variant: {
+                select: {
+                  sku: true,
+                  size: true,
+                  color: true,
+                  product: { select: { name: true, nameAr: true } },
+                },
+              },
+            },
+          },
+        },
       },
       returns: {
         orderBy: { createdAt: "desc" },

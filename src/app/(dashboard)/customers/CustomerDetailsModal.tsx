@@ -19,7 +19,6 @@ import {
   getSaleStatusLabel,
 } from "@/lib/utils";
 import { Mail, MapPin, Phone } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type CustomerDetails = Awaited<ReturnType<typeof getCustomer>>;
@@ -36,11 +35,13 @@ export default function CustomerDetailsModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [data, setData] = useState<CustomerDetails | null>(null);
+  const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!customerId) {
       setData(null);
       setError("");
+      setExpandedSaleId(null);
       return;
     }
 
@@ -49,6 +50,7 @@ export default function CustomerDetailsModal({
     async function load() {
       setLoading(true);
       setError("");
+      setExpandedSaleId(null);
       try {
         const result = await getCustomer(customerId!);
         if (!cancelled) setData(result);
@@ -146,47 +148,93 @@ export default function CustomerDetailsModal({
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-brown">سجل المشتريات</p>
+            <p className="mb-2 text-sm font-medium text-brown">
+              سجل المشتريات ({data.sales.length})
+            </p>
+
             {data.sales.length === 0 ? (
               <p className="rounded-xl border border-border py-8 text-center text-sm text-muted">
                 لا توجد مشتريات بعد
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>رقم الفاتورة</TableHead>
-                    <TableHead>المنتجات</TableHead>
-                    <TableHead>الإجمالي</TableHead>
-                    <TableHead>الحالة</TableHead>
-                    <TableHead>التاريخ</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.sales.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell>
-                        <Link
-                          href={`/sales/${sale.id}`}
-                          className="font-medium text-gold hover:underline"
-                        >
-                          {sale.invoiceNumber}
-                        </Link>
-                      </TableCell>
-                      <TableCell>{sale._count.items}</TableCell>
-                      <TableCell>{formatCurrency(sale.totalAmount)}</TableCell>
-                      <TableCell>
-                        <Badge status={sale.status}>
-                          {getSaleStatusLabel(sale.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted">
-                        {formatDateTime(sale.createdAt)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="space-y-2 max-h-[360px] overflow-y-auto">
+                {data.sales.map((sale) => {
+                  const isExpanded = expandedSaleId === sale.id;
+                  return (
+                    <div
+                      key={sale.id}
+                      className="rounded-lg border border-border overflow-hidden"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedSaleId(isExpanded ? null : sale.id)
+                        }
+                        className="w-full flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-start hover:bg-gold/5 transition-colors"
+                      >
+                        <div>
+                          <p className="font-medium text-brown">
+                            {sale.invoiceNumber}
+                          </p>
+                          <p className="text-xs text-muted mt-0.5">
+                            {formatDateTime(sale.createdAt)} · {sale._count.items} منتج
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge status={sale.status}>
+                            {getSaleStatusLabel(sale.status)}
+                          </Badge>
+                          <span className="font-semibold text-gold">
+                            {formatCurrency(sale.totalAmount)}
+                          </span>
+                        </div>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-border bg-cream/30 px-4 py-3">
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>المنتج</TableHead>
+                                  <TableHead>المقاس/اللون</TableHead>
+                                  <TableHead>SKU</TableHead>
+                                  <TableHead>الكمية</TableHead>
+                                  <TableHead>السعر</TableHead>
+                                  <TableHead>الإجمالي</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {sale.items.map((item, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>
+                                      {item.variant.product.nameAr ||
+                                        item.variant.product.name}
+                                    </TableCell>
+                                    <TableCell>
+                                      {item.variant.size} / {item.variant.color}
+                                    </TableCell>
+                                    <TableCell dir="ltr" className="text-start">
+                                      {item.variant.sku}
+                                    </TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell>
+                                      {formatCurrency(item.unitPrice)}
+                                    </TableCell>
+                                    <TableCell>
+                                      {formatCurrency(item.totalPrice)}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 
