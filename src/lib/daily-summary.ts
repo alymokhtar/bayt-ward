@@ -49,8 +49,8 @@ export async function getDailySummary() {
   const invoicesCount = salesAgg._count;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
   const costOfGoodsSold = costOfGoodsSoldRows[0]?.costOfGoodsSold ?? 0;
-  const netRevenue = totalSales - totalReturns;
-  const grossProfit = netRevenue - costOfGoodsSold;
+  const netRevenue = Math.max(0, totalSales - totalReturns);
+  const grossProfit = Math.max(0, netRevenue - costOfGoodsSold);
 
   return {
     totalSales,
@@ -60,7 +60,7 @@ export async function getDailySummary() {
     netRevenue,
     costOfGoodsSold,
     grossProfit,
-    netProfit: grossProfit - totalExpenses,
+    netProfit: Math.max(0, grossProfit - totalExpenses),
   };
 }
 

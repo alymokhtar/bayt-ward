@@ -257,12 +257,12 @@ export default function CashRegisterPage() {
                   <p className="text-sm text-muted">صافي الربح</p>
                   <p
                     className={`text-3xl font-bold mt-1 ${
-                      (review.netRevenue - review.totalExpenses) >= 0
+                      (Math.max(0, review.netRevenue - review.totalExpenses)) >= 0
                         ? "text-green-700"
                         : "text-red-700"
                     }`}
                   >
-                    {formatCurrency(review.netRevenue - review.totalExpenses)}
+                    {formatCurrency(Math.max(0, review.netRevenue - review.totalExpenses))}
                   </p>
                   <p className="text-xs text-muted mt-2">
                     صافي الإيرادات − المصروفات

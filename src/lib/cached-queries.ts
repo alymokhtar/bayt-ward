@@ -734,7 +734,7 @@ export const getCachedSalesReport = unstable_cache(
       averageSale: sales._avg.totalAmount ?? 0,
       totalDiscount: sales._sum.discountAmount ?? 0,
       totalTax: sales._sum.taxAmount ?? 0,
-      netSales: grossSales - totalReturns,
+      netSales: Math.max(0, grossSales - totalReturns),
       returnsCount: returns._count,
       totalReturns,
       byPaymentMethod: byPaymentMethod.map((item) => ({
@@ -914,9 +914,9 @@ export const getCachedProfitReport = unstable_cache(
     const costOfGoodsSold = cogsRows[0]?.cogs ?? 0;
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
-    const netRevenue = revenue - totalReturns;
-    const grossProfit = netRevenue - costOfGoodsSold;
-    const netProfit = grossProfit - totalExpenses;
+    const netRevenue = Math.max(0, revenue - totalReturns);
+    const grossProfit = Math.max(0, netRevenue - costOfGoodsSold);
+    const netProfit = Math.max(0, grossProfit - totalExpenses);
 
     return {
       period: { from: start, to: end },
