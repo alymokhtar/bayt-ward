@@ -84,9 +84,13 @@ export async function getSales(options?: {
   );
 }
 
-export async function getCashRegisterReview(from?: string, to?: string) {
+export async function getCashRegisterReview(
+  from?: string,
+  to?: string,
+  paymentMethod?: string
+) {
   await requireAuth();
-  return fetchCashRegisterReview(from, to);
+  return fetchCashRegisterReview(from, to, paymentMethod as any);
 }
 
 export async function getSale(id: string) {
