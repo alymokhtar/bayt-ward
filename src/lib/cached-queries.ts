@@ -80,7 +80,7 @@ export const getCachedDashboardKpis = unstable_cache(
 
     const todayReturns = todayReturnsAgg._sum.refundAmount ?? 0;
     const monthReturns = monthReturnsAgg._sum.refundAmount ?? 0;
-    const data = row ?? {
+    const data = row[0] ?? {
       todaySales: 0,
       todaySalesCount: 0,
       monthSales: 0,
