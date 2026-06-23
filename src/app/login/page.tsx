@@ -17,13 +17,13 @@ export default function LoginPage() {
         </div>
 
         <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-          <div className="relative h-32 w-32 mb-8 rounded-full border-4 border-gold/30 bg-cream/10 p-4 shadow-2xl">
+          <div className="relative h-32 w-32 mb-8 rounded-full border-4 border-gold/30 bg-cream/10 shadow-2xl overflow-hidden">
             <Image
               src="/images/logo-light.png"
               alt={STORE_NAME}
               fill
               sizes="128px"
-              className="object-contain p-2"
+              className="object-contain"
               priority
             />
           </div>
@@ -46,13 +46,13 @@ export default function LoginPage() {
       <div className="flex flex-1 flex-col items-center justify-center bg-cream px-6 py-12">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center lg:hidden">
-            <div className="relative mx-auto h-20 w-20 mb-4 rounded-full border-2 border-gold/30 bg-white p-2 shadow-lg">
+            <div className="relative mx-auto h-20 w-20 mb-4 rounded-full border-2 border-gold/30 bg-white shadow-lg overflow-hidden">
               <Image
                 src="/images/logo-light.png"
                 alt={STORE_NAME}
                 fill
                 sizes="80px"
-                className="object-contain p-1"
+                className="object-contain"
                 priority
               />
             </div>

@@ -111,3 +111,8 @@ src/
 ---
 
 © 2026 Bayt Ward — بيت ورد
+
+
+git log --oneline -5
+git reset --hard c4d7f23
+git push origin main --force
