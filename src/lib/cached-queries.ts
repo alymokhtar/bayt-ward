@@ -24,19 +24,20 @@ export const getCachedDashboardKpis = unstable_cache(
       monthRange.to
     );
 
-    const [row] = await prisma.$queryRaw<
-      [
-        {
-          todaySales: number;
-          todaySalesCount: number;
-          monthSales: number;
-          monthSalesCount: number;
-          totalProducts: number;
-          totalCustomers: number;
-          lowStockCount: number;
-        },
-      ]
-    >`
+    const [row, todayReturnsAgg, monthReturnsAgg] = await Promise.all([
+      prisma.$queryRaw<
+        [
+          {
+            todaySales: number;
+            todaySalesCount: number;
+            monthSales: number;
+            monthSalesCount: number;
+            totalProducts: number;
+            totalCustomers: number;
+            lowStockCount: number;
+          },
+        ]
+      >`
       SELECT
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
           WHERE status = 'COMPLETED' AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySales",
@@ -50,19 +51,40 @@ export const getCachedDashboardKpis = unstable_cache(
         (SELECT COUNT(*)::int FROM "Customer") AS "totalCustomers",
         (SELECT COUNT(*)::int FROM "ProductVariant"
           WHERE "isActive" = true AND "stockQuantity" <= "minStockLevel") AS "lowStockCount"
-    `;
+      `,
+      prisma.return.aggregate({
+        where: {
+          status: "APPROVED",
+          createdAt: { gte: todayStart, lt: todayEnd },
+        },
+        _sum: { refundAmount: true },
+      }),
+      prisma.return.aggregate({
+        where: {
+          status: "APPROVED",
+          createdAt: { gte: monthStart, lt: monthEnd },
+        },
+        _sum: { refundAmount: true },
+      }),
+    ]);
 
-    return (
-      row ?? {
-        todaySales: 0,
-        todaySalesCount: 0,
-        monthSales: 0,
-        monthSalesCount: 0,
-        totalProducts: 0,
-        totalCustomers: 0,
-        lowStockCount: 0,
-      }
-    );
+    const todayReturns = todayReturnsAgg._sum.refundAmount ?? 0;
+    const monthReturns = monthReturnsAgg._sum.refundAmount ?? 0;
+    const data = row ?? {
+      todaySales: 0,
+      todaySalesCount: 0,
+      monthSales: 0,
+      monthSalesCount: 0,
+      totalProducts: 0,
+      totalCustomers: 0,
+      lowStockCount: 0,
+    };
+
+    return {
+      ...data,
+      todaySales: Math.max(0, data.todaySales - todayReturns),
+      monthSales: Math.max(0, data.monthSales - monthReturns),
+    };
   },
   ["dashboard-kpis"],
   {
