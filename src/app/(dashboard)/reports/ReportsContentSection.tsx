@@ -120,7 +120,15 @@ export default async function ReportsContentSection({
 
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard title="الإيرادات" value={formatCurrency(profitReport.revenue)} />
+        <StatCard title="إجمالي الإيرادات" value={formatCurrency(profitReport.revenue)} />
+        <StatCard
+          title="المرتجعات"
+          value={formatCurrency(profitReport.totalReturns)}
+        />
+        <StatCard
+          title="الإيرادات الصافية"
+          value={formatCurrency(profitReport.netRevenue)}
+        />
         <StatCard
           title="تكلفة البضاعة"
           value={formatCurrency(profitReport.costOfGoodsSold)}
@@ -128,10 +136,6 @@ export default async function ReportsContentSection({
         <StatCard
           title="إجمالي الربح"
           value={formatCurrency(profitReport.grossProfit)}
-        />
-        <StatCard
-          title="المرتجعات"
-          value={formatCurrency(profitReport.totalReturns)}
         />
         <StatCard
           title="المصروفات"

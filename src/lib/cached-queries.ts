@@ -914,19 +914,21 @@ export const getCachedProfitReport = unstable_cache(
     const costOfGoodsSold = cogsRows[0]?.cogs ?? 0;
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
-    const grossProfit = revenue - costOfGoodsSold;
-    const netProfit = grossProfit - totalReturns - totalExpenses;
+    const netRevenue = revenue - totalReturns;
+    const grossProfit = netRevenue - costOfGoodsSold;
+    const netProfit = grossProfit - totalExpenses;
 
     return {
       period: { from: start, to: end },
       revenue,
+      netRevenue,
       costOfGoodsSold,
       grossProfit,
       totalReturns,
       totalExpenses,
       expensesCount: expenses._count,
       netProfit,
-      profitMargin: revenue > 0 ? (netProfit / revenue) * 100 : 0,
+      profitMargin: netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0,
       purchasesTotal: purchases._sum.totalAmount ?? 0,
       purchasesCount: purchases._count,
     };
