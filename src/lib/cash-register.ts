@@ -58,6 +58,8 @@ export async function getCashRegisterReview(
   const totalReturns = returnsAgg._sum.refundAmount ?? 0;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
 
+  const netRevenue = totalRevenue - totalReturns;
+
   const paymentBreakdown = salesByMethod.map((group) => ({
     method: group.paymentMethod as PaymentMethod,
     totalAmount: group._sum.totalAmount ?? 0,
@@ -70,7 +72,7 @@ export async function getCashRegisterReview(
     totalRevenue,
     totalExpenses,
     totalReturns,
-    netRevenue: totalRevenue - totalReturns - totalExpenses,
+    netRevenue,
     salesCount: salesAgg._count,
     returnsCount: returnsAgg._count,
     expensesCount: expensesAgg._count,

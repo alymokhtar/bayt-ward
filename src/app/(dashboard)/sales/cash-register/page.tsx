@@ -240,10 +240,35 @@ export default function CashRegisterPage() {
                     {formatCurrency(review.netRevenue)}
                   </p>
                   <p className="text-xs text-muted mt-2">
-                    الإيرادات − المرتجعات − المصروفات
+                    الإيرادات − المرتجعات
                   </p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gold/15 text-gold">
+                  <Wallet className="h-6 w-6" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-muted">صافي الربح</p>
+                  <p
+                    className={`text-3xl font-bold mt-1 ${
+                      (review.netRevenue - review.totalExpenses) >= 0
+                        ? "text-green-700"
+                        : "text-red-700"
+                    }`}
+                  >
+                    {formatCurrency(review.netRevenue - review.totalExpenses)}
+                  </p>
+                  <p className="text-xs text-muted mt-2">
+                    صافي الإيرادات − المصروفات
+                  </p>
+                </div>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-700">
                   <Wallet className="h-6 w-6" />
                 </div>
               </div>
