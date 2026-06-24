@@ -9,7 +9,7 @@ import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 export async function getDailySummary() {
   const { start, end } = getEgyptBusinessDayBounds();
 
-  const [salesAgg, returnsAgg, costOfGoodsSoldRows, expensesAgg] =
+  const [salesAgg, returnsAgg, costOfGoodsSoldRows, returnedCogsRows, expensesAgg] =
     await Promise.all([
       prisma.sale.aggregate({
         where: {
@@ -36,6 +36,15 @@ export async function getDailySummary() {
         AND s."createdAt" >= ${start}
         AND s."createdAt" < ${end}
     `,
+      prisma.$queryRaw<[{ returnedCogs: number }]>`
+      SELECT COALESCE(SUM(ri.quantity * pv."costPrice"), 0)::float AS "returnedCogs"
+      FROM "ReturnItem" ri
+      INNER JOIN "Return" r ON ri."returnId" = r.id
+      INNER JOIN "ProductVariant" pv ON ri."variantId" = pv.id
+      WHERE r.status = 'APPROVED'
+        AND r."createdAt" >= ${start}
+        AND r."createdAt" < ${end}
+    `,
       prisma.expense.aggregate({
         where: {
           expenseDate: { gte: start, lt: end },
@@ -48,7 +57,9 @@ export async function getDailySummary() {
   const totalReturns = returnsAgg._sum.refundAmount ?? 0;
   const invoicesCount = salesAgg._count;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
-  const costOfGoodsSold = costOfGoodsSoldRows[0]?.costOfGoodsSold ?? 0;
+  const totalCogs = costOfGoodsSoldRows[0]?.costOfGoodsSold ?? 0;
+  const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
+  const costOfGoodsSold = Math.max(0, totalCogs - returnedCogs);
   const netRevenue = Math.max(0, totalSales - totalReturns);
   const grossProfit = Math.max(0, netRevenue - costOfGoodsSold);
 

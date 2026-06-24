@@ -900,7 +900,7 @@ export const getCachedProfitReport = unstable_cache(
     };
     const { start, end } = getReportDateRange(from, to);
 
-    const [revenueAgg, cogsRows, returns, expenses, purchases] =
+    const [revenueAgg, cogsRows, returnedCogsRows, returns, expenses, purchases] =
       await Promise.all([
         prisma.sale.aggregate({
           where: {
@@ -918,7 +918,16 @@ export const getCachedProfitReport = unstable_cache(
             AND s."createdAt" >= ${start}
             AND s."createdAt" < ${end}
         `,
-        prisma.return.aggregate({
+        prisma.$queryRaw<[{ returnedCogs: number }]>
+          SELECT COALESCE(SUM(ri.quantity * pv."costPrice"), 0)::float AS "returnedCogs"
+          FROM "ReturnItem" ri
+          INNER JOIN "Return" r ON ri."returnId" = r.id
+          INNER JOIN "ProductVariant" pv ON ri."variantId" = pv.id
+          WHERE r.status = 'APPROVED'
+            AND r."createdAt" >= ${start}
+            AND r."createdAt" < ${end}
+        `,
+
           where: {
             status: "APPROVED",
             createdAt: { gte: start, lt: end },
@@ -943,7 +952,9 @@ export const getCachedProfitReport = unstable_cache(
       ]);
 
     const revenue = revenueAgg._sum.totalAmount ?? 0;
-    const costOfGoodsSold = cogsRows[0]?.cogs ?? 0;
+    const totalCogs = cogsRows[0]?.cogs ?? 0;
+    const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
+    const costOfGoodsSold = Math.max(0, totalCogs - returnedCogs);
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
     const netRevenue = Math.max(0, revenue - totalReturns);
