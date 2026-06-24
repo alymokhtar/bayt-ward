@@ -927,6 +927,13 @@ export const getCachedProfitReport = unstable_cache(
             AND r."createdAt" >= ${start}
             AND r."createdAt" < ${end}
         `,
+        prisma.return.aggregate({
+          where: {
+            status: "APPROVED",
+            createdAt: { gte: start, lt: end },
+          },
+          _sum: { refundAmount: true },
+        }),
         prisma.expense.aggregate({
           where: {
             expenseDate: { gte: start, lt: end },
