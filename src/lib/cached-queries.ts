@@ -918,7 +918,7 @@ export const getCachedProfitReport = unstable_cache(
             AND s."createdAt" >= ${start}
             AND s."createdAt" < ${end}
         `,
-        prisma.$queryRaw<[{ returnedCogs: number }]>
+        prisma.$queryRaw<[{ returnedCogs: number }]>`
           SELECT COALESCE(SUM(ri.quantity * pv."costPrice"), 0)::float AS "returnedCogs"
           FROM "ReturnItem" ri
           INNER JOIN "Return" r ON ri."returnId" = r.id
@@ -927,13 +927,6 @@ export const getCachedProfitReport = unstable_cache(
             AND r."createdAt" >= ${start}
             AND r."createdAt" < ${end}
         `,
-
-          where: {
-            status: "APPROVED",
-            createdAt: { gte: start, lt: end },
-          },
-          _sum: { refundAmount: true },
-        }),
         prisma.expense.aggregate({
           where: {
             expenseDate: { gte: start, lt: end },
