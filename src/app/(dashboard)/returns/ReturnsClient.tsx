@@ -85,7 +85,7 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
         return;
       }
       const fullSale = await getSale(salesResult.items[0].id);
-      if (fullSale.status !== "COMPLETED" && fullSale.status !== "REFUNDED") {
+      if (fullSale.status !== "COMPLETED" && fullSale.status !== "REFUNDED" && fullSale.status !== "PARTIALLY_REFUNDED") {
         setError("لا يمكن إرجاع منتجات من هذه الفاتورة");
         return;
       }

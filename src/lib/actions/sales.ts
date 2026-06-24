@@ -382,7 +382,7 @@ export async function cancelSale(id: string, reason?: string) {
       return { success: false, error: "الفاتورة ملغاة بالفعل" };
     }
 
-    if (sale.status !== "COMPLETED") {
+    if (sale.status !== "COMPLETED" && sale.status !== "PARTIALLY_REFUNDED") {
       return { success: false, error: "لا يمكن إلغاء هذه الفاتورة" };
     }
 

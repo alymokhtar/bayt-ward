@@ -15,7 +15,7 @@ export async function getCashRegisterReview(
   const { start, end } = getBusinessDayBoundsFromDateKeys(fromKey, toKey);
 
   const saleWhere = {
-    status: "COMPLETED" as const,
+    status: { in: ["COMPLETED" as const, "PARTIALLY_REFUNDED" as const] },
     createdAt: { gte: start, lt: end },
     ...(paymentMethod && paymentMethod !== "ALL"
       ? { paymentMethod }
@@ -46,7 +46,7 @@ export async function getCashRegisterReview(
     prisma.sale.groupBy({
       by: ["paymentMethod"],
       where: {
-        status: "COMPLETED",
+        status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
         createdAt: { gte: start, lt: end },
       },
       _sum: { totalAmount: true },

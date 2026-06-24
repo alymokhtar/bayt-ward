@@ -50,13 +50,13 @@ export const getCachedDashboardKpis = unstable_cache(
       >`
       SELECT
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status = 'COMPLETED' AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySales",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySales",
         (SELECT COUNT(*)::int FROM "Sale"
-          WHERE status = 'COMPLETED' AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status = 'COMPLETED' AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSales",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSales",
         (SELECT COUNT(*)::int FROM "Sale"
-          WHERE status = 'COMPLETED' AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSalesCount",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSalesCount",
         (SELECT COUNT(*)::int FROM "Product" WHERE "isActive" = true) AS "totalProducts",
         (SELECT COUNT(*)::int FROM "Customer") AS "totalCustomers",
         (SELECT COUNT(*)::int FROM "ProductVariant"
@@ -904,7 +904,7 @@ export const getCachedProfitReport = unstable_cache(
       await Promise.all([
         prisma.sale.aggregate({
           where: {
-            status: "COMPLETED",
+            status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
             createdAt: { gte: start, lt: end },
           },
           _sum: { totalAmount: true },
@@ -914,7 +914,7 @@ export const getCachedProfitReport = unstable_cache(
           FROM "SaleItem" si
           INNER JOIN "Sale" s ON si."saleId" = s.id
           INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
-          WHERE s.status = 'COMPLETED'
+          WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED')
             AND s."createdAt" >= ${start}
             AND s."createdAt" < ${end}
         `,
@@ -1006,7 +1006,7 @@ export const getCachedTopProducts = unstable_cache(
       INNER JOIN "Sale" s ON si."saleId" = s.id
       INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
       INNER JOIN "Product" p ON pv."productId" = p.id
-      WHERE s.status = 'COMPLETED'
+      WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED')
         AND s."createdAt" >= ${start}
         AND s."createdAt" < ${end}
       GROUP BY p.id, p."nameAr", p.name
