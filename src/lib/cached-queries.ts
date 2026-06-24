@@ -725,7 +725,7 @@ export const getCachedSalesReport = unstable_cache(
     const [sales, returns, byPaymentMethod] = await Promise.all([
       prisma.sale.aggregate({
         where: {
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
           createdAt: { gte: start, lt: end },
         },
         _sum: {
@@ -748,7 +748,7 @@ export const getCachedSalesReport = unstable_cache(
       prisma.sale.groupBy({
         by: ["paymentMethod"],
         where: {
-          status: "COMPLETED",
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
           createdAt: { gte: start, lt: end },
         },
         _sum: { totalAmount: true },
