@@ -13,6 +13,8 @@ import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 type KpiData = {
+  todayGrossSales: number;
+  todayReturns: number;
   todaySales: number;
   todaySalesCount: number;
   monthSales: number;
@@ -38,7 +40,7 @@ export const getCachedDashboardKpis = unstable_cache(
       prisma.$queryRaw<
         [
           {
-            todaySales: number;
+            todayGrossSales: number;
             todaySalesCount: number;
             monthSales: number;
             monthSalesCount: number;
@@ -50,7 +52,7 @@ export const getCachedDashboardKpis = unstable_cache(
       >`
       SELECT
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySales",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todayGrossSales",
         (SELECT COUNT(*)::int FROM "Sale"
           WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
@@ -81,7 +83,7 @@ export const getCachedDashboardKpis = unstable_cache(
     const todayReturns = todayReturnsAgg._sum.refundAmount ?? 0;
     const monthReturns = monthReturnsAgg._sum.refundAmount ?? 0;
     const data = row[0] ?? {
-      todaySales: 0,
+      todayGrossSales: 0,
       todaySalesCount: 0,
       monthSales: 0,
       monthSalesCount: 0,
@@ -92,7 +94,8 @@ export const getCachedDashboardKpis = unstable_cache(
 
     return {
       ...data,
-      todaySales: Math.max(0, data.todaySales - todayReturns),
+      todayReturns: Math.max(0, todayReturns),
+      todaySales: Math.max(0, data.todayGrossSales - todayReturns),
       monthSales: Math.max(0, data.monthSales - monthReturns),
     };
   },

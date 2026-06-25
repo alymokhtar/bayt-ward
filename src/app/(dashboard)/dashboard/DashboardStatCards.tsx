@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { getDashboardKpis } from "@/lib/actions/dashboard";
 import { getSession } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
-import { Package, ShoppingCart, TrendingUp, Users } from "lucide-react";
+import { Package, RotateCcw, ShoppingCart, TrendingUp, Users, Wallet } from "lucide-react";
 
 export default async function DashboardStatCards() {
   const [kpis, session] = await Promise.all([
@@ -13,11 +13,25 @@ export default async function DashboardStatCards() {
 
   const statCards = [
     {
-      title: "مبيعات اليوم",
-      value: formatCurrency(kpis.todaySales),
+      title: "إجمالي مبيعات اليوم",
+      value: formatCurrency(kpis.todayGrossSales),
       sub: `${kpis.todaySalesCount} فاتورة`,
       icon: ShoppingCart,
       color: "bg-gold/10 text-gold",
+    },
+    {
+      title: "مرتجعات اليوم",
+      value: formatCurrency(kpis.todayReturns),
+      sub: "مرتجعات",
+      icon: RotateCcw,
+      color: "bg-red-100 text-red-700",
+    },
+    {
+      title: "صافي مبيعات اليوم",
+      value: formatCurrency(kpis.todaySales),
+      sub: "بعد خصم المرتجعات",
+      icon: Wallet,
+      color: "bg-green-100 text-green-700",
     },
     ...(!isCashier
       ? [
@@ -26,7 +40,7 @@ export default async function DashboardStatCards() {
             value: formatCurrency(kpis.monthSales),
             sub: `${kpis.monthSalesCount} فاتورة`,
             icon: TrendingUp,
-            color: "bg-green-100 text-green-700",
+            color: "bg-blue-100 text-blue-700",
           },
         ]
       : []),
@@ -42,12 +56,12 @@ export default async function DashboardStatCards() {
       value: kpis.totalCustomers.toString(),
       sub: "عميل مسجل",
       icon: Users,
-      color: "bg-blue-100 text-blue-700",
+      color: "bg-purple-100 text-purple-700",
     },
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {statCards.map((card) => {
         const Icon = card.icon;
         return (

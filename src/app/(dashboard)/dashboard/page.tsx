@@ -17,8 +17,8 @@ function SectionSkeleton({ className = "h-28" }: { className?: string }) {
 
 function StatCardsSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, i) => (
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
         <SectionSkeleton key={i} />
       ))}
     </div>
