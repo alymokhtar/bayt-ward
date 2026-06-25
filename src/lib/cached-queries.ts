@@ -728,7 +728,7 @@ export const getCachedSalesReport = unstable_cache(
     const [sales, returns, byPaymentMethod] = await Promise.all([
       prisma.sale.aggregate({
         where: {
-          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
           createdAt: { gte: start, lt: end },
         },
         _sum: {
@@ -751,7 +751,7 @@ export const getCachedSalesReport = unstable_cache(
       prisma.sale.groupBy({
         by: ["paymentMethod"],
         where: {
-          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
           createdAt: { gte: start, lt: end },
         },
         _sum: { totalAmount: true },
@@ -907,7 +907,7 @@ export const getCachedProfitReport = unstable_cache(
       await Promise.all([
         prisma.sale.aggregate({
           where: {
-            status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
+            status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
             createdAt: { gte: start, lt: end },
           },
           _sum: { totalAmount: true },
@@ -917,7 +917,7 @@ export const getCachedProfitReport = unstable_cache(
           FROM "SaleItem" si
           INNER JOIN "Sale" s ON si."saleId" = s.id
           INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
-          WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED')
+          WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND s."createdAt" >= ${start}
             AND s."createdAt" < ${end}
         `,

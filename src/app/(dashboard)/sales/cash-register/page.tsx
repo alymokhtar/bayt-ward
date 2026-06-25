@@ -100,7 +100,7 @@ export default function CashRegisterPage() {
   const statCards = review
     ? [
         {
-          title: "إجمالي الإيرادات",
+          title: "إجمالي المبيعات",
           value: formatCurrency(review.totalRevenue),
           sub: `${review.salesCount} فاتورة`,
           icon: ArrowUpRight,
@@ -258,7 +258,7 @@ export default function CashRegisterPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-muted flex items-center gap-2">
                     <ArrowUpRight className="h-4 w-4 text-green-600" />
-                    إجمالي الإيرادات
+                    إجمالي المبيعات
                   </span>
                   <span className="font-medium">
                     {formatCurrency(review.totalRevenue)}
