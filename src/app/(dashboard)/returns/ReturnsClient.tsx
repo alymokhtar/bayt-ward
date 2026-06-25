@@ -67,6 +67,7 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
   >({});
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
+  const [refundMethod, setRefundMethod] = useState<"CASH" | "INSTAPAY" | "WALLET">("CASH");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedReturnId, setSelectedReturnId] = useState<string | null>(null);
@@ -144,6 +145,7 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
       items: returnItems,
       totalAmount: refundAmount,
       refundAmount,
+      refundMethod,
       reason: reason || undefined,
       notes: notes || undefined,
     });
@@ -291,6 +293,20 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
                   مبلغ الاسترداد: {formatCurrency(refundAmount)}
                 </p>
               )}
+              <div>
+                <label className="text-sm font-medium text-brown block mb-1.5">
+                  طريقة الاسترجاع
+                </label>
+                <select
+                  value={refundMethod}
+                  onChange={(e) => setRefundMethod(e.target.value as "CASH" | "INSTAPAY" | "WALLET")}
+                  className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm"
+                >
+                  <option value="CASH">كاش</option>
+                  <option value="INSTAPAY">إنستاباي</option>
+                  <option value="WALLET">محفظة</option>
+                </select>
+              </div>
             </div>
           )}
 

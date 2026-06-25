@@ -100,6 +100,7 @@ export async function createReturn(data: {
   items: ReturnItemInput[];
   totalAmount: number;
   refundAmount: number;
+  refundMethod?: "CASH" | "INSTAPAY" | "WALLET";
   reason?: string;
   notes?: string;
 }) {
@@ -191,6 +192,7 @@ export async function createReturn(data: {
           userId: user.id,
           totalAmount: data.totalAmount,
           refundAmount: data.refundAmount,
+          refundMethod: data.refundMethod,
           reason: data.reason,
           notes: data.notes,
           status: "APPROVED",

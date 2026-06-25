@@ -29,7 +29,18 @@ interface ReviewData {
   salesCount: number;
   returnsCount: number;
   expensesCount: number;
-  paymentBreakdown: { method: PaymentMethod; totalAmount: number; count: number }[];
+  paymentBreakdown: {
+    method: PaymentMethod;
+    revenue: number;
+    refund: number;
+    net: number;
+    count: number;
+  }[];
+  refundBreakdown: {
+    method: PaymentMethod;
+    totalAmount: number;
+    count: number;
+  }[];
 }
 
 function formatPeriodLabel(from: string, to: string) {
@@ -301,15 +312,42 @@ export default function CashRegisterPage() {
                       تفصيل الإيرادات حسب طريقة الدفع
                     </p>
                     {review.paymentBreakdown.map((item) => (
+                      <div key={item.method} className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted">
+                            {getPaymentMethodLabel(item.method)} ({item.count} فاتورة)
+                          </span>
+                          <span className="font-medium">
+                            {formatCurrency(item.net)}
+                          </span>
+                        </div>
+                        {item.refund > 0 && (
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted">
+                              إيرادات: {formatCurrency(item.revenue)} − مرتجع: {formatCurrency(item.refund)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {review.refundBreakdown.length > 0 && (
+                  <div className="border-t border-border pt-3 space-y-2">
+                    <p className="text-xs font-medium text-muted">
+                      تفصيل المرتجعات حسب طريقة الاسترجاع
+                    </p>
+                    {review.refundBreakdown.map((item) => (
                       <div
                         key={item.method}
                         className="flex items-center justify-between"
                       >
                         <span className="text-muted">
-                          {getPaymentMethodLabel(item.method)} ({item.count} فاتورة)
+                          {getPaymentMethodLabel(item.method)} ({item.count} مرتجع)
                         </span>
-                        <span className="font-medium">
-                          {formatCurrency(item.totalAmount)}
+                        <span className="font-medium text-red-700">
+                          − {formatCurrency(item.totalAmount)}
                         </span>
                       </div>
                     ))}

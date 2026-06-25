@@ -22,7 +22,7 @@ export async function getCashRegisterReview(
       : {}),
   };
 
-  const [salesAgg, returnsAgg, expensesAgg, salesByMethod] = await Promise.all([
+  const [salesAgg, returnsAgg, expensesAgg, salesByMethod, returnsByMethod] = await Promise.all([
     prisma.sale.aggregate({
       where: saleWhere,
       _sum: { totalAmount: true },
@@ -52,6 +52,15 @@ export async function getCashRegisterReview(
       _sum: { totalAmount: true },
       _count: true,
     }),
+    prisma.return.groupBy({
+      by: ["refundMethod"],
+      where: {
+        status: "APPROVED",
+        createdAt: { gte: start, lt: end },
+      },
+      _sum: { refundAmount: true },
+      _count: true,
+    }),
   ]);
 
   const totalRevenue = salesAgg._sum.totalAmount ?? 0;
@@ -60,9 +69,25 @@ export async function getCashRegisterReview(
 
   const netRevenue = Math.max(0, totalRevenue - totalReturns - totalExpenses);
 
-  const paymentBreakdown = salesByMethod.map((group) => ({
-    method: group.paymentMethod as PaymentMethod,
-    totalAmount: group._sum.totalAmount ?? 0,
+  const refundMap = new Map(
+    returnsByMethod.map((r) => [r.refundMethod, r._sum.refundAmount ?? 0])
+  );
+
+  const paymentBreakdown = salesByMethod.map((group) => {
+    const revenue = group._sum.totalAmount ?? 0;
+    const refund = refundMap.get(group.paymentMethod) ?? 0;
+    return {
+      method: group.paymentMethod as PaymentMethod,
+      revenue,
+      refund,
+      net: revenue - refund,
+      count: group._count,
+    };
+  });
+
+  const refundBreakdown = returnsByMethod.map((group) => ({
+    method: group.refundMethod as PaymentMethod,
+    totalAmount: group._sum.refundAmount ?? 0,
     count: group._count,
   }));
 
@@ -77,5 +102,6 @@ export async function getCashRegisterReview(
     returnsCount: returnsAgg._count,
     expensesCount: expensesAgg._count,
     paymentBreakdown,
+    refundBreakdown,
   };
 }
