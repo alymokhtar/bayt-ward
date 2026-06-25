@@ -44,7 +44,7 @@ export default function MobileSplashScreen({ onComplete }: MobileSplashScreenPro
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-cream transition-opacity duration-500 md:hidden ${
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-cream transition-opacity duration-500 ${
         fading ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       style={{
