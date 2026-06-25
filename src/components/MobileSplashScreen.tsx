@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { STORE_NAME, STORE_NAME_AR } from "@/lib/constants";
 
-export default function MobileSplashScreen() {
+interface MobileSplashScreenProps {
+  onComplete?: () => void;
+}
+
+export default function MobileSplashScreen({ onComplete }: MobileSplashScreenProps) {
   const [visible, setVisible] = useState(true);
   const [progress, setProgress] = useState(0);
   const [fading, setFading] = useState(false);
@@ -24,14 +28,17 @@ export default function MobileSplashScreen() {
         // Start fade out after progress completes
         setTimeout(() => {
           setFading(true);
-          setTimeout(() => setVisible(false), 500);
+          setTimeout(() => {
+            setVisible(false);
+            onComplete?.();
+          }, 500);
         }, 200);
       }
       setProgress(current);
     }, interval);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [onComplete]);
 
   if (!visible) return null;
 
