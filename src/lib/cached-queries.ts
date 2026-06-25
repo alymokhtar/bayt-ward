@@ -52,13 +52,13 @@ export const getCachedDashboardKpis = unstable_cache(
       >`
       SELECT
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todayGrossSales",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todayGrossSales",
         (SELECT COUNT(*)::int FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSales",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED') AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSales",
         (SELECT COUNT(*)::int FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED') AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSalesCount",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED') AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSalesCount",
         (SELECT COUNT(*)::int FROM "Product" WHERE "isActive" = true) AS "totalProducts",
         (SELECT COUNT(*)::int FROM "Customer") AS "totalCustomers",
         (SELECT COUNT(*)::int FROM "ProductVariant"
