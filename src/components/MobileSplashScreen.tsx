@@ -14,8 +14,8 @@ export default function MobileSplashScreen({ onComplete }: MobileSplashScreenPro
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    // Animate progress bar over 1.5 seconds
-    const duration = 1500;
+    // Animate progress bar over 1 second
+    const duration = 1000;
     const interval = 30;
     const step = 100 / (duration / interval);
     let current = 0;
