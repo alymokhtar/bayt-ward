@@ -165,6 +165,12 @@ select {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
+/* Loading bar shimmer animation */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Barcode print styles */
 @media print {
   body {

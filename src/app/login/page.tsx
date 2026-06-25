@@ -2,10 +2,13 @@ import { STORE_NAME, STORE_NAME_AR } from "@/lib/constants";
 import Image from "next/image";
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
+import MobileSplashScreen from "@/components/MobileSplashScreen";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen">
+    <>
+      <MobileSplashScreen />
+      <div className="flex min-h-screen">
       <div className="bayt-ward-pattern hidden lg:flex lg:w-1/2 flex-col items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-5">
           <div
@@ -78,5 +81,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  </>
   );
 }
