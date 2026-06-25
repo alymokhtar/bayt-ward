@@ -16,6 +16,8 @@ export default function DashboardSplashWrapper({
   useEffect(() => {
     if (showSplash) {
       sessionStorage.setItem("splash-shown", "true");
+      // Clear the cookie so splash won't show on next navigation
+      document.cookie = "splash-show=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
     }
   }, [showSplash]);
 
