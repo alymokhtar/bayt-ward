@@ -8,17 +8,16 @@ export default function DashboardSplashWrapper({
 }: {
   children: ReactNode;
 }) {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    const hasShown = sessionStorage.getItem("splash-shown");
+    return !hasShown;
+  });
 
   useEffect(() => {
-    // Show splash only once per browser session (after login)
-    const hasShown = sessionStorage.getItem("splash-shown");
-    if (hasShown) {
-      setShowSplash(false);
-    } else {
+    if (showSplash) {
       sessionStorage.setItem("splash-shown", "true");
     }
-  }, []);
+  }, [showSplash]);
 
   const handleComplete = () => {
     setShowSplash(false);
