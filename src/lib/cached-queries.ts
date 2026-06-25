@@ -15,7 +15,7 @@ import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 type KpiData = {
   todayGrossSales: number;
   todayReturns: number;
-  todaySales: number;
+  todayNetSales: number;
   todaySalesCount: number;
   monthSales: number;
   monthSalesCount: number;
@@ -95,7 +95,7 @@ export const getCachedDashboardKpis = unstable_cache(
     return {
       ...data,
       todayReturns: Math.max(0, todayReturns),
-      todaySales: Math.max(0, data.todayGrossSales - todayReturns),
+      todayNetSales: Math.max(0, data.todayGrossSales - todayReturns),
       monthSales: Math.max(0, data.monthSales - monthReturns),
     };
   },

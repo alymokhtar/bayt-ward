@@ -28,7 +28,7 @@ export default async function DashboardStatCards() {
     },
     {
       title: "صافي مبيعات اليوم",
-      value: formatCurrency(kpis.todaySales),
+      value: formatCurrency(kpis.todayNetSales),
       sub: "بعد خصم المرتجعات",
       icon: Wallet,
       color: "bg-green-100 text-green-700",
