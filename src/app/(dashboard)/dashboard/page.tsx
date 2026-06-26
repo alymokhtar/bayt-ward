@@ -59,6 +59,5 @@ export default function DashboardPage() {
           <DashboardRecentSalesSection />
         </Suspense>
       </div>
-    </div>
   );
 }
