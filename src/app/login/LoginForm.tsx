@@ -35,8 +35,7 @@ export default function LoginForm() {
         return;
       }
 
-      // Set cookie to show splash screen on first dashboard load after login
-      document.cookie = "splash-show=1; path=/; max-age=60";
+      // Navigate to dashboard after successful login
       router.push(from);
       router.refresh();
     } catch {
