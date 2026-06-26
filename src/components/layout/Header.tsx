@@ -17,6 +17,17 @@ export default function Header({ user }: HeaderProps) {
   const [loading, setLoading] = useState(false);
 
   function handleLogout() {
+    const isMobile = typeof window !== "undefined" ? window.innerWidth <= 768 : false;
+
+    if (isMobile) {
+      // على الموبايل: تسجيل الخروج مباشرة بدون نسخ احتياطي
+      setLoading(true);
+      fetch("/api/auth/logout", { method: "POST" }).then(() => {
+        router.replace("/login");
+      });
+      return;
+    }
+
     const confirmed = window.confirm(
       "هل تريد تسجيل الخروج؟ يجب تنزيل نسخة احتياطية قبل إغلاق الجلسة."
     );

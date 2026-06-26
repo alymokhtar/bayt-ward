@@ -16,6 +16,10 @@ function isStandalonePWA() {
   );
 }
 
+function isMobileDevice() {
+  return typeof window !== "undefined" && window.innerWidth <= 768;
+}
+
 export default function PWAExitGuard() {
   const pathname = usePathname();
   const router = useRouter();
@@ -24,7 +28,8 @@ export default function PWAExitGuard() {
     if (
       pathname === "/login" ||
       pathname === "/settings" ||
-      !isStandalonePWA()
+      !isStandalonePWA() ||
+      isMobileDevice()
     ) {
       return;
     }
