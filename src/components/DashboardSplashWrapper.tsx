@@ -10,7 +10,9 @@ export default function DashboardSplashWrapper({
 }) {
   const [showSplash, setShowSplash] = useState(() => {
     const hasShown = sessionStorage.getItem("splash-shown");
-    return !hasShown;
+    const isMobile = typeof window !== "undefined" ? window.innerWidth <= 768 : false;
+    // لا تظهر splash screen على الموبايل أبداً
+    return !hasShown && !isMobile;
   });
 
   useEffect(() => {

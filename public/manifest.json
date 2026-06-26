@@ -1,7 +1,7 @@
 {
-  "name": "Bayt Ward - بيت ورد",
-  "short_name": "بيت ورد",
-  "description": "نظام إدارة محل بيت ورد للملابس النسائية",
+  "name": "Bayt Ward",
+  "short_name": " Bayt Ward",
+  "description": "نظام إدارة محل بيت ورد",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#FDF5E6",
