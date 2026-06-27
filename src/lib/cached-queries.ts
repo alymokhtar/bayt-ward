@@ -15,6 +15,7 @@ import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 type KpiData = {
   todayGrossSales: number;
   todayReturns: number;
+  todayExpenses: number;
   todayNetSales: number;
   todaySalesCount: number;
   monthSales: number;
@@ -36,7 +37,7 @@ export const getCachedDashboardKpis = unstable_cache(
       monthRange.to
     );
 
-    const [row, todayReturnsAgg, monthReturnsAgg] = await Promise.all([
+    const [row, todayReturnsAgg, monthReturnsAgg, todayExpensesAgg] = await Promise.all([
       prisma.$queryRaw<
         [
           {
@@ -78,10 +79,17 @@ export const getCachedDashboardKpis = unstable_cache(
         },
         _sum: { refundAmount: true },
       }),
+      prisma.expense.aggregate({
+        where: {
+          expenseDate: { gte: todayStart, lt: todayEnd },
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
     const todayReturns = todayReturnsAgg._sum.refundAmount ?? 0;
     const monthReturns = monthReturnsAgg._sum.refundAmount ?? 0;
+    const todayExpenses = todayExpensesAgg._sum.amount ?? 0;
     const data = row[0] ?? {
       todayGrossSales: 0,
       todaySalesCount: 0,
@@ -95,7 +103,8 @@ export const getCachedDashboardKpis = unstable_cache(
     return {
       ...data,
       todayReturns: Math.max(0, todayReturns),
-      todayNetSales: Math.max(0, data.todayGrossSales - todayReturns),
+      todayExpenses: Math.max(0, todayExpenses),
+      todayNetSales: Math.max(0, data.todayGrossSales - todayReturns - todayExpenses),
       monthSales: Math.max(0, data.monthSales - monthReturns),
     };
   },

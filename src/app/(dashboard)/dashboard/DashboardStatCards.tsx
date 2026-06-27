@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { getDashboardKpis } from "@/lib/actions/dashboard";
 import { getSession } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
-import { Package, RotateCcw, ShoppingCart, TrendingUp, Users, Wallet } from "lucide-react";
+import { Package, Receipt, RotateCcw, ShoppingCart, TrendingUp, Users, Wallet } from "lucide-react";
 
 export default async function DashboardStatCards() {
   const [kpis, session] = await Promise.all([
@@ -27,9 +27,16 @@ export default async function DashboardStatCards() {
       color: "bg-red-100 text-red-700",
     },
     {
+      title: "مصروفات اليوم",
+      value: formatCurrency(kpis.todayExpenses),
+      sub: "مصروفات",
+      icon: Receipt,
+      color: "bg-orange-100 text-orange-700",
+    },
+    {
       title: "صافي مبيعات اليوم",
       value: formatCurrency(kpis.todayNetSales),
-      sub: "بعد خصم المرتجعات",
+      sub: "بعد خصم المرتجعات والمصروفات",
       icon: Wallet,
       color: "bg-green-100 text-green-700",
     },
