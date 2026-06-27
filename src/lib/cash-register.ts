@@ -22,17 +22,22 @@ export async function getCashRegisterReview(
       : {}),
   };
 
-  const [salesAgg, returnsAgg, expensesAgg, salesByMethod, returnsWithSale, salesList] = await Promise.all([
+  const returnWhere = {
+    status: "APPROVED" as const,
+    createdAt: { gte: start, lt: end },
+    ...(paymentMethod && paymentMethod !== "ALL"
+      ? { refundMethod: paymentMethod }
+      : {}),
+  };
+
+  const [salesAgg, returnsAgg, expensesAgg, salesByMethod, returnsByMethod, salesList] = await Promise.all([
     prisma.sale.aggregate({
       where: saleWhere,
       _sum: { totalAmount: true },
       _count: true,
     }),
     prisma.return.aggregate({
-      where: {
-        status: "APPROVED",
-        createdAt: { gte: start, lt: end },
-      },
+      where: returnWhere,
       _sum: { refundAmount: true },
       _count: true,
     }),
@@ -52,19 +57,14 @@ export async function getCashRegisterReview(
       _sum: { totalAmount: true },
       _count: true,
     }),
-    prisma.return.findMany({
+    prisma.return.groupBy({
+      by: ["refundMethod"],
       where: {
         status: "APPROVED",
         createdAt: { gte: start, lt: end },
       },
-      select: {
-        refundAmount: true,
-        sale: {
-          select: {
-            paymentMethod: true,
-          },
-        },
-      },
+      _sum: { refundAmount: true },
+      _count: true,
     }),
     prisma.sale.findMany({
       where: saleWhere,
@@ -88,20 +88,8 @@ export async function getCashRegisterReview(
 
   const netRevenue = Math.max(0, totalRevenue - totalReturns - totalExpenses);
 
-  const returnsByOriginalPayment = returnsWithSale.reduce((acc, r) => {
-    const method = r.sale.paymentMethod;
-    const amount = r.refundAmount ?? 0;
-    if (!acc[method]) acc[method] = { totalAmount: 0, count: 0 };
-    acc[method].totalAmount += amount;
-    acc[method].count += 1;
-    return acc;
-  }, {} as Record<string, { totalAmount: number; count: number }>);
-
   const refundMap = new Map(
-    Object.entries(returnsByOriginalPayment).map(([method, data]) => [
-      method,
-      data.totalAmount,
-    ])
+    returnsByMethod.map((r) => [r.refundMethod, r._sum.refundAmount ?? 0])
   );
 
   const paymentBreakdown = salesByMethod.map((group) => {
@@ -116,13 +104,16 @@ export async function getCashRegisterReview(
     };
   });
 
-  const refundBreakdown = Object.entries(returnsByOriginalPayment).map(
-    ([method, data]) => ({
-      method: method as PaymentMethod,
-      totalAmount: data.totalAmount,
-      count: data.count,
-    })
-  );
+  const refundBreakdownRaw = returnsByMethod.map((group) => ({
+    method: group.refundMethod as PaymentMethod,
+    totalAmount: group._sum.refundAmount ?? 0,
+    count: group._count,
+  }));
+
+  const refundBreakdown =
+    paymentMethod && paymentMethod !== "ALL"
+      ? refundBreakdownRaw.filter((r) => r.method === paymentMethod)
+      : refundBreakdownRaw;
 
   return {
     from: fromKey,
