@@ -4,7 +4,7 @@ import Button from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { getCashRegisterReview } from "@/lib/actions/sales";
 import { formatEgyptChartDateLabel } from "@/lib/business-day";
-import { formatCurrency, getPaymentMethodLabel } from "@/lib/utils";
+import { formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
 import type { PaymentMethod } from "@prisma/client";
 import {
   ArrowRight,
@@ -40,6 +40,16 @@ interface ReviewData {
     method: PaymentMethod;
     totalAmount: number;
     count: number;
+  }[];
+  salesList: {
+    id: string;
+    invoiceNumber: string;
+    totalAmount: number;
+    paymentMethod: PaymentMethod;
+    status: string;
+    createdAt: Date;
+    customer: { name: string | null } | null;
+    user: { name: string } | null;
   }[];
 }
 
@@ -356,6 +366,53 @@ export default function CashRegisterPage() {
               </div>
             </CardContent>
           </Card>
+
+          {review.salesList.length > 0 && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-brown">
+                    فواتير {paymentMethod === "ALL" ? "الكل" : getPaymentMethodLabel(paymentMethod)}
+                  </h3>
+                  <span className="text-xs text-muted">
+                    {review.salesList.length} فاتورة
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {review.salesList.map((sale) => (
+                    <Link
+                      key={sale.id}
+                      href={`/sales/${sale.id}`}
+                      className="flex items-center justify-between rounded-lg border border-border bg-white p-3 transition-colors hover:bg-cream/50"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/15 shrink-0">
+                          <Receipt className="h-4 w-4 text-gold" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-brown truncate">
+                            {sale.invoiceNumber}
+                          </p>
+                          <p className="text-xs text-muted truncate">
+                            {sale.customer?.name || "عميل نقدي"} ·{" "}
+                            {formatDateTime(sale.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-end shrink-0">
+                        <p className="text-sm font-semibold text-brown">
+                          {formatCurrency(sale.totalAmount)}
+                        </p>
+                        <p className="text-xs text-muted">
+                          {getPaymentMethodLabel(sale.paymentMethod)}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>
