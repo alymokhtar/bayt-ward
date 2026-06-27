@@ -5,6 +5,7 @@ import type { SessionUser } from "@/lib/auth";
 import { STORE_NAME_AR } from "@/lib/constants";
 import { getRoleLabel } from "@/lib/utils";
 import { LogOut, User } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -40,12 +41,34 @@ export default function Header({ user }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 md:h-16 items-center justify-between border-b border-border bg-white/80 px-4 md:px-6 backdrop-blur-md">
-      <div className="md:hidden">
+      <div className="md:hidden flex items-center gap-2">
+        <div className="relative h-8 w-8 rounded-full overflow-hidden border border-gold/20 shrink-0">
+          <Image
+            src="/images/logo-light.png"
+            alt={STORE_NAME_AR}
+            fill
+            className="object-cover"
+            sizes="32px"
+            priority
+          />
+        </div>
         <h1 className="text-base font-semibold text-brown">{STORE_NAME_AR}</h1>
       </div>
-      <div className="hidden md:block">
-        <h1 className="text-lg font-semibold text-brown">{STORE_NAME_AR}</h1>
-        <p className="text-xs text-muted">نظام إدارة المتجر</p>
+      <div className="hidden md:flex items-center gap-2.5">
+        <div className="relative h-9 w-9 rounded-full overflow-hidden border border-gold/20 shrink-0">
+          <Image
+            src="/images/logo-light.png"
+            alt={STORE_NAME_AR}
+            fill
+            className="object-cover"
+            sizes="36px"
+            priority
+          />
+        </div>
+        <div>
+          <h1 className="text-lg font-semibold text-brown">{STORE_NAME_AR}</h1>
+          <p className="text-xs text-muted">نظام إدارة المتجر</p>
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
