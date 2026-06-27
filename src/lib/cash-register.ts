@@ -37,7 +37,7 @@ export async function getCashRegisterReview(
       : {}),
   };
 
-  const [salesAgg, returnsAgg, expensesAgg, salesByMethod, returnsByMethod, salesList] = await Promise.all([
+  const [salesAgg, returnsAgg, expensesAgg, salesByMethod, returnsByMethod, expensesByMethod, salesList] = await Promise.all([
     prisma.sale.aggregate({
       where: saleWhere,
       _sum: { totalAmount: true },
@@ -71,6 +71,14 @@ export async function getCashRegisterReview(
       _sum: { refundAmount: true },
       _count: true,
     }),
+    prisma.expense.groupBy({
+      by: ["paymentMethod"],
+      where: {
+        expenseDate: { gte: start, lt: end },
+      },
+      _sum: { amount: true },
+      _count: true,
+    }),
     prisma.sale.findMany({
       where: saleWhere,
       select: {
@@ -97,14 +105,20 @@ export async function getCashRegisterReview(
     returnsByMethod.map((r) => [r.refundMethod, r._sum.refundAmount ?? 0])
   );
 
+  const expensesMap = new Map(
+    expensesByMethod.map((e) => [e.paymentMethod, e._sum.amount ?? 0])
+  );
+
   const paymentBreakdown = salesByMethod.map((group) => {
     const revenue = group._sum.totalAmount ?? 0;
     const refund = refundMap.get(group.paymentMethod) ?? 0;
+    const expense = expensesMap.get(group.paymentMethod) ?? 0;
     return {
       method: group.paymentMethod as PaymentMethod,
       revenue,
       refund,
-      net: revenue - refund,
+      expense,
+      net: revenue - refund - expense,
       count: group._count,
     };
   });

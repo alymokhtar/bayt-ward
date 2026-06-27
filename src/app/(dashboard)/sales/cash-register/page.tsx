@@ -33,6 +33,7 @@ interface ReviewData {
     method: PaymentMethod;
     revenue: number;
     refund: number;
+    expense: number;
     net: number;
     count: number;
   }[];
@@ -331,13 +332,15 @@ export default function CashRegisterPage() {
                             {formatCurrency(item.net)}
                           </span>
                         </div>
-                        {item.refund > 0 && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted">
-                              إيرادات: {formatCurrency(item.revenue)} − مرتجع: {formatCurrency(item.refund)}
-                            </span>
-                          </div>
-                        )}
+                        <div className="flex items-center justify-between text-xs text-muted">
+                          <span>إيرادات: {formatCurrency(item.revenue)}</span>
+                          {item.refund > 0 && (
+                            <span>− مرتجع: {formatCurrency(item.refund)}</span>
+                          )}
+                          {item.expense > 0 && (
+                            <span>− مصروفات: {formatCurrency(item.expense)}</span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
