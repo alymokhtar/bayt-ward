@@ -12,8 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { getExpense } from "@/lib/actions/expenses";
-import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES } from "@/lib/constants";
-import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
+import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES, PAYMENT_METHODS } from "@/lib/constants";
+import { formatCurrency, formatDate, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
 type ExpenseDetails = Awaited<ReturnType<typeof getExpense>>;
@@ -102,6 +102,12 @@ export default function ExpenseDetailsModal({
               <p className="text-xs text-muted">تاريخ المصروف</p>
               <p className="mt-1 text-sm font-medium text-brown">
                 {formatDate(data.expenseDate)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-border bg-cream/50 p-4">
+              <p className="text-xs text-muted">طريقة الدفع</p>
+              <p className="mt-1 text-sm font-medium text-brown">
+                {getPaymentMethodLabel(data.paymentMethod)}
               </p>
             </div>
             {data.employee && (

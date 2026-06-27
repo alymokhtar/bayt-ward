@@ -1088,7 +1088,16 @@ export const getCachedExpensesList = unstable_cache(
       },
       orderBy: { expenseDate: "desc" },
       take: options.limit ?? 100,
-      include: {
+      select: {
+        id: true,
+        title: true,
+        amount: true,
+        category: true,
+        description: true,
+        expenseDate: true,
+        baseSalary: true,
+        deductionsTotal: true,
+        paymentMethod: true,
         user: { select: { id: true, name: true } },
         employee: { select: { id: true, name: true } },
       },

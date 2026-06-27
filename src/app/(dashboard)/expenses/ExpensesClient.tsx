@@ -22,8 +22,8 @@ import {
   getEgyptBusinessDateKey,
   parseDateKey,
 } from "@/lib/business-day";
-import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES, DISPLAY_LOCALE } from "@/lib/constants";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES, DISPLAY_LOCALE, PAYMENT_METHODS } from "@/lib/constants";
+import { formatCurrency, formatDate, getPaymentMethodLabel } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -43,6 +43,7 @@ type Expense = {
   expenseDate: Date;
   baseSalary: number | null;
   deductionsTotal: number | null;
+  paymentMethod: string;
   user: { name: string };
   employee: { id: string; name: string } | null;
 };
@@ -65,6 +66,7 @@ export default function ExpensesClient({
   const [category, setCategory] = useState("OTHER");
   const [description, setDescription] = useState("");
   const [employeeId, setEmployeeId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [expenseDate, setExpenseDate] = useState(getEgyptBusinessDateKey);
   const [payrollSummary, setPayrollSummary] = useState<PayrollSummary | null>(
     null
@@ -125,6 +127,7 @@ export default function ExpensesClient({
     setCategory("OTHER");
     setDescription("");
     setEmployeeId("");
+    setPaymentMethod("CASH");
     setExpenseDate(getEgyptBusinessDateKey());
     setPayrollSummary(null);
     setError("");
@@ -160,6 +163,7 @@ export default function ExpensesClient({
       description: description || undefined,
       expenseDate: dateKeyToUtcNoon(expenseDate),
       employeeId: isSalaryExpense ? employeeId : undefined,
+      paymentMethod: paymentMethod as any,
     });
 
     setLoading(false);
@@ -201,6 +205,7 @@ export default function ExpensesClient({
             <TableHead>التصنيف</TableHead>
             <TableHead>الموظف</TableHead>
             <TableHead>المبلغ</TableHead>
+            <TableHead>طريقة الدفع</TableHead>
             <TableHead>التاريخ</TableHead>
             <TableHead>بواسطة</TableHead>
             <TableHead></TableHead>
@@ -233,6 +238,9 @@ export default function ExpensesClient({
               <TableCell>{e.employee?.name || "—"}</TableCell>
               <TableCell className="font-semibold text-danger">
                 {formatCurrency(e.amount)}
+              </TableCell>
+              <TableCell className="text-sm text-muted">
+                {getPaymentMethodLabel(e.paymentMethod)}
               </TableCell>
               <TableCell>{formatDate(e.expenseDate)}</TableCell>
               <TableCell>{e.user.name}</TableCell>
@@ -365,6 +373,12 @@ export default function ExpensesClient({
                 ? "يُحسب تلقائياً من الراتب ناقص الاستقطاعات"
                 : undefined
             }
+          />
+          <Select
+            label="طريقة الدفع"
+            options={PAYMENT_METHODS}
+            value={paymentMethod}
+            onChange={(e) => setPaymentMethod(e.target.value)}
           />
           <Input
             label="التاريخ"

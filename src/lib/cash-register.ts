@@ -30,6 +30,13 @@ export async function getCashRegisterReview(
       : {}),
   };
 
+  const expensesWhere = {
+    expenseDate: { gte: start, lt: end },
+    ...(paymentMethod && paymentMethod !== "ALL"
+      ? { paymentMethod }
+      : {}),
+  };
+
   const [salesAgg, returnsAgg, expensesAgg, salesByMethod, returnsByMethod, salesList] = await Promise.all([
     prisma.sale.aggregate({
       where: saleWhere,
@@ -42,9 +49,7 @@ export async function getCashRegisterReview(
       _count: true,
     }),
     prisma.expense.aggregate({
-      where: {
-        expenseDate: { gte: start, lt: end },
-      },
+      where: expensesWhere,
       _sum: { amount: true },
       _count: true,
     }),

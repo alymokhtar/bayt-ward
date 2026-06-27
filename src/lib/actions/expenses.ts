@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import type { ExpenseCategory } from "@prisma/client";
+import type { ExpenseCategory, PaymentMethod } from "@prisma/client";
 import { invalidateExpensesData } from "@/lib/revalidate-tags";
 import { getCachedExpensesList } from "@/lib/cached-queries";
 import { sendTelegramMessage } from "@/lib/telegram";
@@ -112,6 +112,7 @@ export async function createExpense(data: {
   description?: string;
   expenseDate?: Date;
   employeeId?: string;
+  paymentMethod?: PaymentMethod;
 }) {
   try {
     const user = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
@@ -172,6 +173,7 @@ export async function createExpense(data: {
             employeeId: employee.id,
             baseSalary: employee.salary,
             deductionsTotal,
+            paymentMethod: data.paymentMethod ?? "CASH",
           },
           include: {
             user: { select: { id: true, name: true } },
@@ -208,6 +210,7 @@ export async function createExpense(data: {
         description: data.description?.trim(),
         expenseDate: data.expenseDate ?? new Date(),
         userId: user.id,
+        paymentMethod: data.paymentMethod ?? "CASH",
       },
       include: {
         user: { select: { id: true, name: true } },

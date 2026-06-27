@@ -336,6 +336,7 @@ model Expense {
   baseSalary      Float?
   deductionsTotal Float?
   expenseDate     DateTime        @default(now())
+  paymentMethod   PaymentMethod   @default(CASH)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -346,6 +347,7 @@ model Expense {
   @@index([userId])
   @@index([employeeId])
   @@index([expenseDate])
+  @@index([paymentMethod])
 }
 
 model EmployeeAdjustment {
