@@ -46,15 +46,14 @@ interface POSClientProps {
   storeNameAr?: string;
   storePhone?: string;
   currencySymbol?: string;
-
   dailyDiscountPercent?: number;
-
 }
 
 export default function POSClient({
   storeNameAr = "بيت ورد",
   storePhone,
   currencySymbol = "ج.م",
+  dailyDiscountPercent = 0,
 }: POSClientProps) {
   const searchRef = useRef<HTMLInputElement>(null);
 
