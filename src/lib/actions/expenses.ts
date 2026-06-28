@@ -152,7 +152,7 @@ export async function createExpense(data: {
         (sum, item) => sum + item.amount,
         0
       );
-      const expectedNet = Math.max(0, employee.salary - deductionsTotal);
+      const expectedNet = employee.salary - deductionsTotal;
 
       if (Math.abs(data.amount - expectedNet) > 0.01) {
         return {

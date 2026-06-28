@@ -102,10 +102,10 @@ export const getCachedDashboardKpis = unstable_cache(
 
     return {
       ...data,
-      todayReturns: Math.max(0, todayReturns),
-      todayExpenses: Math.max(0, todayExpenses),
-      todayNetSales: Math.max(0, data.todayGrossSales - todayReturns - todayExpenses),
-      monthSales: Math.max(0, data.monthSales - monthReturns),
+      todayReturns,
+      todayExpenses,
+      todayNetSales: data.todayGrossSales - todayReturns - todayExpenses,
+      monthSales: data.monthSales - monthReturns,
     };
   },
   ["dashboard-kpis"],
@@ -778,7 +778,7 @@ export const getCachedSalesReport = unstable_cache(
       averageSale: sales._avg.totalAmount ?? 0,
       totalDiscount: sales._sum.discountAmount ?? 0,
       totalTax: sales._sum.taxAmount ?? 0,
-      netSales: Math.max(0, grossSales - totalReturns),
+      netSales: grossSales - totalReturns,
       returnsCount: returns._count,
       totalReturns,
       byPaymentMethod: byPaymentMethod.map((item) => ({
@@ -966,12 +966,12 @@ export const getCachedProfitReport = unstable_cache(
     const revenue = revenueAgg._sum.totalAmount ?? 0;
     const totalCogs = cogsRows[0]?.cogs ?? 0;
     const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
-    const costOfGoodsSold = Math.max(0, totalCogs - returnedCogs);
+    const costOfGoodsSold = totalCogs - returnedCogs;
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
-    const netRevenue = Math.max(0, revenue - totalReturns);
-    const grossProfit = Math.max(0, netRevenue - costOfGoodsSold);
-    const netProfit = Math.max(0, grossProfit - totalExpenses);
+    const netRevenue = revenue - totalReturns;
+    const grossProfit = netRevenue - costOfGoodsSold;
+    const netProfit = grossProfit - totalExpenses;
 
     return {
       period: { from: start, to: end },

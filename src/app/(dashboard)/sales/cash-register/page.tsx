@@ -299,12 +299,12 @@ export default function CashRegisterPage() {
                   <p className="text-sm text-muted">صافي الإيرادات</p>
                   <p
                     className={`text-3xl font-bold mt-1 ${
-                      Math.max(0, review.totalRevenue - review.totalReturns - review.totalExpenses) >= 0
+                      review.totalRevenue - review.totalReturns - review.totalExpenses >= 0
                         ? "text-green-700"
                         : "text-red-700"
                     }`}
                   >
-                    {formatCurrency(Math.max(0, review.totalRevenue - review.totalReturns - review.totalExpenses))}
+                    {formatCurrency(review.totalRevenue - review.totalReturns - review.totalExpenses)}
                   </p>
                   <p className="text-xs text-muted mt-2">
                     الإيرادات − المرتجعات − المصروفات
@@ -351,12 +351,12 @@ export default function CashRegisterPage() {
                   <span>صافي الإيرادات</span>
                   <span
                     className={
-                      Math.max(0, review.totalRevenue - review.totalReturns - review.totalExpenses) >= 0
+                      review.totalRevenue - review.totalReturns - review.totalExpenses >= 0
                         ? "text-green-700"
                         : "text-red-700"
                     }
                   >
-                    {formatCurrency(Math.max(0, review.totalRevenue - review.totalReturns - review.totalExpenses))}
+                    {formatCurrency(review.totalRevenue - review.totalReturns - review.totalExpenses)}
                   </span>
                 </div>
 

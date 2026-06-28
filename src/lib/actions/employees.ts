@@ -116,7 +116,7 @@ export async function getEmployeePayrollSummary(employeeId: string) {
     },
     pendingAdjustments: employee.employeeAdjustments,
     totalDeductions,
-    netSalary: Math.max(0, employee.salary - totalDeductions),
+    netSalary: employee.salary - totalDeductions,
   };
 }
 
@@ -184,7 +184,7 @@ export async function getEmployeeDetails(employeeId: string) {
     ...employee,
     pendingAdjustments,
     pendingDeductions,
-    netSalaryDue: Math.max(0, employee.salary - pendingDeductions),
+    netSalaryDue: employee.salary - pendingDeductions,
     totalSalaryReceived,
     lastSalary: employee.salaryExpenses[0] ?? null,
     salaryCount: employee.salaryExpenses.length,

@@ -99,7 +99,7 @@ export async function getCashRegisterReview(
   const totalReturns = returnsAgg._sum.refundAmount ?? 0;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
 
-  const netRevenue = Math.max(0, totalRevenue - totalReturns - totalExpenses);
+  const netRevenue = totalRevenue - totalReturns - totalExpenses;
 
   const refundMap = new Map(
     returnsByMethod.map((r) => [r.refundMethod, r._sum.refundAmount ?? 0])
