@@ -40,16 +40,16 @@ export default async function ReportsContentSection({
             value={formatCurrency(salesReport.totalSales)}
           />
           <StatCard
-            title="صافي المبيعات"
-            value={formatCurrency(salesReport.netSales)}
-          />
-          <StatCard
             title="المرتجعات"
             value={formatCurrency(salesReport.totalReturns)}
           />
           <StatCard
             title="المصروفات"
             value={formatCurrency(salesReport.totalExpenses)}
+          />
+          <StatCard
+            title="صافي المبيعات"
+            value={formatCurrency(salesReport.netSales)}
           />
           <StatCard
             title="عدد الفواتير"

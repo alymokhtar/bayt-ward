@@ -802,7 +802,7 @@ export const getCachedSalesReport = unstable_cache(
       averageSale: sales._avg.totalAmount ?? 0,
       totalDiscount: sales._sum.discountAmount ?? 0,
       totalTax: sales._sum.taxAmount ?? 0,
-      netSales: grossSales - totalReturns,
+      netSales: grossSales - totalReturns - totalExpenses,
       returnsCount: returns._count,
       totalReturns,
       totalExpenses,
