@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { getCachedStoreSettings } from "@/lib/cached-queries";
+import { getEgyptBusinessDateKey } from "@/lib/business-day";
 import { invalidateSettingsData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
@@ -53,6 +54,11 @@ export async function updateSettings(data: Record<string, string>) {
 
     if (!data || Object.keys(data).length === 0) {
       return { success: false, error: "لا توجد إعدادات للتحديث" };
+    }
+
+    // Auto-set daily discount date when activated
+    if (data.daily_discount_active === "1") {
+      data.daily_discount_date = getEgyptBusinessDateKey();
     }
 
     await prisma.$transaction(
