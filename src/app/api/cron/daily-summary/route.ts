@@ -2,6 +2,7 @@ import {
   formatDailySummaryMessage,
   getDailySummary,
 } from "@/lib/daily-summary";
+import { prisma } from "@/lib/prisma";
 import { sendTelegramMessage } from "@/lib/telegram";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,13 @@ export async function GET(request: Request) {
   const message = formatDailySummaryMessage(summary);
 
   await sendTelegramMessage(message);
+
+  // Auto-clear daily discount at end of business day
+  await prisma.setting.upsert({
+    where: { key: "daily_discount_active" },
+    update: { value: "0" },
+    create: { key: "daily_discount_active", value: "0" },
+  });
 
   return new Response(JSON.stringify({
     success: true,

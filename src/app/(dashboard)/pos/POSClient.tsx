@@ -46,6 +46,9 @@ interface POSClientProps {
   storeNameAr?: string;
   storePhone?: string;
   currencySymbol?: string;
+
+  dailyDiscountPercent?: number;
+
 }
 
 export default function POSClient({
@@ -59,7 +62,7 @@ export default function POSClient({
   const [results, setResults] = useState<VariantResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [discountPercent, setDiscountPercent] = useState(0);
+  const [discountPercent, setDiscountPercent] = useState(dailyDiscountPercent);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod | "">("");
   const [paidAmount, setPaidAmount] = useState("");

@@ -1,9 +1,28 @@
 import POSClient from "@/app/(dashboard)/pos/POSClient";
 import { getStoreSettings } from "@/lib/actions/settings";
+import { getEgyptBusinessDateKey } from "@/lib/business-day";
+import { prisma } from "@/lib/prisma";
 import { Store } from "lucide-react";
 
 export default async function POSPage() {
   const settings = await getStoreSettings();
+
+  const todayKey = getEgyptBusinessDateKey();
+  const discountDate = settings.daily_discount_date || "";
+  const discountActive = settings.daily_discount_active === "1";
+  const discountPercent = parseFloat(settings.daily_discount_percent || "0") || 0;
+
+  let dailyDiscountActive = discountActive && discountDate === todayKey && discountPercent > 0;
+
+  // Auto-clear if the discount is from a previous business day
+  if (discountActive && discountDate !== todayKey) {
+    await prisma.setting.upsert({
+      where: { key: "daily_discount_active" },
+      update: { value: "0" },
+      create: { key: "daily_discount_active", value: "0" },
+    });
+    dailyDiscountActive = false;
+  }
 
   return (
     <div className="space-y-4">
@@ -20,6 +39,7 @@ export default async function POSPage() {
         storeNameAr={settings.store_name_ar || "بيت ورد"}
         storePhone={settings.store_phone}
         currencySymbol={settings.currency_symbol || "ج.م"}
+        dailyDiscountPercent={dailyDiscountActive ? discountPercent : 0}
       />
     </div>
   );

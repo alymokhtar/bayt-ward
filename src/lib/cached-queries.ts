@@ -217,6 +217,9 @@ const STORE_SETTING_KEYS = [
   "store_whatsapp",
   "currency_symbol",
   "whatsapp_promotion_default",
+  "daily_discount_percent",
+  "daily_discount_active",
+  "daily_discount_date",
 ];
 
 export const getCachedStoreSettings = unstable_cache(
