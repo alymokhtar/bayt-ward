@@ -734,10 +734,10 @@ export const getCachedSalesReport = unstable_cache(
     };
     const { start, end } = getReportDateRange(from, to);
 
-    const [sales, returns, byPaymentMethod, expenses] = await Promise.all([
+    const [sales, returns, byPaymentMethod, expenses, salesList] = await Promise.all([
       prisma.sale.aggregate({
         where: {
-          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
           createdAt: { gte: start, lt: end },
         },
         _sum: {
@@ -760,7 +760,7 @@ export const getCachedSalesReport = unstable_cache(
       prisma.sale.groupBy({
         by: ["paymentMethod"],
         where: {
-          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
           createdAt: { gte: start, lt: end },
         },
         _sum: { totalAmount: true },
@@ -771,6 +771,23 @@ export const getCachedSalesReport = unstable_cache(
           createdAt: { gte: start, lt: end },
         },
         _sum: { amount: true },
+      }),
+      prisma.sale.findMany({
+        where: {
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED", "PENDING", "CANCELLED"] },
+          createdAt: { gte: start, lt: end },
+        },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          totalAmount: true,
+          status: true,
+          paymentMethod: true,
+          createdAt: true,
+          customer: { select: { name: true } },
+          user: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
       }),
     ]);
 
@@ -793,6 +810,16 @@ export const getCachedSalesReport = unstable_cache(
         method: item.paymentMethod,
         total: item._sum.totalAmount ?? 0,
         count: item._count,
+      })),
+      salesList: salesList.map((sale) => ({
+        id: sale.id,
+        invoiceNumber: sale.invoiceNumber,
+        customerName: sale.customer?.name || "نقدي",
+        cashierName: sale.user.name,
+        totalAmount: sale.totalAmount,
+        status: sale.status,
+        paymentMethod: sale.paymentMethod,
+        createdAt: sale.createdAt,
       })),
     };
   },

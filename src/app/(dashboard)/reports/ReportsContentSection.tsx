@@ -14,7 +14,8 @@ import {
   getSalesReport,
   getTopProducts,
 } from "@/lib/actions/reports";
-import { formatCurrency, getPaymentMethodLabel } from "@/lib/utils";
+import Badge from "@/components/ui/Badge";
+import { formatCurrency, formatDateTime, getPaymentMethodLabel, getSaleStatusLabel } from "@/lib/utils";
 
 interface ReportsContentSectionProps {
   activeTab: string;
@@ -61,7 +62,44 @@ export default async function ReportsContentSection({
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>حسب طريقة الدفع</CardTitle>
+            <CardTitle>تفاصيل الفواتير</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>رقم الفاتورة</TableHead>
+                  <TableHead>العميل</TableHead>
+                  <TableHead>طريقة الدفع</TableHead>
+                  <TableHead>الإجمالي</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>التاريخ</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {salesReport.salesList.map((sale) => (
+                  <TableRow key={sale.id}>
+                    <TableCell className="font-medium">{sale.invoiceNumber}</TableCell>
+                    <TableCell>{sale.customerName}</TableCell>
+                    <TableCell>{getPaymentMethodLabel(sale.paymentMethod)}</TableCell>
+                    <TableCell className="font-medium text-gold">
+                      {formatCurrency(sale.totalAmount)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge status={sale.status}>{getSaleStatusLabel(sale.status)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted">
+                      {formatDateTime(sale.createdAt)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>ملخص حسب طريقة الدفع</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
