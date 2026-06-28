@@ -262,7 +262,7 @@ export const getCachedCustomersPage = unstable_cache(
     const [items, total] = await Promise.all([
       prisma.customer.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { totalSpent: "desc" },
         take,
         skip,
         select: {
@@ -672,7 +672,6 @@ export const getCachedSuppliersList = unstable_cache(
     const [suppliers, aggregates, lastPurchases] = await Promise.all([
       prisma.supplier.findMany({
         where: includeInactive ? undefined : { isActive: true },
-        orderBy: { name: "asc" },
         take: 500,
         select: {
           id: true,
@@ -712,7 +711,7 @@ export const getCachedSuppliersList = unstable_cache(
       lastPurchases.map((row) => [row.supplierId, row])
     );
 
-    return suppliers.map((supplier) => {
+    const result = suppliers.map((supplier) => {
       const last = lastBySupplier.get(supplier.id);
       return {
         ...supplier,
@@ -721,6 +720,8 @@ export const getCachedSuppliersList = unstable_cache(
         lastPurchaseAt: last?.createdAt ?? null,
       };
     });
+
+    return result.sort((a, b) => b.totalPurchaseAmount - a.totalPurchaseAmount);
   },
   ["suppliers-list"],
   { tags: [CACHE_TAG.suppliers], revalidate: READ_CACHE_SECONDS }
