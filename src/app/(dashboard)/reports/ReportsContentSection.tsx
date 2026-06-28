@@ -1,3 +1,5 @@
+import { formatCurrency, formatDateTime, getPaymentMethodLabel, getSaleStatusLabel } from "@/lib/utils";
+import Badge from "@/components/ui/Badge";
 import LowStockReportPanel from "@/app/(dashboard)/reports/LowStockReportPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import {
@@ -14,8 +16,7 @@ import {
   getSalesReport,
   getTopProducts,
 } from "@/lib/actions/reports";
-import Badge from "@/components/ui/Badge";
-import { formatCurrency, formatDateTime, getPaymentMethodLabel, getSaleStatusLabel } from "@/lib/utils";
+import Link from "next/link";
 
 interface ReportsContentSectionProps {
   activeTab: string;
@@ -79,7 +80,11 @@ export default async function ReportsContentSection({
               <TableBody>
                 {salesReport.salesList.map((sale) => (
                   <TableRow key={sale.id}>
-                    <TableCell className="font-medium">{sale.invoiceNumber}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/sales/${sale.id}`} className="text-gold hover:underline">
+                        {sale.invoiceNumber}
+                      </Link>
+                    </TableCell>
                     <TableCell>{sale.customerName}</TableCell>
                     <TableCell>{getPaymentMethodLabel(sale.paymentMethod)}</TableCell>
                     <TableCell className="font-medium text-gold">
@@ -108,6 +113,9 @@ export default async function ReportsContentSection({
                   <TableHead>الطريقة</TableHead>
                   <TableHead>العدد</TableHead>
                   <TableHead>الإجمالي</TableHead>
+                  <TableHead>يخصم</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>الصافي</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -117,6 +125,22 @@ export default async function ReportsContentSection({
                     <TableCell>{item.count}</TableCell>
                     <TableCell className="font-medium text-gold">
                       {formatCurrency(item.total)}
+                    </TableCell>
+                    <TableCell className="text-danger">
+                      {item.deductions > 0 ? `- ${formatCurrency(item.deductions)}` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-xs font-medium ${
+                        item.status === "مسترد + مصروف" ? "text-orange-600" :
+                        item.status === "مسترد" ? "text-red-600" :
+                        item.status === "مصروف" ? "text-orange-600" :
+                        "text-muted"
+                      }`}>
+                        {item.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className={`font-bold ${item.net >= 0 ? "text-green-700" : "text-red-700"}`}>
+                      {formatCurrency(item.net)}
                     </TableCell>
                   </TableRow>
                 ))}
