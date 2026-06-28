@@ -734,7 +734,7 @@ export const getCachedSalesReport = unstable_cache(
     };
     const { start, end } = getReportDateRange(from, to);
 
-    const [sales, returns, byPaymentMethod] = await Promise.all([
+    const [sales, returns, byPaymentMethod, expenses] = await Promise.all([
       prisma.sale.aggregate({
         where: {
           status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
@@ -766,10 +766,17 @@ export const getCachedSalesReport = unstable_cache(
         _sum: { totalAmount: true },
         _count: true,
       }),
+      prisma.expense.aggregate({
+        where: {
+          createdAt: { gte: start, lt: end },
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
     const grossSales = sales._sum.totalAmount ?? 0;
     const totalReturns = returns._sum.refundAmount ?? 0;
+    const totalExpenses = expenses._sum.amount ?? 0;
 
     return {
       period: { from: start, to: end },
@@ -781,6 +788,7 @@ export const getCachedSalesReport = unstable_cache(
       netSales: grossSales - totalReturns,
       returnsCount: returns._count,
       totalReturns,
+      totalExpenses,
       byPaymentMethod: byPaymentMethod.map((item) => ({
         method: item.paymentMethod,
         total: item._sum.totalAmount ?? 0,
