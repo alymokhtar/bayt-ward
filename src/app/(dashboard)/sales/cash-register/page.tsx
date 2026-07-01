@@ -319,6 +319,58 @@ export default function CashRegisterPage() {
 
           <Card>
             <CardContent className="pt-6">
+              <p className="text-sm font-semibold text-brown mb-4">ملخص حسب طريقة الدفع</p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>الطريقة</TableHead>
+                    <TableHead>العدد</TableHead>
+                    <TableHead>الإجمالي</TableHead>
+                    <TableHead>يخصم</TableHead>
+                    <TableHead>الحالة</TableHead>
+                    <TableHead>الصافي</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {review.paymentBreakdown.map((item) => {
+                    const deductions = item.refund + item.expense;
+                    let status = "—";
+                    if (item.refund > 0 && item.expense > 0) status = "مسترد + مصروف";
+                    else if (item.refund > 0) status = "مسترد";
+                    else if (item.expense > 0) status = "مصروف";
+                    return (
+                      <TableRow key={item.method}>
+                        <TableCell>{getPaymentMethodLabel(item.method)}</TableCell>
+                        <TableCell>{item.count}</TableCell>
+                        <TableCell className="font-medium text-gold">
+                          {formatCurrency(item.revenue)}
+                        </TableCell>
+                        <TableCell className="text-danger">
+                          {deductions > 0 ? `- ${formatCurrency(deductions)}` : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`text-xs font-medium ${
+                            status === "مسترد + مصروف" ? "text-orange-600" :
+                            status === "مسترد" ? "text-red-600" :
+                            status === "مصروف" ? "text-orange-600" :
+                            "text-muted"
+                          }`}>
+                            {status}
+                          </span>
+                        </TableCell>
+                        <TableCell className={`font-bold ${item.net >= 0 ? "text-green-700" : "text-red-700"}`}>
+                          {formatCurrency(item.net)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
               <div className="space-y-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-muted flex items-center gap-2">
