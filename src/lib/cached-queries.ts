@@ -814,11 +814,15 @@ export const getCachedSalesReport = unstable_cache(
     const totalExpenses = expenses._sum.amount ?? 0;
 
     // Build lookup maps
-    const returnsMap = new Map(
-      returnsByMethod.map((r) => [r.refundMethod, (r._sum.refundAmount ?? 0)])
+    const returnsMap = new Map<string, number>(
+      returnsByMethod
+        .filter((r) => r.refundMethod)
+        .map((r) => [String(r.refundMethod), r._sum.refundAmount ?? 0])
     );
-    const expensesMap = new Map(
-      expensesByMethod.map((e) => [e.paymentMethod, (e._sum.amount ?? 0)])
+    const expensesMap = new Map<string, number>(
+      expensesByMethod
+        .filter((e) => e.paymentMethod)
+        .map((e) => [String(e.paymentMethod), e._sum.amount ?? 0])
     );
     // Merge all methods (sales + returns + expenses)
     const allMethods = new Set<string>([
