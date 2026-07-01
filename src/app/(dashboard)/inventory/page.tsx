@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import Button from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
+import FilterForm from "@/components/ui/FilterForm";
 import InventoryVariantsSection from "@/app/(dashboard)/inventory/InventoryVariantsSection";
 import InventoryMovementsSection from "@/app/(dashboard)/inventory/InventoryMovementsSection";
 import { Search } from "lucide-react";
@@ -33,7 +33,7 @@ export default async function InventoryPage({
       </div>
       <Card>
         <CardContent className="pt-6">
-          <form className="flex flex-wrap gap-3 mb-6">
+          <FilterForm action="/inventory" submitLabel="بحث">
             <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
               <input
@@ -54,10 +54,7 @@ export default async function InventoryPage({
               />
               مخزون منخفض فقط
             </label>
-            <Button type="submit" variant="secondary">
-              بحث
-            </Button>
-          </form>
+          </FilterForm>
 
           <Suspense fallback={<TableSkeleton />}>
             <InventoryVariantsSection

@@ -119,7 +119,19 @@ export default function InventoryClient({
 
   return (
     <>
-      <form className="flex flex-wrap gap-3 mb-6">
+      <form
+        className="flex flex-wrap gap-3 mb-6"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const formData = new FormData(e.currentTarget);
+          const q = formData.get("search")?.toString() || "";
+          const lowStock = formData.get("lowStock")?.toString();
+          const params = new URLSearchParams();
+          if (q.trim()) params.set("search", q.trim());
+          if (lowStock === "true") params.set("lowStock", "true");
+          router.push(`/inventory?${params.toString()}`);
+        }}
+      >
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
           <input

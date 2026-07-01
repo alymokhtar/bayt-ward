@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import Button from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
+import FilterForm from "@/components/ui/FilterForm";
 import ExpensesSection from "@/app/(dashboard)/expenses/ExpensesSection";
 import { EXPENSE_CATEGORIES } from "@/lib/constants";
 import type { ExpenseCategory } from "@prisma/client";
@@ -39,7 +39,7 @@ export default async function ExpensesPage({
 
       <Card>
         <CardContent className="pt-6">
-          <form className="flex flex-wrap gap-3 mb-6">
+          <FilterForm action="/expenses" submitLabel="تصفية">
             <select
               name="category"
               defaultValue={params.category || ""}
@@ -64,10 +64,7 @@ export default async function ExpensesPage({
               defaultValue={params.to}
               className="h-10 rounded-lg border border-border bg-white px-3 text-sm"
             />
-            <Button type="submit" variant="secondary">
-              تصفية
-            </Button>
-          </form>
+          </FilterForm>
 
           <Suspense key={filterKey} fallback={<TableSkeleton />}>
             <ExpensesSection

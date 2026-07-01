@@ -4,7 +4,8 @@ import { Card, CardContent } from "@/components/ui/Card";
 import ProductsTableClient from "@/app/(dashboard)/products/ProductsTableClient";
 import { getProducts } from "@/lib/actions/products";
 import PaginationNav from "@/components/ui/PaginationNav";
-import { Package, Plus, Search } from "lucide-react";
+import SearchForm from "@/components/ui/SearchForm";
+import { Package, Plus } from "lucide-react";
 import Link from "next/link";
 
 interface ProductsPageProps {
@@ -41,20 +42,11 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
 
       <Card>
         <CardContent className="pt-6">
-          <form className="flex gap-3 mb-6">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-              <input
-                name="search"
-                defaultValue={search}
-                placeholder="بحث بالاسم أو SKU أو الباركود..."
-                className="w-full h-10 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
-              />
-            </div>
-            <Button type="submit" variant="secondary">
-              بحث
-            </Button>
-          </form>
+          <SearchForm
+            action="/products"
+            placeholder="بحث بالاسم أو SKU أو الباركود..."
+            defaultValue={search}
+          />
 
           {products.length === 0 ? (
             <EmptyState

@@ -1,7 +1,7 @@
 import Badge from "@/components/ui/Badge";
-import Button from "@/components/ui/Button";
 import PaginationNav from "@/components/ui/PaginationNav";
 import { Card, CardContent } from "@/components/ui/Card";
+import FilterForm from "@/components/ui/FilterForm";
 import {
   Table,
   TableBody,
@@ -18,6 +18,7 @@ import {
 } from "@/lib/utils";
 import { Search, Wallet } from "lucide-react";
 import Link from "next/link";
+import Button from "@/components/ui/Button";
 
 const statusLabels: Record<string, string> = {
   COMPLETED: "مكتملة",
@@ -66,7 +67,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
 
       <Card>
         <CardContent className="pt-6">
-          <form className="flex flex-wrap gap-3 mb-6">
+          <FilterForm action="/sales" submitLabel="تصفية">
             <div className="relative flex-1 min-w-[180px] max-w-sm">
               <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
               <input
@@ -99,10 +100,7 @@ export default async function SalesPage({ searchParams }: SalesPageProps) {
               defaultValue={params.to}
               className="h-10 rounded-lg border border-border bg-white px-3 text-sm"
             />
-            <Button type="submit" variant="secondary">
-              تصفية
-            </Button>
-          </form>
+          </FilterForm>
 
           <Table>
             <TableHeader>
