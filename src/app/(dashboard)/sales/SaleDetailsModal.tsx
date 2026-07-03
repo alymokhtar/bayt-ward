@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
-import PrintButton from "@/components/ui/PrintButton";
+import PrintInvoiceButton from "@/components/ui/PrintInvoiceButton";
 import SaleWhatsAppButton from "@/components/whatsapp/SaleWhatsAppButton";
 import { getSale } from "@/lib/actions/sales";
 import { getStoreSettings } from "@/lib/actions/settings";
@@ -193,11 +193,11 @@ export default function SaleDetailsModal({
                   items={itemsText}
                 />
               )}
-              <PrintButton />
+              <PrintInvoiceButton invoiceId={`invoice-${sale.id}`} />
             </div>
           </div>
 
-          <Card className="print:shadow-none print:border-none">
+          <Card id={`invoice-${sale.id}`} className="print:shadow-none print:border-none">
             <CardContent className="pt-6">
               <div className="text-center border-b border-border pb-6 mb-6">
                 <h2 className="text-xl font-bold text-brown">{STORE_NAME_AR}</h2>
@@ -388,6 +388,12 @@ export default function SaleDetailsModal({
                   ملاحظات: {sale.notes}
                 </p>
               )}
+
+              <div className="mt-6 flex justify-end print:hidden">
+                <Button variant="ghost" onClick={onClose}>
+                  إغلاق
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
