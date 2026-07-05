@@ -16,7 +16,7 @@ import {
   formatDateTime,
   getPaymentMethodLabel,
 } from "@/lib/utils";
-import PrintButton from "@/components/ui/PrintButton";
+import PrintInvoiceButton from "@/components/ui/PrintInvoiceButton";
 import SaleWhatsAppButton from "@/components/whatsapp/SaleWhatsAppButton";
 import { getStoreSettings } from "@/lib/actions/settings";
 import { ArrowRight } from "lucide-react";
@@ -101,11 +101,11 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
                 items={itemsText}
               />
             )}
-            <PrintButton />
+            <PrintInvoiceButton invoiceId={`invoice-${sale.id}`} />
           </div>
         </div>
 
-        <Card className="print:shadow-none print:border-none">
+        <Card id={`invoice-${sale.id}`} className="print:shadow-none print:border-none">
           <CardContent className="pt-6">
             <div className="text-center border-b border-border pb-6 mb-6">
               <h2 className="text-xl font-bold text-brown">{STORE_NAME_AR}</h2>
