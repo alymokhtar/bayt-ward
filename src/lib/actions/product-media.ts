@@ -8,18 +8,32 @@ import {
 } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { invalidateProductsData } from "@/lib/revalidate-tags";
+import type {
+  ProductColorWithMedia,
+  ProductMediaItem,
+} from "@/lib/types/product-media";
 
-const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = new Set([
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+export const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/gif",
-]);
+] as const;
 
 type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+const mediaSelect = {
+  id: true,
+  url: true,
+  publicId: true,
+  altText: true,
+  sortOrder: true,
+  isPrimary: true,
+  isActive: true,
+} as const;
 
 function handleActionError(error: unknown): ActionResult<never> {
   if (error instanceof Error) {
@@ -38,6 +52,14 @@ function handleActionError(error: unknown): ActionResult<never> {
   return { success: false, error: "حدث خطأ غير متوقع" };
 }
 
+function revalidateProductMediaPaths() {
+  invalidateProductsData();
+}
+
+async function requireMediaManager() {
+  return requireRole(["ADMIN", "MANAGER"]);
+}
+
 async function getNextMediaSortOrder(productColorId: string): Promise<number> {
   const latest = await prisma.productMedia.findFirst({
     where: { productColorId },
@@ -48,17 +70,55 @@ async function getNextMediaSortOrder(productColorId: string): Promise<number> {
   return (latest?.sortOrder ?? -1) + 1;
 }
 
+async function getMediaOrError(mediaId: string) {
+  const media = await prisma.productMedia.findUnique({
+    where: { id: mediaId },
+    select: {
+      id: true,
+      publicId: true,
+      isPrimary: true,
+      isActive: true,
+      productColorId: true,
+      productColor: {
+        select: { productId: true },
+      },
+    },
+  });
+
+  if (!media) {
+    return { success: false as const, error: "الصورة غير موجودة" };
+  }
+
+  return { success: true as const, media };
+}
+
+export async function getProductColorsWithMedia(
+  productId: string
+): Promise<ProductColorWithMedia[]> {
+  await requireMediaManager();
+
+  return prisma.productColor.findMany({
+    where: { productId },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      color: true,
+      colorHex: true,
+      sortOrder: true,
+      isActive: true,
+      media: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: mediaSelect,
+      },
+    },
+  });
+}
+
 export async function uploadProductMedia(formData: FormData): Promise<
-  ActionResult<{
-    id: string;
-    url: string;
-    publicId: string;
-    sortOrder: number;
-    isPrimary: boolean;
-  }>
+  ActionResult<ProductMediaItem>
 > {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    await requireMediaManager();
 
     if (!isCloudinaryConfigured()) {
       return { success: false, error: "إعدادات Cloudinary غير مكتملة" };
@@ -75,8 +135,8 @@ export async function uploadProductMedia(formData: FormData): Promise<
       return { success: false, error: "الملف مطلوب" };
     }
 
-    if (!ALLOWED_MIME_TYPES.has(file.type)) {
-      return { success: false, error: "نوع الملف غير مدعوم" };
+    if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
+      return { success: false, error: "نوع الملف غير مدعوم (JPG, PNG, WEBP, GIF)" };
     }
 
     if (file.size === 0 || file.size > MAX_UPLOAD_BYTES) {
@@ -85,7 +145,7 @@ export async function uploadProductMedia(formData: FormData): Promise<
 
     const productColor = await prisma.productColor.findUnique({
       where: { id: productColorId },
-      select: { id: true, productId: true },
+      select: { id: true },
     });
 
     if (!productColor) {
@@ -95,30 +155,26 @@ export async function uploadProductMedia(formData: FormData): Promise<
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploaded = await uploadImageBuffer(buffer);
 
-    const sortOrder = await getNextMediaSortOrder(productColorId);
-    const existingPrimary = await prisma.productMedia.findFirst({
-      where: { productColorId, isPrimary: true, isActive: true },
-      select: { id: true },
+    const media = await prisma.$transaction(async (tx) => {
+      const sortOrder = await getNextMediaSortOrder(productColorId);
+      const existingPrimary = await tx.productMedia.findFirst({
+        where: { productColorId, isPrimary: true, isActive: true },
+        select: { id: true },
+      });
+
+      return tx.productMedia.create({
+        data: {
+          productColorId,
+          url: uploaded.url,
+          publicId: uploaded.publicId,
+          sortOrder,
+          isPrimary: !existingPrimary,
+        },
+        select: mediaSelect,
+      });
     });
 
-    const media = await prisma.productMedia.create({
-      data: {
-        productColorId,
-        url: uploaded.url,
-        publicId: uploaded.publicId,
-        sortOrder,
-        isPrimary: !existingPrimary,
-      },
-      select: {
-        id: true,
-        url: true,
-        publicId: true,
-        sortOrder: true,
-        isPrimary: true,
-      },
-    });
-
-    invalidateProductsData();
+    revalidateProductMediaPaths();
     return { success: true, data: media };
   } catch (error) {
     return handleActionError(error);
@@ -127,21 +183,14 @@ export async function uploadProductMedia(formData: FormData): Promise<
 
 export async function deleteProductMedia(mediaId: string): Promise<ActionResult> {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    await requireMediaManager();
 
-    const media = await prisma.productMedia.findUnique({
-      where: { id: mediaId },
-      select: {
-        id: true,
-        publicId: true,
-        isPrimary: true,
-        productColorId: true,
-      },
-    });
-
-    if (!media) {
-      return { success: false, error: "الصورة غير موجودة" };
+    const lookup = await getMediaOrError(mediaId);
+    if (!lookup.success) {
+      return { success: false, error: lookup.error };
     }
+
+    const { media } = lookup;
 
     if (isCloudinaryConfigured() && !media.publicId.startsWith("migrated/")) {
       try {
@@ -173,8 +222,200 @@ export async function deleteProductMedia(mediaId: string): Promise<ActionResult>
       }
     });
 
-    invalidateProductsData();
+    revalidateProductMediaPaths();
     return { success: true, data: undefined };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function setPrimaryProductMedia(
+  mediaId: string
+): Promise<ActionResult<ProductMediaItem>> {
+  try {
+    await requireMediaManager();
+
+    const lookup = await getMediaOrError(mediaId);
+    if (!lookup.success) {
+      return { success: false, error: lookup.error };
+    }
+
+    const media = await prisma.$transaction(async (tx) => {
+      await tx.productMedia.updateMany({
+        where: { productColorId: lookup.media.productColorId },
+        data: { isPrimary: false },
+      });
+
+      return tx.productMedia.update({
+        where: { id: mediaId },
+        data: { isPrimary: true, isActive: true },
+        select: mediaSelect,
+      });
+    });
+
+    revalidateProductMediaPaths();
+    return { success: true, data: media };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function toggleProductMediaActive(
+  mediaId: string,
+  isActive: boolean
+): Promise<ActionResult<ProductMediaItem>> {
+  try {
+    await requireMediaManager();
+
+    const lookup = await getMediaOrError(mediaId);
+    if (!lookup.success) {
+      return { success: false, error: lookup.error };
+    }
+
+    const media = await prisma.$transaction(async (tx) => {
+      const updated = await tx.productMedia.update({
+        where: { id: mediaId },
+        data: { isActive },
+        select: mediaSelect,
+      });
+
+      if (!isActive && lookup.media.isPrimary) {
+        await tx.productMedia.update({
+          where: { id: mediaId },
+          data: { isPrimary: false },
+        });
+
+        const nextPrimary = await tx.productMedia.findFirst({
+          where: {
+            productColorId: lookup.media.productColorId,
+            isActive: true,
+            id: { not: mediaId },
+          },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: { id: true },
+        });
+
+        if (nextPrimary) {
+          await tx.productMedia.update({
+            where: { id: nextPrimary.id },
+            data: { isPrimary: true },
+          });
+        }
+
+        return tx.productMedia.findUniqueOrThrow({
+          where: { id: mediaId },
+          select: mediaSelect,
+        });
+      }
+
+      if (isActive) {
+        const activePrimary = await tx.productMedia.findFirst({
+          where: {
+            productColorId: lookup.media.productColorId,
+            isPrimary: true,
+            isActive: true,
+          },
+          select: { id: true },
+        });
+
+        if (!activePrimary) {
+          return tx.productMedia.update({
+            where: { id: mediaId },
+            data: { isPrimary: true },
+            select: mediaSelect,
+          });
+        }
+      }
+
+      return updated;
+    });
+
+    revalidateProductMediaPaths();
+    return { success: true, data: media };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function updateProductMediaAltText(
+  mediaId: string,
+  altText: string
+): Promise<ActionResult<ProductMediaItem>> {
+  try {
+    await requireMediaManager();
+
+    const lookup = await getMediaOrError(mediaId);
+    if (!lookup.success) {
+      return { success: false, error: lookup.error };
+    }
+
+    const trimmed = altText.trim();
+    if (trimmed.length > 255) {
+      return { success: false, error: "نص Alt Text طويل جداً (255 حرف كحد أقصى)" };
+    }
+
+    const media = await prisma.productMedia.update({
+      where: { id: mediaId },
+      data: { altText: trimmed || null },
+      select: mediaSelect,
+    });
+
+    revalidateProductMediaPaths();
+    return { success: true, data: media };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function reorderProductMedia(
+  productColorId: string,
+  orderedMediaIds: string[]
+): Promise<ActionResult<ProductMediaItem[]>> {
+  try {
+    await requireMediaManager();
+
+    if (!productColorId.trim()) {
+      return { success: false, error: "معرّف اللون مطلوب" };
+    }
+
+    if (!orderedMediaIds.length) {
+      return { success: false, error: "ترتيب الصور مطلوب" };
+    }
+
+    const existing = await prisma.productMedia.findMany({
+      where: { productColorId },
+      select: { id: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+    });
+
+    if (existing.length !== orderedMediaIds.length) {
+      return { success: false, error: "قائمة الصور غير مكتملة" };
+    }
+
+    const existingIds = new Set(existing.map((item) => item.id));
+    if (orderedMediaIds.some((id) => !existingIds.has(id))) {
+      return { success: false, error: "قائمة الصور غير صالحة" };
+    }
+
+    const media = await prisma.$transaction(async (tx) => {
+      await Promise.all(
+        orderedMediaIds.map((id, index) =>
+          tx.productMedia.update({
+            where: { id },
+            data: { sortOrder: index },
+          })
+        )
+      );
+
+      return tx.productMedia.findMany({
+        where: { productColorId },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        select: mediaSelect,
+      });
+    });
+
+    revalidateProductMediaPaths();
+    return { success: true, data: media };
   } catch (error) {
     return handleActionError(error);
   }

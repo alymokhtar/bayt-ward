@@ -8,6 +8,7 @@ import {
   getCachedProductsPage,
 } from "@/lib/cached-queries";
 import { invalidateProductsData } from "@/lib/revalidate-tags";
+import { syncProductColors } from "@/lib/product-color-sync";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 type ActionResult<T = void> =
@@ -67,6 +68,14 @@ export async function getProduct(id: string) {
     include: {
       category: true,
       variants: { orderBy: [{ size: "asc" }, { color: "asc" }] },
+      colors: {
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+        include: {
+          media: {
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          },
+        },
+      },
     },
   });
 
