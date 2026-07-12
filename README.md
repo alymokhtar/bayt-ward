@@ -117,4 +117,7 @@ git log --oneline -5
 git reset --hard c4d7f23 
 git push origin main --force 
 
-
+لانشاء فرع حديد 
+git branch   لمعرفه الفرع الحالي
+git checkout -b website-preparation   أنشئ الـ Branch الجديد
+git push -u origin website-preparation  ارفعه على GitHub
