@@ -104,21 +104,57 @@ model Category {
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  nameAr      String?
-  description String?
-  brand       String?
-  categoryId  String
-  imageUrl    String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  nameAr           String?
+  description      String?
+  brand            String?
+  categoryId       String
+  imageUrl         String?
+  publishToWebsite Boolean  @default(false)
+  featuredProduct  Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   category Category         @relation(fields: [categoryId], references: [id])
   variants ProductVariant[]
+  colors   ProductColor[]
 
   @@index([categoryId])
+}
+
+model ProductColor {
+  id        String   @id @default(cuid())
+  productId String
+  color     String
+  colorHex  String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  media   ProductMedia[]
+
+  @@unique([productId, color])
+  @@index([productId])
+}
+
+model ProductMedia {
+  id             String   @id @default(cuid())
+  productColorId String
+  url            String
+  publicId       String
+  altText        String?
+  sortOrder      Int      @default(0)
+  isPrimary      Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  productColor ProductColor @relation(fields: [productColorId], references: [id], onDelete: Cascade)
+
+  @@index([productColorId])
 }
 
 model ProductVariant {
