@@ -7,6 +7,7 @@ import {
   uploadImageBuffer,
 } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
+import { syncProductColors } from "@/lib/product-color-sync";
 import { invalidateProductsData } from "@/lib/revalidate-tags";
 import type {
   ProductColorWithMedia,
@@ -96,6 +97,31 @@ export async function getProductColorsWithMedia(
   productId: string
 ): Promise<ProductColorWithMedia[]> {
   await requireMediaManager();
+
+  const variants = await prisma.productVariant.findMany({
+    where: { productId, isActive: true },
+    select: { id: true, color: true, colorHex: true, isActive: true },
+    orderBy: [{ color: "asc" }],
+  });
+
+  const hasVariantColors = variants.some((variant) => variant.color?.trim());
+  if (hasVariantColors) {
+    await prisma.$transaction(async (tx) => {
+      await syncProductColors(
+        tx,
+        productId,
+        variants
+          .filter((variant) => variant.color?.trim())
+          .map((variant) => ({
+            id: variant.id,
+            color: variant.color.trim(),
+            colorHex: variant.colorHex?.trim() || null,
+            isActive: variant.isActive,
+          })),
+        []
+      );
+    });
+  }
 
   return prisma.productColor.findMany({
     where: { productId },

@@ -247,6 +247,8 @@ export async function createProduct(data: {
         include: { variants: true, category: true },
       });
 
+      await syncProductColors(tx, created.id, preparedVariants, []);
+
       for (const variant of created.variants) {
         if (variant.stockQuantity > 0) {
           await tx.stockMovement.create({
