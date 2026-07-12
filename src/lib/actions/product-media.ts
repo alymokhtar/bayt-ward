@@ -96,7 +96,14 @@ async function getMediaOrError(mediaId: string) {
 export async function getProductColorsWithMedia(
   productId: string
 ): Promise<ProductColorWithMedia[]> {
-  await requireMediaManager();
+  try {
+    await requireMediaManager();
+  } catch (error) {
+    if (error instanceof Error && (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN")) {
+      return [];
+    }
+    throw error;
+  }
 
   const variants = await prisma.productVariant.findMany({
     where: { productId, isActive: true },
@@ -138,6 +145,46 @@ export async function getProductColorsWithMedia(
       },
     },
   });
+}
+
+export async function ensureDefaultProductColor(productId: string): Promise<ActionResult<{ id: string; color: string }>> {
+  try {
+    await requireMediaManager();
+
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true },
+    });
+
+    if (!product) {
+      return { success: false, error: "المنتج غير موجود" };
+    }
+
+    const existing = await prisma.productColor.findFirst({
+      where: { productId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      select: { id: true, color: true },
+    });
+
+    if (existing) {
+      return { success: true, data: existing };
+    }
+
+    const created = await prisma.productColor.create({
+      data: {
+        productId,
+        color: "عام",
+        colorHex: null,
+        sortOrder: 0,
+      },
+      select: { id: true, color: true },
+    });
+
+    revalidateProductMediaPaths();
+    return { success: true, data: created };
+  } catch (error) {
+    return handleActionError(error);
+  }
 }
 
 export async function uploadProductMedia(formData: FormData): Promise<

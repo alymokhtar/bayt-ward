@@ -1,7 +1,7 @@
 "use client";
 
 import Button from "@/components/ui/Button";
-import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES, deleteProductMedia, getProductColorsWithMedia, setPrimaryProductMedia, toggleProductMediaActive, updateProductMediaAltText, uploadProductMedia } from "@/lib/actions/product-media";
+import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES, deleteProductMedia, ensureDefaultProductColor, getProductColorsWithMedia, setPrimaryProductMedia, toggleProductMediaActive, updateProductMediaAltText, uploadProductMedia } from "@/lib/actions/product-media";
 import type { ProductColorWithMedia, ProductMediaItem } from "@/lib/types/product-media";
 import { Check, Eye, EyeOff, ImagePlus, Trash2, X } from "lucide-react";
 import Image from "next/image";
@@ -25,20 +25,26 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
 
   async function refreshColors() {
     setLoading(true);
-    const data = await getProductColorsWithMedia(productId);
-    setColors(data);
-    setLoading(false);
+    try {
+      const data = await getProductColorsWithMedia(productId);
+      setColors(data);
+      return data;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "فشل تحميل الصور");
+      setColors([]);
+      return [] as ProductColorWithMedia[];
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadColors() {
-      setLoading(true);
-      const data = await getProductColorsWithMedia(productId);
+      const data = await refreshColors();
       if (!cancelled) {
         setColors(data);
-        setLoading(false);
       }
     }
 
@@ -58,16 +64,30 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
   }, [colors, productColorId]);
 
   async function handleUpload(files: FileList | null) {
-    if (!files || files.length === 0 || !selectedColor) return;
+    if (!files || files.length === 0) return;
 
     setError(null);
     setUploading(true);
     const uploads = Array.from(files);
 
     try {
+      let effectiveColor = selectedColor;
+      if (!effectiveColor) {
+        const ensured = await ensureDefaultProductColor(productId);
+        if (!ensured.success) {
+          throw new Error(ensured.error);
+        }
+        const refreshed = await refreshColors();
+        effectiveColor = refreshed[0] ?? null;
+      }
+
+      if (!effectiveColor) {
+        throw new Error("لم يتم العثور على لون للمنتج");
+      }
+
       for (const [index, file] of uploads.entries()) {
         const formData = new FormData();
-        formData.append("productColorId", selectedColor.id);
+        formData.append("productColorId", effectiveColor.id);
         formData.append("file", file);
         const result = await uploadProductMedia(formData);
         if (!result.success) {
@@ -133,24 +153,22 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
             <h3 className="font-semibold text-brown">الصور</h3>
             <p className="text-sm text-muted">تُظهر كل لون صورًا مستقلة مع صورة رئيسية وترتيب قابل للتعديل.</p>
           </div>
-          {selectedColor && (
-            <label className="cursor-pointer rounded-lg border border-border px-3 py-2 text-sm text-brown transition hover:border-gold hover:text-gold">
-              <input
-                type="file"
-                multiple
-                accept={ALLOWED_MIME_TYPES.join(",")}
-                className="hidden"
-                onChange={(event) => {
-                  void handleUpload(event.target.files);
-                  event.currentTarget.value = "";
-                }}
-              />
-              <span className="inline-flex items-center gap-2">
-                <ImagePlus className="h-4 w-4" />
-                إضافة صور
-              </span>
-            </label>
-          )}
+          <label className="cursor-pointer rounded-lg border border-border px-3 py-2 text-sm text-brown transition hover:border-gold hover:text-gold">
+            <input
+              type="file"
+              multiple
+              accept={ALLOWED_MIME_TYPES.join(",")}
+              className="hidden"
+              onChange={(event) => {
+                void handleUpload(event.target.files);
+                event.currentTarget.value = "";
+              }}
+            />
+            <span className="inline-flex items-center gap-2">
+              <ImagePlus className="h-4 w-4" />
+              إضافة صور
+            </span>
+          </label>
         </div>
       </div>
 
