@@ -185,6 +185,8 @@ export async function createProduct(data: {
   brand?: string;
   categoryId: string;
   imageUrl?: string;
+  publishToWebsite?: boolean;
+  featuredProduct?: boolean;
   variants: VariantInput[];
 }) {
   try {
@@ -226,6 +228,8 @@ export async function createProduct(data: {
           brand: data.brand?.trim(),
           categoryId: data.categoryId,
           imageUrl: data.imageUrl,
+          publishToWebsite: data.publishToWebsite ?? false,
+          featuredProduct: data.featuredProduct ?? false,
           variants: {
             create: preparedVariants.map((v) => ({
               sku: v.sku,
@@ -279,6 +283,8 @@ export async function updateProduct(
     brand?: string;
     categoryId?: string;
     imageUrl?: string;
+    publishToWebsite?: boolean;
+    featuredProduct?: boolean;
     isActive?: boolean;
     variants?: VariantSaveInput[];
   }
@@ -314,6 +320,8 @@ export async function updateProduct(
           brand: data.brand?.trim(),
           categoryId: data.categoryId,
           imageUrl: data.imageUrl,
+          publishToWebsite: data.publishToWebsite,
+          featuredProduct: data.featuredProduct,
           isActive: data.isActive,
         },
       });
@@ -357,6 +365,8 @@ export async function updateProduct(
 
         const preparedVariants = prepareVariantsForSave(incomingPrepared, allRows);
         validateVariantCodesPayload(preparedVariants, allRows);
+
+        await syncProductColors(tx, id, preparedVariants, existing.variants);
 
         for (const variant of preparedVariants) {
           if (variant.id && existingIds.has(variant.id)) {

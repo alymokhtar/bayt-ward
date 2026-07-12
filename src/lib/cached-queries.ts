@@ -338,8 +338,28 @@ export const getCachedProductsPage = unstable_cache(
           description: true,
           brand: true,
           imageUrl: true,
+          publishToWebsite: true,
+          featuredProduct: true,
           isActive: true,
           category: { select: { name: true, nameAr: true } },
+          colors: {
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            select: {
+              id: true,
+              color: true,
+              colorHex: true,
+              media: {
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                select: {
+                  id: true,
+                  url: true,
+                  altText: true,
+                  isPrimary: true,
+                  isActive: true,
+                },
+              },
+            },
+          },
           variants: {
             where: options.includeInactive ? undefined : { isActive: true },
             orderBy: [{ size: "asc" }, { color: "asc" }],

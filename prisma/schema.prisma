@@ -122,6 +122,8 @@ model Product {
   colors   ProductColor[]
 
   @@index([categoryId])
+  @@index([publishToWebsite])
+  @@index([featuredProduct])
 }
 
 model ProductColor {
@@ -139,6 +141,7 @@ model ProductColor {
 
   @@unique([productId, color])
   @@index([productId])
+  @@index([sortOrder])
 }
 
 model ProductMedia {
@@ -151,10 +154,13 @@ model ProductMedia {
   isPrimary      Boolean  @default(false)
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   productColor ProductColor @relation(fields: [productColorId], references: [id], onDelete: Cascade)
 
   @@index([productColorId])
+  @@index([productColorId, sortOrder])
+  @@index([isPrimary, isActive])
 }
 
 model ProductVariant {

@@ -1,17 +1,19 @@
 import { prisma } from "@/lib/prisma";
 
-export const BACKUP_VERSION = 1 as const;
+export const BACKUP_VERSION = 2 as const;
 
 type BackupRow = Record<string, unknown>;
 
 export interface BackupPayload {
-  version: typeof BACKUP_VERSION;
+  version: number;
   generatedAt: string;
   data: {
     settings: BackupRow[];
     users: BackupRow[];
     categories: BackupRow[];
     products: BackupRow[];
+    productColors: BackupRow[];
+    productMedia: BackupRow[];
     productVariants: BackupRow[];
     customers: BackupRow[];
     suppliers: BackupRow[];
@@ -27,11 +29,19 @@ export interface BackupPayload {
   };
 }
 
+interface BackupPayloadLike {
+  version?: number;
+  generatedAt?: string;
+  data?: Partial<BackupPayload["data"]>;
+}
+
 export interface BackupRestoreCounts {
   settings: number;
   users: number;
   categories: number;
   products: number;
+  productColors: number;
+  productMedia: number;
   productVariants: number;
   customers: number;
   suppliers: number;
@@ -81,6 +91,8 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
     users,
     categories,
     products,
+    productColors,
+    productMedia,
     productVariants,
     customers,
     suppliers,
@@ -98,6 +110,8 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
     prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.category.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.product.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.productColor.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.productMedia.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.productVariant.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.customer.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.supplier.findMany({ orderBy: { createdAt: "asc" } }),
@@ -120,6 +134,8 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
       users: cloneRecords(users),
       categories: cloneRecords(categories),
       products: cloneRecords(products),
+      productColors: cloneRecords(productColors),
+      productMedia: cloneRecords(productMedia),
       productVariants: cloneRecords(productVariants),
       customers: cloneRecords(customers),
       suppliers: cloneRecords(suppliers),
@@ -136,8 +152,9 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
   };
 }
 
-function normalizeBackupPayload(payload: BackupPayload): BackupPayload["data"] {
-  if (payload.version !== BACKUP_VERSION) {
+function normalizeBackupPayload(payload: BackupPayload | BackupPayloadLike): BackupPayload["data"] {
+  const version = Number(payload.version ?? 0);
+  if (version !== BACKUP_VERSION && version !== 1) {
     throw new Error("UNSUPPORTED_BACKUP_VERSION");
   }
 
@@ -145,7 +162,30 @@ function normalizeBackupPayload(payload: BackupPayload): BackupPayload["data"] {
     throw new Error("INVALID_BACKUP_FILE");
   }
 
-  return payload.data;
+  const data = payload.data as Partial<BackupPayload["data"]>;
+
+  return {
+    settings: Array.isArray(data.settings) ? data.settings : [],
+    users: Array.isArray(data.users) ? data.users : [],
+    categories: Array.isArray(data.categories) ? data.categories : [],
+    products: Array.isArray(data.products) ? data.products : [],
+    productColors: Array.isArray(data.productColors) ? data.productColors : [],
+    productMedia: Array.isArray(data.productMedia) ? data.productMedia : [],
+    productVariants: Array.isArray(data.productVariants) ? data.productVariants : [],
+    customers: Array.isArray(data.customers) ? data.customers : [],
+    suppliers: Array.isArray(data.suppliers) ? data.suppliers : [],
+    sales: Array.isArray(data.sales) ? data.sales : [],
+    saleItems: Array.isArray(data.saleItems) ? data.saleItems : [],
+    purchases: Array.isArray(data.purchases) ? data.purchases : [],
+    purchaseItems: Array.isArray(data.purchaseItems) ? data.purchaseItems : [],
+    returns: Array.isArray(data.returns) ? data.returns : [],
+    returnItems: Array.isArray(data.returnItems) ? data.returnItems : [],
+    stockMovements: Array.isArray(data.stockMovements) ? data.stockMovements : [],
+    expenses: Array.isArray(data.expenses) ? data.expenses : [],
+    employeeAdjustments: Array.isArray(data.employeeAdjustments)
+      ? data.employeeAdjustments
+      : [],
+  };
 }
 
 export async function restoreBackupSnapshot(
@@ -188,6 +228,30 @@ export async function restoreBackupSnapshot(
     brand: toNullableString(row.brand),
     categoryId: String(row.categoryId),
     imageUrl: toNullableString(row.imageUrl),
+    publishToWebsite: Boolean(row.publishToWebsite),
+    featuredProduct: Boolean(row.featuredProduct),
+    isActive: Boolean(row.isActive),
+    createdAt: toDate(row.createdAt),
+  }));
+
+  const productColors = data.productColors.map((row) => ({
+    id: String(row.id),
+    productId: String(row.productId),
+    color: String(row.color),
+    colorHex: toNullableString(row.colorHex),
+    sortOrder: Number(row.sortOrder ?? 0),
+    isActive: Boolean(row.isActive),
+    createdAt: toDate(row.createdAt),
+  }));
+
+  const productMedia = data.productMedia.map((row) => ({
+    id: String(row.id),
+    productColorId: String(row.productColorId),
+    url: String(row.url),
+    publicId: String(row.publicId),
+    altText: toNullableString(row.altText),
+    sortOrder: Number(row.sortOrder ?? 0),
+    isPrimary: Boolean(row.isPrimary),
     isActive: Boolean(row.isActive),
     createdAt: toDate(row.createdAt),
   }));
@@ -370,6 +434,8 @@ export async function restoreBackupSnapshot(
     await tx.return.deleteMany();
     await tx.purchase.deleteMany();
     await tx.sale.deleteMany();
+    await tx.productMedia.deleteMany();
+    await tx.productColor.deleteMany();
     await tx.productVariant.deleteMany();
     await tx.product.deleteMany();
     await tx.customer.deleteMany();
@@ -384,6 +450,8 @@ export async function restoreBackupSnapshot(
     await tx.supplier.createMany({ data: suppliers as never[] });
     await tx.customer.createMany({ data: customers as never[] });
     await tx.product.createMany({ data: products as never[] });
+    await tx.productColor.createMany({ data: productColors as never[] });
+    await tx.productMedia.createMany({ data: productMedia as never[] });
     await tx.productVariant.createMany({ data: productVariants as never[] });
     await tx.sale.createMany({ data: sales as never[] });
     await tx.purchase.createMany({ data: purchases as never[] });
@@ -401,6 +469,8 @@ export async function restoreBackupSnapshot(
     users: users.length,
     categories: categories.length,
     products: products.length,
+    productColors: productColors.length,
+    productMedia: productMedia.length,
     productVariants: productVariants.length,
     customers: customers.length,
     suppliers: suppliers.length,

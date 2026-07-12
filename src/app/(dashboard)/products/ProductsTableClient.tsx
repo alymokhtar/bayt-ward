@@ -12,7 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { formatCurrency } from "@/lib/utils";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Image as ImageIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -23,8 +24,22 @@ type Product = {
   description: string | null;
   brand: string | null;
   imageUrl: string | null;
+  publishToWebsite: boolean;
+  featuredProduct: boolean;
   isActive: boolean;
   category: { name: string; nameAr: string | null };
+  colors: {
+    id: string;
+    color: string;
+    colorHex: string | null;
+    media: {
+      id: string;
+      url: string;
+      altText: string | null;
+      isPrimary: boolean;
+      isActive: boolean;
+    }[];
+  }[];
   variants: {
     id: string;
     sku: string;
@@ -90,27 +105,49 @@ export default function ProductsTableClient({
         <TableBody>
           {products.map((product) => {
             const summary = getProductSummary(product);
+            const mediaItems = product.colors.flatMap((color) => color.media);
+            const primaryMedia = mediaItems.find((item) => item.isPrimary && item.isActive) ?? mediaItems.find((item) => item.isActive) ?? null;
+            const primaryImageUrl = product.imageUrl || primaryMedia?.url || null;
+            const imageCount = mediaItems.filter((item) => item.isActive).length;
 
             return (
               <TableRow key={product.id}>
                 <TableCell>
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProduct(product)}
-                      className="font-medium text-brown text-start hover:text-gold hover:underline"
-                    >
-                      {product.nameAr || product.name}
-                    </button>
-                    {product.brand && (
-                      <p className="text-xs text-muted">{product.brand}</p>
-                    )}
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-brown/5">
+                      {primaryImageUrl ? (
+                        <Image src={primaryImageUrl} alt={product.nameAr || product.name} width={48} height={48} className="h-full w-full object-cover" />
+                      ) : (
+                        <ImageIcon className="h-5 w-5 text-muted" />
+                      )}
+                    </div>
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedProduct(product)}
+                        className="font-medium text-brown text-start hover:text-gold hover:underline"
+                      >
+                        {product.nameAr || product.name}
+                      </button>
+                      {product.brand && (
+                        <p className="text-xs text-muted">{product.brand}</p>
+                      )}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {product.publishToWebsite && <Badge variant="gold">مُنشَر</Badge>}
+                        {product.featuredProduct && <Badge variant="outline">Featured</Badge>}
+                      </div>
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   {product.category.nameAr || product.category.name}
                 </TableCell>
-                <TableCell>{product.variants.length}</TableCell>
+                <TableCell>
+                  <div className="space-y-1 text-sm">
+                    <div>{product.variants.length} متغير</div>
+                    <div className="text-xs text-muted">{imageCount} صورة متاحة</div>
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Badge
                     variant={

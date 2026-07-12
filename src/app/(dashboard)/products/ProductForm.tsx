@@ -17,6 +17,7 @@ import {
   type VariantCodePair,
   type VariantInput,
 } from "@/lib/actions/products";
+import ProductMediaManager from "@/components/products/ProductMediaManager";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -31,6 +32,8 @@ type ProductData = {
   brand: string | null;
   categoryId: string;
   imageUrl: string | null;
+  publishToWebsite: boolean;
+  featuredProduct: boolean;
   isActive: boolean;
   variants: {
     id: string;
@@ -86,6 +89,8 @@ export default function ProductForm({
   const [brand, setBrand] = useState(product?.brand || "");
   const [categoryId, setCategoryId] = useState(product?.categoryId || "");
   const [imageUrl, setImageUrl] = useState(product?.imageUrl || "");
+  const [publishToWebsite, setPublishToWebsite] = useState(product?.publishToWebsite ?? false);
+  const [featuredProduct, setFeaturedProduct] = useState(product?.featuredProduct ?? false);
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [variants, setVariants] = useState<VariantForm[]>(
     product?.variants.map((v) => ({
@@ -217,6 +222,8 @@ export default function ProductForm({
       brand: brand || undefined,
       categoryId,
       imageUrl: imageUrl || undefined,
+      publishToWebsite,
+      featuredProduct,
       variants: variants.map((v) => ({
         ...v,
         id: v.id,
@@ -227,7 +234,7 @@ export default function ProductForm({
     };
 
     const result = isEdit
-      ? await updateProduct(product!.id, { ...payload, isActive })
+      ? await updateProduct(product!.id, { ...payload, isActive, publishToWebsite, featuredProduct })
       : await createProduct(payload);
 
     setLoading(false);
@@ -296,8 +303,32 @@ export default function ProductForm({
               منتج نشط
             </label>
           )}
+          <label className="flex items-center gap-2 text-sm text-brown">
+            <input
+              type="checkbox"
+              checked={publishToWebsite}
+              onChange={(e) => setPublishToWebsite(e.target.checked)}
+              className="rounded border-border"
+            />
+            Publish To Website
+          </label>
+          <label className="flex items-center gap-2 text-sm text-brown">
+            <input
+              type="checkbox"
+              checked={featuredProduct}
+              onChange={(e) => setFeaturedProduct(e.target.checked)}
+              className="rounded border-border"
+            />
+            Featured Product
+          </label>
         </div>
       </div>
+
+      {isEdit && product && (
+        <div className="rounded-xl border border-border bg-white p-6 space-y-4">
+          <ProductMediaManager productId={product.id} />
+        </div>
+      )}
 
       <div className="rounded-xl border border-border bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
