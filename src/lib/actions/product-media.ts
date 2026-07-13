@@ -90,54 +90,63 @@ export async function getProductColorsWithMedia(
   productId: string
 ): Promise<ProductColorWithMedia[]> {
   try {
-    await requireMediaManager();
-  } catch (error) {
-    if (error instanceof Error && (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN")) {
+    try {
+      await requireMediaManager();
+    } catch (error) {
+      if (error instanceof Error && (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN")) {
+        return [];
+      }
+      throw error;
+    }
+
+    if (!productId || typeof productId !== "string") {
       return [];
     }
+
+    const variants = await prisma.productVariant.findMany({
+      where: { productId, isActive: true },
+      select: { id: true, color: true, colorHex: true, isActive: true },
+      orderBy: [{ color: "asc" }],
+    });
+
+    const hasVariantColors = variants.some((variant) => variant.color?.trim());
+    if (hasVariantColors) {
+      await prisma.$transaction(async (tx) => {
+        await syncProductColors(
+          tx,
+          productId,
+          variants
+            .filter((variant) => variant.color?.trim())
+            .map((variant) => ({
+              id: variant.id,
+              color: variant.color.trim(),
+              colorHex: variant.colorHex?.trim() || null,
+              isActive: variant.isActive,
+            })),
+          []
+        );
+      });
+    }
+
+    return prisma.productColor.findMany({
+      where: { productId },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        color: true,
+        colorHex: true,
+        sortOrder: true,
+        isActive: true,
+        media: {
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: mediaSelect,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error in getProductColorsWithMedia:", error);
     throw error;
   }
-
-  const variants = await prisma.productVariant.findMany({
-    where: { productId, isActive: true },
-    select: { id: true, color: true, colorHex: true, isActive: true },
-    orderBy: [{ color: "asc" }],
-  });
-
-  const hasVariantColors = variants.some((variant) => variant.color?.trim());
-  if (hasVariantColors) {
-    await prisma.$transaction(async (tx) => {
-      await syncProductColors(
-        tx,
-        productId,
-        variants
-          .filter((variant) => variant.color?.trim())
-          .map((variant) => ({
-            id: variant.id,
-            color: variant.color.trim(),
-            colorHex: variant.colorHex?.trim() || null,
-            isActive: variant.isActive,
-          })),
-        []
-      );
-    });
-  }
-
-  return prisma.productColor.findMany({
-    where: { productId },
-    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-    select: {
-      id: true,
-      color: true,
-      colorHex: true,
-      sortOrder: true,
-      isActive: true,
-      media: {
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-        select: mediaSelect,
-      },
-    },
-  });
 }
 
 export async function ensureDefaultProductColor(productId: string): Promise<ActionResult<{ id: string; color: string }>> {
@@ -218,8 +227,28 @@ export async function uploadProductMedia(formData: FormData): Promise<
       return { success: false, error: "اللون غير موجود" };
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uploaded = await uploadImageBuffer(buffer);
+    let buffer: Buffer;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    } catch (error) {
+      console.error("Error converting file to buffer:", error);
+      return { success: false, error: "خطأ في معالجة الملف" };
+    }
+
+    let uploaded: any;
+    try {
+      uploaded = await uploadImageBuffer(buffer);
+    } catch (error) {
+      console.error("Error uploading to Cloudinary:", error);
+      const errorMessage = error instanceof Error ? error.message : "خطأ في رفع الصورة";
+      return { 
+        success: false, 
+        error: errorMessage === "CLOUDINARY_UPLOAD_FAILED" 
+          ? "فشل رفع الصورة إلى Cloudinary"
+          : `خطأ في رفع الصورة: ${errorMessage}`
+      };
+    }
 
     const media = await prisma.$transaction(async (tx) => {
       const sortOrder = await getNextMediaSortOrder(productColorId);
@@ -243,6 +272,7 @@ export async function uploadProductMedia(formData: FormData): Promise<
     revalidateProductMediaPaths();
     return { success: true, data: media };
   } catch (error) {
+    console.error("Error in uploadProductMedia:", error);
     return handleActionError(error);
   }
 }

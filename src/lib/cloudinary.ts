@@ -52,6 +52,8 @@ export async function uploadImageBuffer(
   const folder = options?.folder ?? getCloudinaryUploadFolder();
 
   return new Promise((resolve, reject) => {
+    let callbackCalled = false;
+
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder,
@@ -59,8 +61,15 @@ export async function uploadImageBuffer(
         resource_type: "image",
       },
       (error, result) => {
-        if (error || !result) {
-          reject(error ?? new Error("CLOUDINARY_UPLOAD_FAILED"));
+        callbackCalled = true;
+        
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        if (!result) {
+          reject(new Error("CLOUDINARY_UPLOAD_FAILED"));
           return;
         }
 
@@ -72,7 +81,22 @@ export async function uploadImageBuffer(
       }
     );
 
-    uploadStream.end(buffer);
+    // Handle stream errors
+    uploadStream.on("error", (error) => {
+      if (!callbackCalled) {
+        reject(error);
+      }
+    });
+
+    // Write buffer to stream
+    uploadStream.write(buffer, (error) => {
+      if (error && !callbackCalled) {
+        reject(error);
+      }
+    });
+
+    // End the stream
+    uploadStream.end();
   });
 }
 
