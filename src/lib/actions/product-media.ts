@@ -8,19 +8,12 @@ import {
 } from "@/lib/cloudinary";
 import { prisma } from "@/lib/prisma";
 import { syncProductColors } from "@/lib/product-color-sync";
+import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-constants";
 import { invalidateProductsData } from "@/lib/revalidate-tags";
 import type {
   ProductColorWithMedia,
   ProductMediaItem,
 } from "@/lib/types/product-media";
-
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-export const ALLOWED_MIME_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-] as const;
 
 type ActionResult<T = void> =
   | { success: true; data: T }

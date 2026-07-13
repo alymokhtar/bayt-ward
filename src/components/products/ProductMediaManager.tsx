@@ -1,7 +1,8 @@
 "use client";
 
 import Button from "@/components/ui/Button";
-import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES, deleteProductMedia, ensureDefaultProductColor, getProductColorsWithMedia, setPrimaryProductMedia, toggleProductMediaActive, updateProductMediaAltText, uploadProductMedia } from "@/lib/actions/product-media";
+import { deleteProductMedia, ensureDefaultProductColor, getProductColorsWithMedia, setPrimaryProductMedia, toggleProductMediaActive, updateProductMediaAltText, uploadProductMedia } from "@/lib/actions/product-media";
+import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-constants";
 import type { ProductColorWithMedia, ProductMediaItem } from "@/lib/types/product-media";
 import { Check, Eye, EyeOff, ImagePlus, Trash2, X } from "lucide-react";
 import Image from "next/image";
