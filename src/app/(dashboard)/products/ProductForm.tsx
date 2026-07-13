@@ -225,11 +225,17 @@ export default function ProductForm({
       publishToWebsite,
       featuredProduct,
       variants: variants.map((v) => ({
-        ...v,
-        id: v.id,
+        id: v.id || undefined,
+        sku: String(v.sku).trim(),
+        barcode: v.barcode ? String(v.barcode).trim() : undefined,
+        size: String(v.size).trim(),
+        color: String(v.color).trim(),
+        colorHex: v.colorHex ? String(v.colorHex).trim() : undefined,
+        costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
+        sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
+        stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : parseInt(String(v.stockQuantity) || "0"),
+        minStockLevel: typeof v.minStockLevel === "number" ? v.minStockLevel : parseInt(String(v.minStockLevel) || "5"),
         isActive: v.isActive ?? true,
-        barcode: v.barcode || undefined,
-        colorHex: v.colorHex || undefined,
       })),
     };
 

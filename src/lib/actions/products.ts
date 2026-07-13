@@ -40,8 +40,10 @@ function handleActionError(error: unknown): ActionResult<never> {
     if (error.message.includes("Unique constraint")) {
       return { success: false, error: "رمز SKU أو الباركود مستخدم بالفعل" };
     }
+    console.error("Product action error:", error.message);
     return { success: false, error: error.message };
   }
+  console.error("Product action unknown error:", error);
   return { success: false, error: "حدث خطأ غير متوقع" };
 }
 
@@ -172,9 +174,32 @@ function prepareVariantsForSave(
   existingRows: { id: string; sku: string; barcode: string | null }[]
 ): (VariantSaveInput & { barcode: string })[] {
   return variants.map((variant) => {
-    const sku = variant.sku.trim();
+    const sku = String(variant.sku || "").trim();
+    if (!sku) {
+      throw new Error("رمز SKU مطلوب لكل متغير");
+    }
+
     const barcode = resolveStoredBarcode(sku, variant.barcode);
-    return { ...variant, sku, barcode };
+    
+    // Validate numeric fields
+    const costPrice = typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0");
+    const sellingPrice = typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0");
+    
+    if (!Number.isFinite(costPrice) || costPrice < 0) {
+      throw new Error("سعر التكلفة يجب أن يكون رقماً صحيحاً موجباً");
+    }
+    
+    if (!Number.isFinite(sellingPrice) || sellingPrice < 0) {
+      throw new Error("سعر البيع يجب أن يكون رقماً صحيحاً موجباً");
+    }
+
+    return { 
+      ...variant, 
+      sku, 
+      barcode,
+      costPrice,
+      sellingPrice,
+    };
   });
 }
 
@@ -313,19 +338,21 @@ export async function updateProduct(
     }
 
     const product = await prisma.$transaction(async (tx) => {
+      const updateData: any = {};
+      
+      if (data.name !== undefined) updateData.name = data.name?.trim() || null;
+      if (data.nameAr !== undefined) updateData.nameAr = data.nameAr?.trim() || null;
+      if (data.description !== undefined) updateData.description = data.description?.trim() || null;
+      if (data.brand !== undefined) updateData.brand = data.brand?.trim() || null;
+      if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+      if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl || null;
+      if (data.publishToWebsite !== undefined) updateData.publishToWebsite = data.publishToWebsite;
+      if (data.featuredProduct !== undefined) updateData.featuredProduct = data.featuredProduct;
+      if (data.isActive !== undefined) updateData.isActive = data.isActive;
+
       await tx.product.update({
         where: { id },
-        data: {
-          name: data.name?.trim(),
-          nameAr: data.nameAr?.trim(),
-          description: data.description?.trim(),
-          brand: data.brand?.trim(),
-          categoryId: data.categoryId,
-          imageUrl: data.imageUrl,
-          publishToWebsite: data.publishToWebsite,
-          featuredProduct: data.featuredProduct,
-          isActive: data.isActive,
-        },
+        data: updateData,
       });
 
       if (data.variants) {
@@ -372,19 +399,24 @@ export async function updateProduct(
 
         for (const variant of preparedVariants) {
           if (variant.id && existingIds.has(variant.id)) {
+            const updateData: any = {
+              sku: variant.sku,
+              barcode: variant.barcode,
+              size: variant.size?.trim() || "",
+              color: variant.color?.trim() || "",
+              costPrice: typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0"),
+              sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
+              minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
+              isActive: variant.isActive ?? true,
+            };
+
+            if (variant.colorHex !== undefined) {
+              updateData.colorHex = variant.colorHex?.trim() || null;
+            }
+
             await tx.productVariant.update({
               where: { id: variant.id },
-              data: {
-                sku: variant.sku,
-                barcode: variant.barcode,
-                size: variant.size,
-                color: variant.color,
-                colorHex: variant.colorHex,
-                costPrice: variant.costPrice,
-                sellingPrice: variant.sellingPrice,
-                minStockLevel: variant.minStockLevel ?? 5,
-                isActive: variant.isActive ?? true,
-              },
+              data: updateData,
             });
           } else if (!variant.id) {
             await tx.productVariant.create({
@@ -392,13 +424,13 @@ export async function updateProduct(
                 productId: id,
                 sku: variant.sku,
                 barcode: variant.barcode,
-                size: variant.size,
-                color: variant.color,
-                colorHex: variant.colorHex,
-                costPrice: variant.costPrice,
-                sellingPrice: variant.sellingPrice,
-                stockQuantity: variant.stockQuantity ?? 0,
-                minStockLevel: variant.minStockLevel ?? 5,
+                size: variant.size?.trim() || "",
+                color: variant.color?.trim() || "",
+                colorHex: variant.colorHex?.trim() || null,
+                costPrice: typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0"),
+                sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
+                stockQuantity: 0,
+                minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
               },
             });
           }
