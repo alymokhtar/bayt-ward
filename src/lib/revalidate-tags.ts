@@ -1,120 +1,136 @@
 import { revalidatePath, updateTag } from "next/cache";
 import { CACHE_TAG } from "@/lib/server-cache";
 
+function safeRevalidatePath(path: string) {
+  try {
+    revalidatePath(path);
+  } catch (error) {
+    console.error(`Failed to revalidate path: ${path}`, error);
+  }
+}
+
+function safeUpdateTag(tag: string) {
+  try {
+    updateTag(tag);
+  } catch (error) {
+    console.error(`Failed to update tag: ${tag}`, error);
+  }
+}
+
 export function invalidateSalesData() {
-  updateTag(CACHE_TAG.sales);
-  updateTag(CACHE_TAG.dashboard);
-  updateTag(CACHE_TAG.inventory);
-  updateTag(CACHE_TAG.customers);
-  updateTag(CACHE_TAG.reports);
-  revalidatePath("/sales");
-  revalidatePath("/pos");
-  revalidatePath("/dashboard");
-  revalidatePath("/inventory");
-  revalidatePath("/customers");
-  revalidatePath("/reports");
+  safeUpdateTag(CACHE_TAG.sales);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeUpdateTag(CACHE_TAG.inventory);
+  safeUpdateTag(CACHE_TAG.customers);
+  safeUpdateTag(CACHE_TAG.reports);
+  safeRevalidatePath("/sales");
+  safeRevalidatePath("/pos");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/inventory");
+  safeRevalidatePath("/customers");
+  safeRevalidatePath("/reports");
 }
 
 export function invalidateProductsData() {
-  updateTag(CACHE_TAG.products);
-  updateTag(CACHE_TAG.inventory);
-  updateTag(CACHE_TAG.dashboard);
-  revalidatePath("/products");
-  revalidatePath("/inventory");
-  revalidatePath("/pos");
-  revalidatePath("/dashboard");
+  safeUpdateTag(CACHE_TAG.products);
+  safeUpdateTag(CACHE_TAG.inventory);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeRevalidatePath("/products");
+  safeRevalidatePath("/inventory");
+  safeRevalidatePath("/pos");
+  safeRevalidatePath("/dashboard");
 }
 
 export function invalidateCustomersData() {
-  updateTag(CACHE_TAG.customers);
-  updateTag(CACHE_TAG.dashboard);
-  revalidatePath("/customers");
-  revalidatePath("/pos");
-  revalidatePath("/dashboard");
+  safeUpdateTag(CACHE_TAG.customers);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeRevalidatePath("/customers");
+  safeRevalidatePath("/pos");
+  safeRevalidatePath("/dashboard");
 }
 
 export function invalidateInventoryData() {
-  updateTag(CACHE_TAG.inventory);
-  updateTag(CACHE_TAG.stockMovements);
-  updateTag(CACHE_TAG.dashboard);
-  updateTag(CACHE_TAG.reports);
-  revalidatePath("/inventory");
-  revalidatePath("/products");
-  revalidatePath("/dashboard");
-  revalidatePath("/reports");
+  safeUpdateTag(CACHE_TAG.inventory);
+  safeUpdateTag(CACHE_TAG.stockMovements);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeUpdateTag(CACHE_TAG.reports);
+  safeRevalidatePath("/inventory");
+  safeRevalidatePath("/products");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/reports");
 }
 
 export function invalidatePurchasesData() {
-  updateTag(CACHE_TAG.purchases);
-  updateTag(CACHE_TAG.suppliers);
-  updateTag(CACHE_TAG.inventory);
-  updateTag(CACHE_TAG.dashboard);
-  updateTag(CACHE_TAG.reports);
-  revalidatePath("/purchases");
-  revalidatePath("/suppliers");
-  revalidatePath("/inventory");
-  revalidatePath("/dashboard");
-  revalidatePath("/reports");
+  safeUpdateTag(CACHE_TAG.purchases);
+  safeUpdateTag(CACHE_TAG.suppliers);
+  safeUpdateTag(CACHE_TAG.inventory);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeUpdateTag(CACHE_TAG.reports);
+  safeRevalidatePath("/purchases");
+  safeRevalidatePath("/suppliers");
+  safeRevalidatePath("/inventory");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/reports");
 }
 
 export function invalidateReturnsData() {
-  updateTag(CACHE_TAG.returns);
-  updateTag(CACHE_TAG.sales);
-  updateTag(CACHE_TAG.inventory);
-  updateTag(CACHE_TAG.customers);
-  updateTag(CACHE_TAG.dashboard);
-  updateTag(CACHE_TAG.reports);
-  revalidatePath("/returns");
-  revalidatePath("/sales");
-  revalidatePath("/inventory");
-  revalidatePath("/customers");
-  revalidatePath("/dashboard");
-  revalidatePath("/reports");
+  safeUpdateTag(CACHE_TAG.returns);
+  safeUpdateTag(CACHE_TAG.sales);
+  safeUpdateTag(CACHE_TAG.inventory);
+  safeUpdateTag(CACHE_TAG.customers);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeUpdateTag(CACHE_TAG.reports);
+  safeRevalidatePath("/returns");
+  safeRevalidatePath("/sales");
+  safeRevalidatePath("/inventory");
+  safeRevalidatePath("/customers");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/reports");
 }
 
 export function invalidateExpensesData() {
-  updateTag(CACHE_TAG.expenses);
-  updateTag(CACHE_TAG.employees);
-  updateTag(CACHE_TAG.dashboard);
-  updateTag(CACHE_TAG.reports);
-  revalidatePath("/expenses");
-  revalidatePath("/employees");
-  revalidatePath("/dashboard");
-  revalidatePath("/reports");
+  safeUpdateTag(CACHE_TAG.expenses);
+  safeUpdateTag(CACHE_TAG.employees);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeUpdateTag(CACHE_TAG.reports);
+  safeRevalidatePath("/expenses");
+  safeRevalidatePath("/employees");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/reports");
 }
 
 export function invalidateCategoriesData() {
-  updateTag(CACHE_TAG.categories);
-  updateTag(CACHE_TAG.products);
-  updateTag(CACHE_TAG.dashboard);
-  revalidatePath("/categories");
-  revalidatePath("/products");
-  revalidatePath("/dashboard");
+  safeUpdateTag(CACHE_TAG.categories);
+  safeUpdateTag(CACHE_TAG.products);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeRevalidatePath("/categories");
+  safeRevalidatePath("/products");
+  safeRevalidatePath("/dashboard");
 }
 
 export function invalidateSuppliersData() {
-  updateTag(CACHE_TAG.suppliers);
-  updateTag(CACHE_TAG.purchases);
-  revalidatePath("/suppliers");
-  revalidatePath("/purchases");
+  safeUpdateTag(CACHE_TAG.suppliers);
+  safeUpdateTag(CACHE_TAG.purchases);
+  safeRevalidatePath("/suppliers");
+  safeRevalidatePath("/purchases");
 }
 
 export function invalidateEmployeesData() {
-  updateTag(CACHE_TAG.employees);
-  updateTag(CACHE_TAG.expenses);
-  updateTag(CACHE_TAG.session);
-  revalidatePath("/employees");
-  revalidatePath("/expenses");
+  safeUpdateTag(CACHE_TAG.employees);
+  safeUpdateTag(CACHE_TAG.expenses);
+  safeUpdateTag(CACHE_TAG.session);
+  safeRevalidatePath("/employees");
+  safeRevalidatePath("/expenses");
 }
 
 export function invalidateSettingsData() {
-  updateTag(CACHE_TAG.settings);
-  revalidatePath("/settings");
-  revalidatePath("/dashboard");
-  revalidatePath("/pos");
+  safeUpdateTag(CACHE_TAG.settings);
+  safeRevalidatePath("/settings");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/pos");
 }
 
 export function invalidateReportsData() {
-  updateTag(CACHE_TAG.reports);
-  revalidatePath("/reports");
+  safeUpdateTag(CACHE_TAG.reports);
+  safeRevalidatePath("/reports");
 }
