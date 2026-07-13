@@ -233,8 +233,18 @@ export async function uploadProductMedia(formData: FormData): Promise<
 
     let buffer: Buffer;
     try {
+      console.log("STEP 1: Starting file conversion", {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+      });
+
       const arrayBuffer = await file.arrayBuffer();
       buffer = Buffer.from(arrayBuffer);
+
+      console.log("STEP 2: File converted to Buffer", {
+        bufferLength: buffer.length,
+      });
     } catch (error) {
       console.error("Error converting file to buffer:", error);
       return { success: false, error: "خطأ في معالجة الملف" };
@@ -242,7 +252,12 @@ export async function uploadProductMedia(formData: FormData): Promise<
 
     let uploaded: any;
     try {
-      uploaded = await uploadImageBuffer(buffer);
+      console.log("STEP 3: Calling uploadImageBuffer");
+      uploaded = await uploadImageBuffer(buffer, { contentType: file.type });
+      console.log("STEP 4: uploadImageBuffer returned", {
+        uploadedUrl: uploaded?.url,
+        uploadedPublicId: uploaded?.publicId,
+      });
       
       if (!uploaded || !uploaded.url || !uploaded.publicId) {
         throw new Error("CLOUDINARY_UPLOAD_INCOMPLETE: فشل رفع الصورة - بيانات ناقصة");

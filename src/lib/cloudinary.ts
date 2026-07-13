@@ -1,4 +1,5 @@
 import { v2 as cloudinary, type UploadApiResponse } from "cloudinary";
+import https from "https";
 import {
   getCloudinaryApiKey,
   getCloudinaryApiSecret,
@@ -13,6 +14,7 @@ export type CloudinaryUploadResult = {
 };
 
 let configured = false;
+let cloudinaryTimeOffsetSeconds: number | null = null;
 
 function ensureCloudinaryConfigured(): void {
   if (!isCloudinaryConfigured()) {
@@ -31,6 +33,54 @@ function ensureCloudinaryConfigured(): void {
   configured = true;
 }
 
+async function getCloudinaryTimestamp(): Promise<number> {
+  if (cloudinaryTimeOffsetSeconds !== null) {
+    return Math.floor(Date.now() / 1000 + cloudinaryTimeOffsetSeconds);
+  }
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: "api.cloudinary.com",
+        path: "/",
+        method: "HEAD",
+        timeout: 10000,
+      },
+      (res) => {
+        const dateHeader = res.headers.date;
+        if (!dateHeader) {
+          reject(new Error("CLOUDINARY_SERVER_DATE_MISSING"));
+          return;
+        }
+
+        const serverTime = Date.parse(dateHeader);
+        if (Number.isNaN(serverTime)) {
+          reject(new Error("CLOUDINARY_SERVER_DATE_INVALID"));
+          return;
+        }
+
+        cloudinaryTimeOffsetSeconds = Math.floor(serverTime / 1000) - Math.floor(Date.now() / 1000);
+        console.log("STEP 3: resolveCloudinaryTimestamp", {
+          serverTimeUTC: new Date(serverTime).toISOString(),
+          localTimeUTC: new Date().toISOString(),
+          offsetSeconds: cloudinaryTimeOffsetSeconds,
+        });
+        resolve(Math.floor(serverTime / 1000));
+      }
+    );
+
+    req.on("error", (error) => {
+      reject(error);
+    });
+
+    req.on("timeout", () => {
+      req.destroy(new Error("CLOUDINARY_SERVER_TIME_TIMEOUT"));
+    });
+
+    req.end();
+  });
+}
+
 function toUploadResult(response: UploadApiResponse): CloudinaryUploadResult {
   const url = response.secure_url || response.url;
   if (!url || !response.public_id) {
@@ -43,61 +93,52 @@ function toUploadResult(response: UploadApiResponse): CloudinaryUploadResult {
   };
 }
 
+export async function resolveCloudinaryTimestamp(): Promise<number> {
+  return getCloudinaryTimestamp();
+}
+
 export async function uploadImageBuffer(
   buffer: Buffer,
-  options?: { folder?: string; publicId?: string }
+  options?: { folder?: string; publicId?: string; contentType?: string }
 ): Promise<CloudinaryUploadResult> {
   ensureCloudinaryConfigured();
 
   const folder = options?.folder ?? getCloudinaryUploadFolder();
+  const contentType = options?.contentType ?? "image/png";
+  const timestamp = new Date().toISOString();
 
-  return new Promise((resolve, reject) => {
-    let callbackCalled = false;
-
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        public_id: options?.publicId,
-        resource_type: "image",
-      },
-      (error, result) => {
-        callbackCalled = true;
-        
-        if (error) {
-          reject(error);
-          return;
-        }
-
-        if (!result) {
-          reject(new Error("CLOUDINARY_UPLOAD_FAILED"));
-          return;
-        }
-
-        try {
-          resolve(toUploadResult(result));
-        } catch (parseError) {
-          reject(parseError);
-        }
-      }
-    );
-
-    // Handle stream errors
-    uploadStream.on("error", (error) => {
-      if (!callbackCalled) {
-        reject(error);
-      }
-    });
-
-    // Write buffer to stream
-    uploadStream.write(buffer, (error) => {
-      if (error && !callbackCalled) {
-        reject(error);
-      }
-    });
-
-    // End the stream
-    uploadStream.end();
+  console.log("STEP 4: uploadImageBuffer start", {
+    folder,
+    publicId: options?.publicId,
+    contentType,
+    timestamp,
   });
+
+  const cloudinaryTimestamp = await resolveCloudinaryTimestamp();
+  const dataUri = `data:${contentType};base64,${buffer.toString("base64")}`;
+
+  console.log("STEP 4: uploadImageBuffer request params", {
+    folder,
+    publicId: options?.publicId,
+    contentType,
+    timestamp: cloudinaryTimestamp,
+  });
+
+  const result = await cloudinary.uploader.upload(dataUri, {
+    folder,
+    public_id: options?.publicId,
+    resource_type: "image",
+    overwrite: true,
+    timestamp: cloudinaryTimestamp,
+  });
+
+  console.log("STEP 5: uploadImageBuffer result", {
+    url: result.secure_url || result.url,
+    publicId: result.public_id,
+    responseTime: new Date().toISOString(),
+  });
+
+  return toUploadResult(result);
 }
 
 export async function deleteImageByPublicId(publicId: string): Promise<void> {
