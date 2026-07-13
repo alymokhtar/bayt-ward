@@ -30,20 +30,24 @@ const mediaSelect = {
 } as const;
 
 function handleActionError(error: unknown): ActionResult<never> {
-  if (error instanceof Error) {
-    if (error.message === "UNAUTHORIZED") {
-      return { success: false, error: "يجب تسجيل الدخول أولاً" };
-    }
-    if (error.message === "FORBIDDEN") {
-      return { success: false, error: "ليس لديك صلاحية لهذا الإجراء" };
-    }
-    if (error.message === "CLOUDINARY_NOT_CONFIGURED") {
-      return { success: false, error: "إعدادات Cloudinary غير مكتملة" };
-    }
-    return { success: false, error: error.message };
+  const message =
+    error instanceof Error
+      ? error.message
+      : error && typeof error === "object" && "message" in error
+      ? String((error as any).message)
+      : String(error);
+
+  if (message === "UNAUTHORIZED") {
+    return { success: false, error: "يجب تسجيل الدخول أولاً" };
+  }
+  if (message === "FORBIDDEN") {
+    return { success: false, error: "ليس لديك صلاحية لهذا الإجراء" };
+  }
+  if (message === "CLOUDINARY_NOT_CONFIGURED") {
+    return { success: false, error: "إعدادات Cloudinary غير مكتملة" };
   }
 
-  return { success: false, error: "حدث خطأ غير متوقع" };
+  return { success: false, error: message || "حدث خطأ غير متوقع" };
 }
 
 function revalidateProductMediaPaths() {
@@ -244,15 +248,23 @@ export async function uploadProductMedia(formData: FormData): Promise<
         throw new Error("CLOUDINARY_UPLOAD_INCOMPLETE: فشل رفع الصورة - بيانات ناقصة");
       }
     } catch (error) {
-      console.error("Error uploading to Cloudinary:", error);
-      const errorMessage = error instanceof Error ? error.message : "خطأ في رفع الصورة";
-      return { 
-        success: false, 
-        error: errorMessage.includes("CLOUDINARY_UPLOAD_INCOMPLETE")
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : error && typeof error === "object" && "message" in error
+          ? String((error as any).message)
+          : String(error);
+
+      const normalizedMessage = errorMessage || "خطأ في رفع الصورة";
+      return {
+        success: false,
+        error: normalizedMessage.includes("CLOUDINARY_UPLOAD_INCOMPLETE")
           ? "فشل رفع الصورة إلى Cloudinary - بيانات ناقصة"
-          : errorMessage.includes("CLOUDINARY_NOT_CONFIGURED")
+          : normalizedMessage.includes("CLOUDINARY_NOT_CONFIGURED")
           ? "إعدادات Cloudinary غير مكتملة"
-          : `خطأ في رفع الصورة: ${errorMessage}`
+          : normalizedMessage.includes("Stale request")
+          ? "فشل رفع الصورة إلى Cloudinary: توقيت النظام غير متزامن"
+          : `خطأ في رفع الصورة: ${normalizedMessage}`,
       };
     }
 
