@@ -86,7 +86,7 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
         throw new Error("لم يتم العثور على لون للمنتج");
       }
 
-      for (const [index, file] of uploads.entries()) {
+      for (const file of uploads) {
         const formData = new FormData();
         formData.append("productColorId", effectiveColor.id);
         formData.append("file", file);
@@ -95,10 +95,9 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
           throw new Error(result.error);
         }
         await refreshColors();
-        if (index === uploads.length - 1) {
-          setUploading(false);
-        }
       }
+      
+      setUploading(false);
     } catch (err) {
       setUploading(false);
       setError(err instanceof Error ? err.message : "فشل رفع الصورة");

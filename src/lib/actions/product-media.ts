@@ -239,13 +239,19 @@ export async function uploadProductMedia(formData: FormData): Promise<
     let uploaded: any;
     try {
       uploaded = await uploadImageBuffer(buffer);
+      
+      if (!uploaded || !uploaded.url || !uploaded.publicId) {
+        throw new Error("CLOUDINARY_UPLOAD_INCOMPLETE: فشل رفع الصورة - بيانات ناقصة");
+      }
     } catch (error) {
       console.error("Error uploading to Cloudinary:", error);
       const errorMessage = error instanceof Error ? error.message : "خطأ في رفع الصورة";
       return { 
         success: false, 
-        error: errorMessage === "CLOUDINARY_UPLOAD_FAILED" 
-          ? "فشل رفع الصورة إلى Cloudinary"
+        error: errorMessage.includes("CLOUDINARY_UPLOAD_INCOMPLETE")
+          ? "فشل رفع الصورة إلى Cloudinary - بيانات ناقصة"
+          : errorMessage.includes("CLOUDINARY_NOT_CONFIGURED")
+          ? "إعدادات Cloudinary غير مكتملة"
           : `خطأ في رفع الصورة: ${errorMessage}`
       };
     }
@@ -260,8 +266,8 @@ export async function uploadProductMedia(formData: FormData): Promise<
       return tx.productMedia.create({
         data: {
           productColorId,
-          url: uploaded.url,
-          publicId: uploaded.publicId,
+          url: String(uploaded.url).trim(),
+          publicId: String(uploaded.publicId).trim(),
           sortOrder,
           isPrimary: !existingPrimary,
         },
