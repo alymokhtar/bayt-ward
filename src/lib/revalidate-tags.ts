@@ -35,10 +35,21 @@ export function invalidateProductsData() {
   safeUpdateTag(CACHE_TAG.products);
   safeUpdateTag(CACHE_TAG.inventory);
   safeUpdateTag(CACHE_TAG.dashboard);
+  safeUpdateTag(CACHE_TAG.storefront);
   safeRevalidatePath("/products");
   safeRevalidatePath("/inventory");
   safeRevalidatePath("/pos");
   safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/");
+  safeRevalidatePath("/storefront/products");
+  safeRevalidatePath("/storefront/categories");
+}
+
+export function invalidateStorefrontData() {
+  safeUpdateTag(CACHE_TAG.storefront);
+  safeRevalidatePath("/");
+  safeRevalidatePath("/storefront/products");
+  safeRevalidatePath("/storefront/categories");
 }
 
 export function invalidateCustomersData() {
@@ -103,9 +114,12 @@ export function invalidateCategoriesData() {
   safeUpdateTag(CACHE_TAG.categories);
   safeUpdateTag(CACHE_TAG.products);
   safeUpdateTag(CACHE_TAG.dashboard);
+  safeUpdateTag(CACHE_TAG.storefront);
   safeRevalidatePath("/categories");
   safeRevalidatePath("/products");
   safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/");
+  safeRevalidatePath("/storefront/categories");
 }
 
 export function invalidateSuppliersData() {
@@ -125,9 +139,11 @@ export function invalidateEmployeesData() {
 
 export function invalidateSettingsData() {
   safeUpdateTag(CACHE_TAG.settings);
+  safeUpdateTag(CACHE_TAG.storefront);
   safeRevalidatePath("/settings");
   safeRevalidatePath("/dashboard");
   safeRevalidatePath("/pos");
+  safeRevalidatePath("/");
 }
 
 export function invalidateReportsData() {

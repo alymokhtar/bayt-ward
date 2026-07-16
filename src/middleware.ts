@@ -25,6 +25,12 @@ const PROTECTED_ROUTES = [
   "/settings",
 ];
 
+/** Public storefront paths rewritten from dashboard URLs for guests */
+const STOREFRONT_REWRITES: Record<string, string> = {
+  "/products": "/storefront/products",
+  "/categories": "/storefront/categories",
+};
+
 async function isValidSession(token: string): Promise<boolean> {
   try {
     await jwtVerify(token, JWT_SECRET);
@@ -35,6 +41,11 @@ async function isValidSession(token: string): Promise<boolean> {
 }
 
 function isProtectedRoute(pathname: string): boolean {
+  // Public storefront category pages live at /categories/[id]
+  if (/^\/categories\/[^/]+$/.test(pathname)) {
+    return false;
+  }
+
   return PROTECTED_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
@@ -44,6 +55,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("session")?.value;
   const hasValidSession = token ? await isValidSession(token) : false;
+
+  if (!hasValidSession && STOREFRONT_REWRITES[pathname]) {
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = STOREFRONT_REWRITES[pathname];
+    return NextResponse.rewrite(rewriteUrl);
+  }
 
   if (isProtectedRoute(pathname) && !hasValidSession) {
     const loginUrl = new URL("/login", request.url);
@@ -60,6 +77,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/dashboard/:path*",
     "/pos/:path*",
     "/products/:path*",
@@ -77,5 +95,6 @@ export const config = {
     "/employees/:path*",
     "/settings/:path*",
     "/login",
+    "/storefront/:path*",
   ],
 };

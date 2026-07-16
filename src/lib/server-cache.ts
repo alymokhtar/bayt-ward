@@ -15,6 +15,7 @@ export const CACHE_TAG = {
   settings: "settings",
   reports: "reports",
   session: "session",
+  storefront: "storefront",
 } as const;
 
 /** Default TTL for read-heavy list/stats queries (seconds) */
