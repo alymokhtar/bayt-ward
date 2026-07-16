@@ -112,8 +112,23 @@ export function getDefaultColor(product: StoreProduct): string | null {
   return product.colors[0]?.color ?? product.variants[0]?.color ?? null;
 }
 
-export function getProductPath(productId: string): string {
+/** Public storefront product detail — singular `/product/` avoids admin `/products/` routes */
+export function getStoreProductPath(productId: string): string {
   return `/product/${productId}`;
+}
+
+/** Admin dashboard product edit/detail */
+export function getAdminProductPath(productId: string): string {
+  return `/products/${productId}`;
+}
+
+export function getProductPath(
+  productId: string,
+  options?: { isDashboard?: boolean }
+): string {
+  return options?.isDashboard
+    ? getAdminProductPath(productId)
+    : getStoreProductPath(productId);
 }
 
 export function getCategoryPath(categoryId: string): string {

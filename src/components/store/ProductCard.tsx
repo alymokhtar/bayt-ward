@@ -2,10 +2,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { optimizeCloudinaryUrl, STORE_IMAGE_SIZES } from "@/lib/store/images";
 import {
+  getAdminProductPath,
   getPrimaryImageUrl,
   getProductDisplayName,
-  getProductPath,
   getProductPriceRange,
+  getStoreProductPath,
   isProductInStock,
 } from "@/lib/store/product-utils";
 import type { StoreProductListItem } from "@/lib/store/types";
@@ -16,18 +17,23 @@ type ProductCardProps = {
   product: StoreProductListItem;
   currencySymbol?: string;
   priority?: boolean;
+  /** Set true only when rendering inside the admin dashboard */
+  isDashboard?: boolean;
 };
 
 export default function ProductCard({
   product,
   currencySymbol = "ج.م",
   priority = false,
+  isDashboard = false,
 }: ProductCardProps) {
   const imageUrl = getPrimaryImageUrl(product);
   const { min, max } = getProductPriceRange(product);
   const inStock = isProductInStock(product);
   const displayName = getProductDisplayName(product);
-  const href = getProductPath(product.id);
+  const href = isDashboard
+    ? getAdminProductPath(product.id)
+    : getStoreProductPath(product.id);
 
   const optimizedUrl = imageUrl
     ? optimizeCloudinaryUrl(imageUrl, {

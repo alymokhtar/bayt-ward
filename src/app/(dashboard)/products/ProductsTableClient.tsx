@@ -15,6 +15,7 @@ import { formatCurrency } from "@/lib/utils";
 import { ExternalLink, Image as ImageIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { getAdminProductPath } from "@/lib/store/product-utils";
 import { useMemo, useState } from "react";
 
 type Product = {
@@ -170,7 +171,7 @@ export default function ProductsTableClient({
                 </TableCell>
                 <TableCell>
                   <Link
-                    href={`/products/${product.id}`}
+                    href={getAdminProductPath(product.id)}
                     className="text-sm text-gold hover:underline"
                   >
                     تعديل
@@ -225,7 +226,7 @@ export default function ProductsTableClient({
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-brown">المتغيرات</h3>
-                <Link href={`/products/${selectedProduct.id}`}>
+                <Link href={getAdminProductPath(selectedProduct.id)}>
                   <Button size="sm" variant="outline">
                     <ExternalLink className="h-4 w-4" />
                     تعديل

@@ -8,7 +8,7 @@ import {
   getCachedSimilarProducts,
   getCachedStoreSettingsPublic,
 } from "@/lib/store/cached-queries";
-import { getProductDisplayName } from "@/lib/store/product-utils";
+import { getProductDisplayName, getStoreProductPath } from "@/lib/store/product-utils";
 
 export const revalidate = 60;
 
@@ -52,7 +52,9 @@ export default async function StoreProductPage({ params }: PageProps) {
   const similar = await getCachedSimilarProducts(id, product.categoryId, 4);
   const displayName = getProductDisplayName(product);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "";
-  const productUrl = siteUrl ? `${siteUrl}/product/${id}` : `/product/${id}`;
+  const productUrl = siteUrl
+    ? `${siteUrl}${getStoreProductPath(id)}`
+    : getStoreProductPath(id);
   const whatsappNumber = settings.store_whatsapp || settings.store_phone || "";
 
   const prices = product.variants.map((variant) => variant.sellingPrice);

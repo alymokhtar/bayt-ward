@@ -62,6 +62,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(rewriteUrl);
   }
 
+  // Guests hitting admin-style product URLs should see the public product page
+  const adminProductDetailMatch = pathname.match(/^\/products\/([^/]+)$/);
+  if (!hasValidSession && adminProductDetailMatch) {
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = `/product/${adminProductDetailMatch[1]}`;
+    return NextResponse.rewrite(rewriteUrl);
+  }
+
   if (isProtectedRoute(pathname) && !hasValidSession) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("from", pathname);

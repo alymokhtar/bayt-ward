@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/Table";
 import { getProductInventory } from "@/lib/actions/inventory";
 import { formatCurrency } from "@/lib/utils";
+import { getAdminProductPath } from "@/lib/store/product-utils";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -169,7 +170,7 @@ export default function ProductInventoryModal({
             <Button type="button" variant="ghost" onClick={onClose}>
               إغلاق
             </Button>
-            <Link href={`/products/${data.id}`}>
+            <Link href={getAdminProductPath(data.id)}>
               <Button type="button" variant="outline">
                 فتح صفحة المنتج
               </Button>
