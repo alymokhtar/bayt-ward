@@ -10,7 +10,6 @@ const PROTECTED_ROUTES = [
   "/dashboard",
   "/pos",
   "/products",
-  "/categories",
   "/inventory",
   "/barcodes",
   "/sales",
@@ -41,7 +40,7 @@ async function isValidSession(token: string): Promise<boolean> {
 }
 
 function isProtectedRoute(pathname: string): boolean {
-  // Public storefront category pages live at /categories/[id]
+  // Public storefront category detail pages live at /categories/[id]
   if (/^\/categories\/[^/]+$/.test(pathname)) {
     return false;
   }
@@ -102,7 +101,10 @@ export const config = {
     "/reports/:path*",
     "/employees/:path*",
     "/settings/:path*",
+    "/about/:path*",
+    "/contact/:path*",
+    "/search/:path*",
+    "/product/:path*",
     "/login",
-    "/storefront/:path*",
   ],
 };

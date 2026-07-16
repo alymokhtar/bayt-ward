@@ -1,5 +1,10 @@
 import type { StoreProduct, StoreProductListItem } from "@/lib/store/types";
 
+const STOREFRONT_REWRITES: Record<string, string> = {
+  "/products": "/storefront/products",
+  "/categories": "/storefront/categories",
+};
+
 export function getProductDisplayName(product: {
   nameAr: string | null;
   name: string;
@@ -112,7 +117,7 @@ export function getDefaultColor(product: StoreProduct): string | null {
   return product.colors[0]?.color ?? product.variants[0]?.color ?? null;
 }
 
-/** Public storefront product detail — singular `/product/` avoids admin `/products/` routes */
+/** Public storefront product detail — singular `/product/` matches the actual route */
 export function getStoreProductPath(productId: string): string {
   return `/product/${productId}`;
 }
@@ -131,6 +136,44 @@ export function getProductPath(
     : getStoreProductPath(productId);
 }
 
+/** Public storefront category detail — matches the actual route under /(store)/categories/[id] */
 export function getCategoryPath(categoryId: string): string {
   return `/categories/${categoryId}`;
+}
+
+function isProtectedRoute(pathname: string): boolean {
+  if (/^\/categories\/[^/]+$/.test(pathname)) {
+    return false;
+  }
+
+  return PROTECTED_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`)
+  );
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const token = request.cookies.get("session")?.value;
+  const hasValidSession = token ? await isValidSession(token) : false;
+
+  if (!hasValidSession && STOREFRONT_REWRITES[pathname]) {
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = STOREFRONT_REWRITES[pathname];
+    return NextResponse.rewrite(rewriteUrl);
+  }
+
+  const adminProductDetailMatch = pathname.match(/^\/products\/([^/]+)$/);
+  if (!hasValidSession && adminProductDetailMatch) {
+    const rewriteUrl = request.nextUrl.clone();
+    rewriteUrl.pathname = `/product/${adminProductDetailMatch[1]}`;
+    return NextResponse.rewrite(rewriteUrl);
+  }
+
+  if (isProtectedRoute(pathname) && !hasValidSession) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
 }
