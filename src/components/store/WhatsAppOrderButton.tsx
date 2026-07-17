@@ -24,7 +24,7 @@ export default function WhatsAppOrderButton({
   if (!whatsappNumber) {
     return (
       <a
-        href="/contact"
+        href="/store/contact"
         className={`inline-flex w-full items-center justify-center rounded-full bg-[var(--store-text)] px-6 py-3.5 text-sm font-medium text-white transition hover:bg-black ${className}`}
       >
         تواصل معنا للطلب

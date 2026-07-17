@@ -90,13 +90,13 @@ export default async function StoreHomePage() {
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/products"
+                href="/store/products"
                 className="inline-flex items-center justify-center rounded-full bg-[var(--store-text)] px-8 py-3.5 text-sm font-medium text-white transition hover:bg-black"
               >
                 تسوقي الآن
               </Link>
               <Link
-                href="/categories"
+                href="/store/categories"
                 className="inline-flex items-center justify-center rounded-full border border-[var(--store-border)] bg-white px-8 py-3.5 text-sm font-medium transition hover:border-[var(--store-gold)]"
               >
                 استكشفي الأقسام
@@ -146,7 +146,7 @@ export default async function StoreHomePage() {
           </div>
           <div className="mt-10 text-center">
             <Link
-              href="/products"
+              href="/store/products"
               className="store-link-hover text-sm uppercase tracking-[0.25em] text-[var(--store-text)]"
             >
               عرض كل المنتجات

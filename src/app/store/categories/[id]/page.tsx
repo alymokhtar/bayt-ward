@@ -62,7 +62,7 @@ export default async function StoreCategoryDetailPage({ params, searchParams }: 
             <PaginationNav
               page={result.page}
               totalPages={result.totalPages}
-              basePath={`/categories/${id}`}
+              basePath={`/store/categories/${id}`}
             />
           </div>
         )}

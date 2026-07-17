@@ -112,9 +112,9 @@ export function getDefaultColor(product: StoreProduct): string | null {
   return product.colors[0]?.color ?? product.variants[0]?.color ?? null;
 }
 
-/** Public storefront product detail — singular `/product/` matches the actual route */
+/** Public storefront product detail — singular `/store/product/` matches the actual route */
 export function getStoreProductPath(productId: string): string {
-  return `/product/${productId}`;
+  return `/store/product/${productId}`;
 }
 
 /** Admin dashboard product edit/detail */
@@ -131,7 +131,7 @@ export function getProductPath(
     : getStoreProductPath(productId);
 }
 
-/** Public storefront category detail — matches the actual route under /(store)/categories/[id] */
+/** Public storefront category detail — matches the actual route under /store/categories/[id] */
 export function getCategoryPath(categoryId: string): string {
-  return `/categories/${categoryId}`;
+  return `/store/categories/${categoryId}`;
 }

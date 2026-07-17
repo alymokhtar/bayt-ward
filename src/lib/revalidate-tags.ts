@@ -41,15 +41,15 @@ export function invalidateProductsData() {
   safeRevalidatePath("/pos");
   safeRevalidatePath("/dashboard");
   safeRevalidatePath("/");
-  safeRevalidatePath("/storefront/products");
-  safeRevalidatePath("/storefront/categories");
+  safeRevalidatePath("/store/products");
+  safeRevalidatePath("/store/categories");
 }
 
 export function invalidateStorefrontData() {
   safeUpdateTag(CACHE_TAG.storefront);
-  safeRevalidatePath("/");
-  safeRevalidatePath("/storefront/products");
-  safeRevalidatePath("/storefront/categories");
+  safeRevalidatePath("/store");
+  safeRevalidatePath("/store/products");
+  safeRevalidatePath("/store/categories");
 }
 
 export function invalidateCustomersData() {
@@ -118,8 +118,8 @@ export function invalidateCategoriesData() {
   safeRevalidatePath("/categories");
   safeRevalidatePath("/products");
   safeRevalidatePath("/dashboard");
-  safeRevalidatePath("/");
-  safeRevalidatePath("/storefront/categories");
+  safeRevalidatePath("/store");
+  safeRevalidatePath("/store/categories");
 }
 
 export function invalidateSuppliersData() {

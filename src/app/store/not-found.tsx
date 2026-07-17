@@ -10,7 +10,7 @@ export default function StoreNotFound() {
       />
       <section className="store-container pb-20 text-center">
         <Link
-          href="/"
+          href="/store"
           className="inline-flex rounded-full bg-[var(--store-text)] px-8 py-3 text-sm text-white"
         >
           العودة للرئيسية

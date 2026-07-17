@@ -7,12 +7,14 @@ type StoreFooterProps = {
   settings: Record<string, string>;
 };
 
+const STORE_BASE_PATH = "/store";
+
 const QUICK_LINKS = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/products", label: "المنتجات" },
-  { href: "/categories", label: "الأقسام" },
-  { href: "/about", label: "من نحن" },
-  { href: "/contact", label: "تواصل معنا" },
+  { href: `${STORE_BASE_PATH}`, label: "الرئيسية" },
+  { href: `${STORE_BASE_PATH}/products`, label: "المنتجات" },
+  { href: `${STORE_BASE_PATH}/categories`, label: "الأقسام" },
+  { href: `${STORE_BASE_PATH}/about`, label: "من نحن" },
+  { href: `${STORE_BASE_PATH}/contact`, label: "تواصل معنا" },
 ];
 
 export default function StoreFooter({ settings }: StoreFooterProps) {
@@ -24,7 +26,7 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
 
   const whatsappHref = whatsappNumber
     ? getWhatsAppUrl(whatsappNumber, "السلام عليكم، أرغب في التواصل مع بيت ورد.")
-    : "/contact";
+    : `${STORE_BASE_PATH}/contact`;
 
   return (
     <footer className="mt-20 border-t border-[var(--store-border)] bg-[var(--store-text)] text-white">

@@ -43,7 +43,7 @@ export default async function StoreProductsPage({ searchParams }: PageProps) {
             <PaginationNav
               page={result.page}
               totalPages={result.totalPages}
-              basePath="/products"
+              basePath="/store/products"
             />
           </div>
         )}

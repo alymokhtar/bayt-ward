@@ -8,6 +8,10 @@ const STATIC_ASSETS = [
   "/images/logo-light.png",
 ];
 
+function isStorePath(pathname) {
+  return pathname === "/store" || pathname.startsWith("/store/");
+}
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
@@ -31,6 +35,7 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/")) return;
   if (url.pathname.startsWith("/_next/")) return;
   if (url.pathname === "/sw.js") return;
+  if (isStorePath(url.pathname)) return;
 
   // Let the browser handle page navigations normally for faster, fresh routing.
   if (event.request.mode === "navigate") return;

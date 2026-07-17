@@ -13,12 +13,14 @@ type StoreHeaderProps = {
   settings: Record<string, string>;
 };
 
+const STORE_BASE_PATH = "/store";
+
 const NAV_LINKS = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/products", label: "المنتجات" },
-  { href: "/categories", label: "الأقسام" },
-  { href: "/about", label: "من نحن" },
-  { href: "/contact", label: "تواصل معنا" },
+  { href: `${STORE_BASE_PATH}`, label: "الرئيسية" },
+  { href: `${STORE_BASE_PATH}/products`, label: "المنتجات" },
+  { href: `${STORE_BASE_PATH}/categories`, label: "الأقسام" },
+  { href: `${STORE_BASE_PATH}/about`, label: "من نحن" },
+  { href: `${STORE_BASE_PATH}/contact`, label: "تواصل معنا" },
 ];
 
 export default function StoreHeader({ settings }: StoreHeaderProps) {
@@ -45,7 +47,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
 
   const whatsappHref = whatsappNumber
     ? getWhatsAppUrl(whatsappNumber, "السلام عليكم، أرغب في الاستفسار عن منتجات بيت ورد.")
-    : "/contact";
+    : `${STORE_BASE_PATH}/contact`;
 
   return (
     <header
@@ -68,7 +70,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
-          <Link href="/" className="flex items-center gap-3 shrink-0" aria-label={storeName}>
+          <Link href={STORE_BASE_PATH} className="flex items-center gap-3 shrink-0" aria-label={storeName}>
             <div className="relative h-10 w-10 overflow-hidden rounded-full border border-[var(--store-gold-soft)] bg-white md:h-12 md:w-12">
               <Image
                 src="/images/logo-light.png"
@@ -92,8 +94,8 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
           <nav className="hidden items-center gap-8 md:flex" aria-label="التنقل الرئيسي">
             {NAV_LINKS.map((link) => {
               const active =
-                link.href === "/"
-                  ? pathname === "/"
+                link.href === STORE_BASE_PATH
+                  ? pathname === STORE_BASE_PATH || pathname === `${STORE_BASE_PATH}/`
                   : pathname === link.href || pathname.startsWith(`${link.href}/`);
 
               return (
@@ -115,7 +117,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
 
           <div className="flex items-center gap-1 sm:gap-2">
             <Link
-              href="/search"
+              href={`${STORE_BASE_PATH}/search`}
               className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--store-text)] transition hover:bg-[var(--store-gold-soft)]"
               aria-label="بحث"
             >
