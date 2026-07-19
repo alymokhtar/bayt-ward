@@ -101,13 +101,13 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        <Link href={STORE_BASE_PATH} className="flex flex-col items-center" aria-label={storeName}>
-          <span className="relative h-20 w-24 md:h-24 md:w-28">
+        <Link href={STORE_BASE_PATH} className="flex items-center justify-center" aria-label={storeName}>
+          <span className="relative h-12 w-20 sm:h-14 sm:w-24 md:h-16 md:w-28">
             <Image
-              src="/images/logo-light.png"
+              src="/images/icon2.png"
               alt={storeName}
               fill
-              sizes="112px"
+              sizes="(min-width: 768px) 112px, 96px"
               className="object-contain"
               priority
             />
