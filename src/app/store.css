@@ -1,17 +1,18 @@
 .store-root {
-  --store-bg: #fcf7ef;
-  --store-surface: #fffaf3;
-  --store-text: #3d2b20;
-  --store-muted: #7b6b5b;
-  --store-gold: #c89a49;
-  --store-gold-soft: color-mix(in srgb, #c89a49 16%, transparent);
-  --store-border: #e8d8c4;
+  --store-bg: #f7efe4;
+  --store-surface: #fff8ee;
+  --store-text: #4b2f1f;
+  --store-muted: #7a6553;
+  --store-gold: #b7833c;
+  --store-gold-soft: color-mix(in srgb, #b7833c 18%, transparent);
+  --store-border: #e7d3b7;
   --store-serif: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
 }
 
 .store-root {
   background:
-    radial-gradient(circle at top left, rgba(200, 154, 73, 0.12), transparent 24%),
+    radial-gradient(circle at top left, rgba(183, 131, 60, 0.16), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(75, 47, 31, 0.08), transparent 28%),
     var(--store-bg);
   color: var(--store-text);
   min-height: 100vh;

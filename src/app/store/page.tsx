@@ -60,7 +60,6 @@ export default async function StoreHomePage() {
 
   const featuredProducts = featured.length > 0 ? featured : newest.slice(0, 8);
   const hasProducts = productsPage.total > 0;
-  const previewImages = gallery.slice(0, 4);
 
   const categoriesWithCovers = await Promise.all(
     categories.slice(0, 4).map(async (category) => {
@@ -118,45 +117,29 @@ export default async function StoreHomePage() {
             </div>
           </div>
 
-          <div className="store-animate-in store-animate-delay-1 relative overflow-hidden rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-3 shadow-[0_25px_70px_rgba(80,54,28,0.12)]">
-            {previewImages.length > 0 ? (
-              <>
-                <div className="grid h-full gap-3 md:grid-cols-2">
-                  {previewImages.map((item, index) => {
-                    const isPrimary = index === 0;
-                    return (
-                      <div
-                        key={item.id}
-                        className={`relative overflow-hidden rounded-[1.3rem] border border-[var(--store-border)] bg-[var(--store-surface)] ${
-                          isPrimary ? "min-h-[16rem] md:col-span-2 md:row-span-2" : "aspect-[4/5]"
-                        }`}
-                      >
-                        <Image
-                          src={optimizeCloudinaryUrl(item.url, {
-                            width: isPrimary ? 900 : 500,
-                            height: isPrimary ? 1125 : 500,
-                            crop: "fill",
-                          })}
-                          alt={item.altText || storeName}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          className="object-cover"
-                          priority={index === 0}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="absolute inset-x-6 bottom-6 rounded-[1.4rem] border border-white/50 bg-white/80 p-4 shadow-lg backdrop-blur">
-                  <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--store-gold)]">تشكيلة رمضان 2025</p>
-                  <p className="mt-2 text-sm text-[var(--store-muted)]">اختاري من أحدث الإبداعات الفاخرة</p>
-                </div>
-              </>
+          <div className="store-animate-in store-animate-delay-1 relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-3 shadow-[0_25px_70px_rgba(80,54,28,0.12)]">
+            {gallery[0] ? (
+              <Image
+                src={optimizeCloudinaryUrl(gallery[0].url, {
+                  width: 900,
+                  height: 1125,
+                  crop: "fill",
+                })}
+                alt={storeName}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+                priority
+              />
             ) : (
               <div className="flex h-full items-center justify-center bg-[var(--store-border)] text-[var(--store-muted)]">
                 {storeName}
               </div>
             )}
+            <div className="absolute inset-x-6 bottom-6 rounded-[1.4rem] border border-white/50 bg-white/80 p-4 shadow-lg backdrop-blur">
+              <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--store-gold)]">تشكيلة رمضان 2025</p>
+              <p className="mt-2 text-sm text-[var(--store-muted)]">اختاري من أحدث الإبداعات الفاخرة</p>
+            </div>
           </div>
         </div>
       </section>
