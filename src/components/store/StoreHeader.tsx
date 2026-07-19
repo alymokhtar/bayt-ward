@@ -101,7 +101,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
-        <Link href={STORE_BASE_PATH} className="flex items-center justify-center gap-3" aria-label={storeName}>
+        <Link href={STORE_BASE_PATH} className="flex items-center justify-center gap-1.5 sm:gap-2" aria-label={storeName}>
           <span className="relative h-28 w-36 sm:h-32 sm:w-44 md:h-36 md:w-52 lg:h-44 lg:w-64 xl:h-52 xl:w-72">
             <Image
               src="/images/icon2.png"
@@ -112,7 +112,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
               priority
             />
           </span>
-          <span className="text-lg font-semibold tracking-[0.2em] text-[var(--store-text)] sm:text-xl md:text-2xl lg:text-[1.75rem]">
+          <span className="font-[Cairo,serif] text-base font-semibold leading-none tracking-[0.12em] text-[var(--store-text)] sm:text-lg md:text-xl lg:text-[1.5rem]">
             Bayt Ward
           </span>
         </Link>
