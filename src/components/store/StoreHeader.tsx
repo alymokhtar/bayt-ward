@@ -61,7 +61,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
           : "bg-[var(--store-surface)]/90 backdrop-blur"
       )}
     >
-      <div className="store-container relative flex min-h-[6.6rem] items-center justify-center py-3 md:min-h-[8.9rem] md:pb-0">
+      <div className="store-container relative flex min-h-[4.8rem] items-center justify-center py-2 md:min-h-[6.2rem] md:py-2">
         <div className="absolute left-0 top-4 hidden items-center gap-4 text-[var(--store-text)] md:flex">
           <button
             type="button"
@@ -102,7 +102,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
         </button>
 
         <Link href={STORE_BASE_PATH} className="flex items-center justify-center gap-1.5 sm:gap-2" aria-label={storeName}>
-          <span className="relative h-28 w-36 sm:h-32 sm:w-44 md:h-36 md:w-52 lg:h-44 lg:w-64 xl:h-52 xl:w-72">
+          <span className="relative h-20 w-28 sm:h-24 sm:w-32 md:h-28 md:w-40 lg:h-32 lg:w-48 xl:h-36 xl:w-56">
             <Image
               src="/images/icon2.png"
               alt={storeName}
