@@ -87,8 +87,8 @@ export default async function StoreHomePage() {
             <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,253,249,0.08),rgba(255,253,249,0.74)_54%,rgba(255,253,249,0.95))]" />
           </div>
 
-          <div className="store-container relative flex min-h-[24rem] items-center justify-end py-12 text-right md:min-h-[27rem] lg:min-h-[31rem]">
-            <div className="store-animate-in max-w-sm md:ml-20">
+          <div className="store-container relative flex min-h-[24rem] items-center justify-start py-12 text-right md:min-h-[27rem] lg:min-h-[31rem]">
+            <div className="store-animate-in max-w-sm md:mr-20">
               <h1 className="text-4xl font-bold leading-tight text-[var(--store-text)] md:text-5xl">
                 أناقة تحكي
                 <br />
