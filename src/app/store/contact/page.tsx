@@ -27,9 +27,9 @@ export default async function ContactPage() {
         description="نسعد بخدمتكِ — تواصلي معنا في أي وقت"
       />
       <section className="store-container max-w-xl pb-20">
-        <div className="space-y-4 rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-8 shadow-[0_16px_45px_rgba(80,54,28,0.06)] md:p-10">
+        <div className="store-shell space-y-4 p-8 md:p-10">
           {whatsappNumber && whatsappHref && (
-            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-[var(--store-bg)]/70 p-4">
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
                 واتساب
               </p>
@@ -45,7 +45,7 @@ export default async function ContactPage() {
             </div>
           )}
           {settings.store_phone && (
-            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-[var(--store-bg)]/70 p-4">
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
                 الهاتف
               </p>
@@ -55,7 +55,7 @@ export default async function ContactPage() {
             </div>
           )}
           {settings.store_address && (
-            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-[var(--store-bg)]/70 p-4">
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
                 العنوان
               </p>
@@ -65,7 +65,7 @@ export default async function ContactPage() {
             </div>
           )}
           {settings.store_email && (
-            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-[var(--store-bg)]/70 p-4">
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
                 البريد
               </p>

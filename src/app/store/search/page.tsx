@@ -17,7 +17,7 @@ export default function SearchPage() {
         description="البحث الفوري سيُضاف في مرحلة لاحقة"
       />
       <section className="store-container pb-20 text-center">
-        <div className="rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)]/90 px-6 py-12 shadow-sm">
+        <div className="store-shell px-6 py-12">
           <p className="text-sm text-[var(--store-muted)]">
             في هذه المرحلة، يمكنكِ تصفح{" "}
             <Link href="/store/products" className="text-[var(--store-gold)] underline">
