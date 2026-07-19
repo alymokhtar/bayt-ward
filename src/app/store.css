@@ -6,7 +6,7 @@
   --store-gold: #c89a49;
   --store-gold-soft: color-mix(in srgb, #c89a49 16%, transparent);
   --store-border: #e8d8c4;
-  --store-serif: var(--font-cormorant), "Times New Roman", serif;
+  --store-serif: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
 }
 
 .store-root {
@@ -15,6 +15,7 @@
     var(--store-bg);
   color: var(--store-text);
   min-height: 100vh;
+  font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
 }
 
 .store-serif {
