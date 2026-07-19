@@ -44,9 +44,9 @@ export default function ProductCard({
     : null;
 
   return (
-    <article className="group">
+    <article className="group rounded-[1.75rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
       <Link href={href} className="block">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-[var(--store-surface)]">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.35rem] bg-[var(--store-surface)]">
           {optimizedUrl ? (
             <Image
               src={optimizedUrl}
@@ -68,7 +68,7 @@ export default function ProductCard({
           )}
         </div>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-2 px-1 pb-2">
           {product.category && (
             <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-muted)]">
               {product.category.nameAr || product.category.name}
@@ -77,7 +77,7 @@ export default function ProductCard({
           <h3 className="text-base font-medium text-[var(--store-text)] transition group-hover:text-[var(--store-gold)]">
             {displayName}
           </h3>
-          <p className="text-sm text-[var(--store-text)]">
+          <p className="text-sm font-medium text-[var(--store-text)]">
             {min === max
               ? formatCurrency(min, currencySymbol)
               : `${formatCurrency(min, currencySymbol)} – ${formatCurrency(max, currencySymbol)}`}

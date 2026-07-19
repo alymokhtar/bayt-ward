@@ -20,11 +20,11 @@ export default async function StoreLayout({
   const settings = await getCachedStoreSettingsPublic();
 
   return (
-    <div className={`store-root ${cormorant.variable}`}>
-      <Suspense fallback={<div className="h-16 border-b border-[var(--store-border)] bg-white" />}>
+    <div className={`store-root ${cormorant.variable} flex min-h-screen flex-col`}>
+      <Suspense fallback={<div className="h-16 border-b border-[var(--store-border)] bg-[var(--store-surface)]" />}>
         <StoreHeader settings={settings} />
       </Suspense>
-      <main id="main-content">{children}</main>
+      <main id="main-content" className="flex-1">{children}</main>
       <StoreFooter settings={settings} />
     </div>
   );

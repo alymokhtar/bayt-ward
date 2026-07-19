@@ -54,15 +54,15 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
       className={cn(
         "sticky top-0 z-50 transition-all duration-300",
         scrolled
-          ? "border-b border-[var(--store-border)] bg-white/95 shadow-sm backdrop-blur-md"
-          : "bg-[var(--store-bg)]/90 backdrop-blur-sm"
+          ? "border-b border-[var(--store-border)] bg-[var(--store-surface)]/90 shadow-[0_14px_40px_rgba(76,50,27,0.08)] backdrop-blur-2xl"
+          : "bg-[var(--store-bg)]/80 backdrop-blur"
       )}
     >
       <div className="store-container">
         <div className="flex h-16 items-center justify-between gap-4 md:h-20">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--store-border)] text-[var(--store-text)] md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)] shadow-sm md:hidden"
             aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((open) => !open)}
@@ -71,7 +71,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
           </button>
 
           <Link href={STORE_BASE_PATH} className="flex items-center gap-3 shrink-0" aria-label={storeName}>
-            <div className="relative h-10 w-10 overflow-hidden rounded-full border border-[var(--store-gold-soft)] bg-white md:h-12 md:w-12">
+            <div className="relative h-10 w-10 overflow-hidden rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] shadow-sm md:h-12 md:w-12">
               <Image
                 src="/images/logo-light.png"
                 alt={storeName}
@@ -103,7 +103,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
                   key={link.href}
                   href={link.href}
                   className={cn(
-                    "store-link-hover text-sm tracking-wide transition-colors",
+                    "store-link-hover text-sm tracking-[0.2em] transition-colors",
                     active
                       ? "text-[var(--store-gold)]"
                       : "text-[var(--store-text)] hover:text-[var(--store-gold)]"
@@ -118,14 +118,14 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
           <div className="flex items-center gap-1 sm:gap-2">
             <Link
               href={`${STORE_BASE_PATH}/search`}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--store-text)] transition hover:bg-[var(--store-gold-soft)]"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)] shadow-sm transition hover:-translate-y-0.5"
               aria-label="بحث"
             >
               <Search className="h-5 w-5" />
             </Link>
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--store-text)] transition hover:bg-[var(--store-gold-soft)]"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)] shadow-sm transition hover:-translate-y-0.5"
               aria-label="المفضلة — قريباً"
               title="المفضلة — قريباً"
             >
@@ -133,7 +133,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
             </button>
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--store-text)] transition hover:bg-[var(--store-gold-soft)]"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)] shadow-sm transition hover:-translate-y-0.5"
               aria-label="السلة — قريباً"
               title="السلة — قريباً"
             >
@@ -143,7 +143,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#1da851] sm:inline-flex"
+              className="hidden items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#1da851] sm:inline-flex"
             >
               واتساب
             </a>
@@ -153,7 +153,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
 
       {menuOpen && (
         <nav
-          className="border-t border-[var(--store-border)] bg-white px-4 py-4 md:hidden"
+          className="border-t border-[var(--store-border)] bg-[var(--store-surface)] px-4 py-4 md:hidden"
           aria-label="قائمة الجوال"
         >
           <ul className="space-y-1">
@@ -161,7 +161,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="block rounded-lg px-3 py-2.5 text-sm text-[var(--store-text)] hover:bg-[var(--store-gold-soft)]"
+                  className="block rounded-2xl px-3 py-2.5 text-sm text-[var(--store-text)] transition hover:bg-[var(--store-gold-soft)]"
                 >
                   {link.label}
                 </Link>
@@ -172,7 +172,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-lg bg-[#25D366] px-3 py-2.5 text-sm font-medium text-white"
+                className="block rounded-2xl bg-[#25D366] px-3 py-2.5 text-sm font-medium text-white"
               >
                 تواصل عبر واتساب
               </a>

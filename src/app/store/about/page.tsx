@@ -21,7 +21,7 @@ export default async function AboutPage() {
         description={`نقدم لعملائنا في ${storeName} تشكيلات مختارة بعناية من الحجاب والملابس النسائية بأسلوب أنيق ومريح.`}
       />
       <section className="store-container max-w-4xl pb-20">
-        <div className="rounded-2xl border border-[var(--store-border)] bg-white p-8 text-sm leading-8 text-[var(--store-muted)] md:p-10">
+        <div className="rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-8 text-sm leading-8 text-[var(--store-muted)] shadow-[0_16px_45px_rgba(80,54,28,0.06)] md:p-10">
           <p>
             {storeName} هو اسم يرمز إلى الأناقة الهادئة، التفاصيل الدقيقة، والاختيار الدقيق
             في عالم الحجاب والملابس النسائية.

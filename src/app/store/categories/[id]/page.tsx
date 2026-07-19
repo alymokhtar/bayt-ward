@@ -53,6 +53,9 @@ export default async function StoreCategoryDetailPage({ params, searchParams }: 
         description={category.description || "تشكيلات مختارة من هذا القسم"}
       />
       <section className="store-container pb-20">
+        <div className="mb-8 rounded-[1.5rem] border border-[var(--store-border)] bg-[var(--store-surface)]/80 px-4 py-4 text-sm text-[var(--store-muted)] shadow-sm md:px-6">
+          {category.description || "تشكيلة مختارة ونظيفة تعكس ذوق بيت ورد."}
+        </div>
         <ProductGrid
           products={result.items}
           currencySymbol={settings.currency_symbol || "ج.م"}

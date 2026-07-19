@@ -107,11 +107,11 @@ export default function ProductDetailClient({
   const activeImage = images[activeImageIndex] ?? images[0];
 
   return (
-    <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
+    <div className="grid gap-8 rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)]/90 p-4 shadow-[0_20px_45px_rgba(80,54,28,0.08)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
       <div className="space-y-4">
         <button
           type="button"
-          className="relative aspect-[4/5] w-full overflow-hidden rounded-sm bg-white"
+          className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-2"
           onClick={() => activeImage && setZoomOpen(true)}
           aria-label="تكبير الصورة"
         >
@@ -145,7 +145,7 @@ export default function ProductDetailClient({
                 aria-current={index === activeImageIndex}
                 onClick={() => setActiveImageIndex(index)}
                 className={cn(
-                  "relative h-20 w-16 shrink-0 overflow-hidden rounded-sm border-2",
+                  "relative h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2",
                   index === activeImageIndex
                     ? "border-[var(--store-gold)]"
                     : "border-transparent"
@@ -170,7 +170,7 @@ export default function ProductDetailClient({
 
       <div className="space-y-6">
         <div className="space-y-2">
-          <p className="text-xs uppercase tracking-[0.35em] text-[var(--store-gold)]">
+          <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--store-gold)]">
             {product.category.nameAr || product.category.name}
           </p>
           <h1 className="store-serif text-3xl font-semibold md:text-4xl">{displayName}</h1>
@@ -179,18 +179,21 @@ export default function ProductDetailClient({
           )}
         </div>
 
-        <p className="text-2xl font-medium">{formatCurrency(price, currencySymbol)}</p>
-
-        <p
-          className={cn(
-            "inline-flex rounded-full px-3 py-1 text-xs font-medium",
-            inStock
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-neutral-100 text-neutral-600"
-          )}
-        >
-          {inStock ? "متوفر" : "غير متوفر حالياً"}
-        </p>
+        <div className="flex flex-wrap items-end gap-3">
+          <p className="text-2xl font-semibold text-[var(--store-text)]">
+            {formatCurrency(price, currencySymbol)}
+          </p>
+          <p
+            className={cn(
+              "inline-flex rounded-full px-3 py-1 text-xs font-medium",
+              inStock
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-neutral-100 text-neutral-600"
+            )}
+          >
+            {inStock ? "متوفر" : "غير متوفر حالياً"}
+          </p>
+        </div>
 
         {colorOptions.length > 0 && (
           <div className="space-y-3">
@@ -218,7 +221,7 @@ export default function ProductDetailClient({
                     "min-w-12 rounded-full border px-4 py-2 text-sm transition",
                     selectedSize === item.size || (!selectedSize && item === sizes[0])
                       ? "border-[var(--store-text)] bg-[var(--store-text)] text-white"
-                      : "border-[var(--store-border)] bg-white text-[var(--store-text)]",
+                      : "border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)]",
                     !item.inStock && "opacity-40 line-through"
                   )}
                 >
@@ -251,7 +254,7 @@ export default function ProductDetailClient({
           <button
             type="button"
             onClick={handleShare}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--store-border)] bg-white px-6 py-3.5 text-sm font-medium transition hover:border-[var(--store-gold)]"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] px-6 py-3.5 text-sm font-medium text-[var(--store-text)] transition hover:border-[var(--store-gold)]"
           >
             <Share2 className="h-4 w-4" />
             مشاركة

@@ -12,7 +12,7 @@ export default function ProductGrid({
 }: ProductGridProps) {
   if (products.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-[var(--store-border)] bg-white px-6 py-16 text-center">
+      <div className="rounded-[2rem] border border-dashed border-[var(--store-border)] bg-[var(--store-surface)] px-6 py-16 text-center shadow-sm">
         <p className="store-serif text-2xl text-[var(--store-text)]">
           لا توجد منتجات متاحة حالياً
         </p>
@@ -24,7 +24,7 @@ export default function ProductGrid({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
       {products.map((product, index) => (
         <ProductCard
           key={product.id}

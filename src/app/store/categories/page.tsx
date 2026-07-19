@@ -35,7 +35,7 @@ export default async function StoreCategoriesPage() {
       />
       <section className="store-container pb-20">
         {categoriesWithCovers.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[var(--store-border)] bg-white px-6 py-16 text-center">
+          <div className="rounded-[2rem] border border-dashed border-[var(--store-border)] bg-[var(--store-surface)] px-6 py-16 text-center shadow-sm">
             <p className="store-serif text-2xl">لا توجد أقسام متاحة حالياً</p>
           </div>
         ) : (
