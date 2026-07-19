@@ -34,6 +34,9 @@ export default async function StoreCategoriesPage() {
         description="اختاري القسم المناسب واكتشفي تشكيلاتنا"
       />
       <section className="store-container pb-20">
+        <div className="store-soft-panel mb-8 px-5 py-4 text-sm text-[var(--store-muted)] md:px-6">
+          كل قسم يضم تشكيلة خاصة من القطع الأنيقة والعملية.
+        </div>
         {categoriesWithCovers.length === 0 ? (
           <div className="rounded-[2rem] border border-dashed border-[var(--store-border)] bg-[var(--store-surface)] px-6 py-16 text-center shadow-sm">
             <p className="store-serif text-2xl">لا توجد أقسام متاحة حالياً</p>

@@ -107,11 +107,11 @@ export default function ProductDetailClient({
   const activeImage = images[activeImageIndex] ?? images[0];
 
   return (
-    <div className="grid gap-8 rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)]/90 p-4 shadow-[0_20px_45px_rgba(80,54,28,0.08)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+    <div className="grid gap-8 rounded-[2.3rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.95))] p-4 shadow-[0_24px_70px_rgba(80,54,28,0.12)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
       <div className="space-y-4">
         <button
           type="button"
-          className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-2"
+          className="relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-2 shadow-sm"
           onClick={() => activeImage && setZoomOpen(true)}
           aria-label="تكبير الصورة"
         >
@@ -170,7 +170,7 @@ export default function ProductDetailClient({
 
       <div className="space-y-6">
         <div className="space-y-2">
-          <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--store-gold)]">
+          <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-[var(--store-gold)]">
             {product.category.nameAr || product.category.name}
           </p>
           <h1 className="store-serif text-3xl font-semibold md:text-4xl">{displayName}</h1>
@@ -179,7 +179,7 @@ export default function ProductDetailClient({
           )}
         </div>
 
-        <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-wrap items-end gap-3 rounded-[1.4rem] border border-[var(--store-border)] bg-white/70 px-4 py-3">
           <p className="text-2xl font-semibold text-[var(--store-text)]">
             {formatCurrency(price, currencySymbol)}
           </p>
@@ -196,7 +196,7 @@ export default function ProductDetailClient({
         </div>
 
         {colorOptions.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">
             <p className="text-sm font-medium">اللون: {selectedColor || "—"}</p>
             <ColorSwatches
               colors={colorOptions}
@@ -208,7 +208,7 @@ export default function ProductDetailClient({
         )}
 
         {sizes.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">
             <p className="text-sm font-medium">المقاس</p>
             <div className="flex flex-wrap gap-2">
               {sizes.map((item) => (
@@ -233,7 +233,7 @@ export default function ProductDetailClient({
         )}
 
         {product.description && (
-          <div className="space-y-2 border-t border-[var(--store-border)] pt-6">
+          <div className="space-y-2 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">
             <h2 className="text-sm font-semibold uppercase tracking-[0.2em]">الوصف</h2>
             <p className="text-sm leading-7 text-[var(--store-muted)] whitespace-pre-line">
               {product.description}

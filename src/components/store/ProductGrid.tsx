@@ -26,12 +26,13 @@ export default function ProductGrid({
   return (
     <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 lg:grid-cols-4">
       {products.map((product, index) => (
-        <ProductCard
-          key={product.id}
-          product={product}
-          currencySymbol={currencySymbol}
-          priority={index < 4}
-        />
+        <div key={product.id} className="store-animate-in" style={{ animationDelay: `${Math.min(index * 60, 240)}ms` }}>
+          <ProductCard
+            product={product}
+            currencySymbol={currencySymbol}
+            priority={index < 4}
+          />
+        </div>
       ))}
     </div>
   );
