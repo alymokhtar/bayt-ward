@@ -107,7 +107,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
               src="/images/icon2.png"
               alt={storeName}
               fill
-              sizes="(min-width: 1280px) 176px, (min-width: 1024px) 160px, (min-width: 768px) 144px, 96px"
+              sizes="(min-width: 1280px) 250px, (min-width: 1024px) 160px, (min-width: 768px) 144px, 96px"
               className="object-contain"
               priority
             />
