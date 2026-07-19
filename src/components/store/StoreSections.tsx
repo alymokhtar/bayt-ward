@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Flower2, Headphones, MessageCircle, PackageCheck, Truck } from "lucide-react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { optimizeCloudinaryUrl } from "@/lib/store/images";
 import { getCategoryPath } from "@/lib/store/product-utils";
@@ -22,32 +22,28 @@ export default function CategoryCard({ category, coverImage }: CategoryCardProps
   return (
     <Link
       href={getCategoryPath(category.id)}
-      className="group relative block overflow-hidden rounded-[2rem] border border-[var(--store-border)] bg-[linear-gradient(145deg,rgba(255,250,243,1),rgba(252,246,238,0.92))] p-2 shadow-[0_16px_45px_rgba(80,54,28,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(80,54,28,0.12)]"
+      className="group block overflow-hidden rounded-lg border border-[var(--store-border)] bg-white shadow-[0_8px_24px_rgba(75,54,37,0.09)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(75,54,37,0.14)]"
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-[var(--store-border)]">
+      <div className="relative aspect-[1.08/1] overflow-hidden bg-[var(--store-cream)]">
         {coverImage ? (
           <Image
-            src={optimizeCloudinaryUrl(coverImage, { width: 700, height: 875, crop: "fill" })}
+            src={optimizeCloudinaryUrl(coverImage, { width: 640, height: 600, crop: "fill" })}
             alt={name}
             fill
-            sizes="(max-width: 768px) 50vw, 25vw"
+            sizes="(max-width: 768px) 50vw, 20vw"
             className="store-image-zoom object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center bg-neutral-100 text-[var(--store-muted)]">
+          <div className="flex h-full items-center justify-center px-3 text-center text-sm text-[var(--store-muted)]">
             {name}
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-          <div className="mb-3 inline-flex rounded-full border border-white/20 bg-white/15 px-3 py-1 text-[10px] uppercase tracking-[0.3em] backdrop-blur">
-            {category._count.products} منتج
-          </div>
-          <h3 className="store-serif text-2xl font-semibold">{name}</h3>
-          {category.description && (
-            <p className="mt-2 line-clamp-2 text-sm text-white/80">{category.description}</p>
-          )}
-        </div>
+      </div>
+      <div className="relative px-3 pb-4 pt-7 text-center">
+        <span className="absolute left-1/2 top-0 inline-flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[var(--store-gold)] text-white shadow-[0_6px_18px_rgba(184,137,56,0.32)]">
+          <Flower2 className="h-5 w-5" />
+        </span>
+        <h3 className="text-base font-bold text-[var(--store-text)]">{name}</h3>
       </div>
     </Link>
   );
@@ -68,7 +64,7 @@ export function StorePageHero({
 }: StorePageHeroProps) {
   return (
     <section className="store-container py-10 md:py-14">
-      <div className="rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)]/90 p-8 shadow-[0_16px_45px_rgba(80,54,28,0.06)] backdrop-blur md:p-10">
+      <div className="store-soft-card p-6 md:p-9">
         {backHref && (
           <Link
             href={backHref}
@@ -79,8 +75,8 @@ export function StorePageHero({
           </Link>
         )}
         <div className="max-w-3xl">
-          <p className="store-pill mb-4">Bayt Ward</p>
-          <h1 className="store-serif text-4xl font-semibold text-[var(--store-text)] md:text-5xl">
+          <p className="mb-2 text-xs font-medium text-[var(--store-gold)]">Bayt Ward</p>
+          <h1 className="text-3xl font-bold text-[var(--store-text)] md:text-4xl">
             {title}
           </h1>
           {description && (
@@ -106,25 +102,70 @@ export function WhatsAppCta({ whatsappNumber, storeName }: WhatsAppCtaProps) {
   );
 
   return (
-    <section className="store-container py-16">
-      <div className="rounded-[2rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(245,232,210,0.9))] px-8 py-12 text-center text-[var(--store-text)] shadow-[0_20px_50px_rgba(80,54,28,0.08)] md:px-16">
-        <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--store-gold)]">
-          طلب سريع
-        </p>
-        <h2 className="store-serif mt-3 text-3xl font-semibold md:text-4xl">
-          جاهزة للطلب؟ تواصلي معنا الآن
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-[var(--store-muted)]">
-          فريقنا يساعدكِ في اختيار المقاس واللون المناسب وإتمام طلبكِ بسهولة عبر واتساب.
-        </p>
+    <section className="store-container pb-6">
+      <div className="store-soft-card flex flex-col items-center justify-between gap-5 px-5 py-5 text-center md:flex-row md:px-8 md:text-start">
+        <div className="flex flex-col items-center gap-4 md:flex-row">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[#35b553] text-white">
+            <MessageCircle className="h-7 w-7" />
+          </span>
+          <div>
+            <h2 className="text-lg font-bold text-[var(--store-text)]">اطلبي الآن عبر واتساب</h2>
+            <p className="mt-1 text-sm text-[var(--store-muted)]">
+              تواصلي معنا مباشرة على واتساب لطلب منتجاتك
+            </p>
+          </div>
+        </div>
         <a
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-8 inline-flex items-center justify-center rounded-full bg-[#25D366] px-8 py-3.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#1da851]"
+          className="inline-flex min-h-11 items-center justify-center rounded bg-[var(--store-gold)] px-8 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--store-gold-deep)]"
         >
-          اطلبي عبر واتساب
+          تواصلي معنا
         </a>
+      </div>
+    </section>
+  );
+}
+
+export function TrustSignals() {
+  const items = [
+    {
+      title: "توصيل سريع",
+      text: "إلى جميع أنحاء موريتانيا",
+      icon: Truck,
+    },
+    {
+      title: "جودة عالية",
+      text: "منتجات مختارة بعناية",
+      icon: PackageCheck,
+    },
+    {
+      title: "خدمة عملاء مميزة",
+      text: "نحن هنا لمساعدتك دائما",
+      icon: Headphones,
+    },
+  ];
+
+  return (
+    <section className="store-container py-6">
+      <div className="store-soft-card grid gap-0 overflow-hidden md:grid-cols-3">
+        {items.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <div
+              key={item.title}
+              className="flex items-center justify-center gap-4 border-b border-[var(--store-border)] px-5 py-5 text-center md:border-b-0 md:border-l md:last:border-l-0"
+            >
+              <Icon className="h-9 w-9 shrink-0 text-[var(--store-gold)]" />
+              <div>
+                <h3 className="font-bold text-[var(--store-text)]">{item.title}</h3>
+                <p className="mt-1 text-sm text-[var(--store-muted)]">{item.text}</p>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );

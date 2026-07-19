@@ -3,9 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Heart, Menu, Search, ShoppingBag, X } from "lucide-react";
+import { Menu, Search, ShoppingBag, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { STORE_NAME, STORE_NAME_AR } from "@/lib/constants";
+import { STORE_NAME_AR } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 
@@ -17,10 +17,12 @@ const STORE_BASE_PATH = "/store";
 
 const NAV_LINKS = [
   { href: `${STORE_BASE_PATH}`, label: "الرئيسية" },
-  { href: `${STORE_BASE_PATH}/products`, label: "المنتجات" },
-  { href: `${STORE_BASE_PATH}/categories`, label: "الأقسام" },
-  { href: `${STORE_BASE_PATH}/about`, label: "من نحن" },
-  { href: `${STORE_BASE_PATH}/contact`, label: "تواصل معنا" },
+  { href: `${STORE_BASE_PATH}/categories`, label: "طرح" },
+  { href: `${STORE_BASE_PATH}/categories`, label: "عبايات" },
+  { href: `${STORE_BASE_PATH}/categories`, label: "ملابس منزلية" },
+  { href: `${STORE_BASE_PATH}/categories`, label: "بيجامات" },
+  { href: `${STORE_BASE_PATH}/products`, label: "إكسسوارات" },
+  { href: `${STORE_BASE_PATH}/products`, label: "عروض" },
 ];
 
 export default function StoreHeader({ settings }: StoreHeaderProps) {
@@ -42,6 +44,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false);
   }, [pathname]);
 
@@ -52,110 +55,92 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 transition-all duration-300",
+        "sticky top-0 z-50 border-b border-[var(--store-border)] transition-all duration-300",
         scrolled
-          ? "border-b border-[var(--store-border)] bg-[var(--store-surface)]/90 shadow-[0_14px_40px_rgba(76,50,27,0.08)] backdrop-blur-2xl"
-          : "bg-[var(--store-bg)]/80 backdrop-blur"
+          ? "bg-[var(--store-surface)]/95 shadow-[0_10px_30px_rgba(75,54,37,0.08)] backdrop-blur-xl"
+          : "bg-[var(--store-surface)]/90 backdrop-blur"
       )}
     >
-      <div className="border-b border-[var(--store-border)]/70 bg-[var(--store-surface)]/70">
-        <div className="store-container flex flex-wrap items-center justify-end gap-2 px-2 py-2 text-[11px] text-[var(--store-muted)] sm:px-0">
-          <div className="flex items-center gap-2">
-            <Link
-              href={`${STORE_BASE_PATH}/search`}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
-              aria-label="بحث"
-            >
-              <Search className="h-4 w-4" />
-            </Link>
-            <button
-              type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
-              aria-label="المفضلة — قريباً"
-              title="المفضلة — قريباً"
-            >
-              <Heart className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
-              aria-label="السلة — قريباً"
-              title="السلة — قريباً"
-            >
-              <ShoppingBag className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="store-container">
-        <div className="flex h-16 items-center justify-between gap-4 md:h-20">
+      <div className="store-container relative flex min-h-[6.6rem] items-center justify-center py-3 md:min-h-[8.9rem] md:pb-0">
+        <div className="absolute left-0 top-4 hidden items-center gap-4 text-[var(--store-text)] md:flex">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)] shadow-sm md:hidden"
-            aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
+            className="relative inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--store-gold-soft)]"
+            aria-label="السلة - قريبا"
+            title="السلة - قريبا"
           >
-            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <ShoppingBag className="h-5 w-5" />
+            <span className="absolute right-1 top-0 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--store-gold)] px-1 text-[10px] font-bold text-white">
+              2
+            </span>
           </button>
-
-          <Link href={STORE_BASE_PATH} className="flex items-center gap-3 shrink-0" aria-label={storeName}>
-            <div className="relative h-10 w-10 overflow-hidden rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] shadow-sm md:h-12 md:w-12">
-              <Image
-                src="/images/logo-light.png"
-                alt={storeName}
-                fill
-                sizes="48px"
-                className="object-contain p-1"
-                priority
-              />
-            </div>
-            <div className="hidden sm:block">
-              <p className="store-serif text-xl font-semibold leading-none text-[var(--store-text)] md:text-2xl">
-                {storeName}
-              </p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.35em] text-[var(--store-muted)]">
-                {settings.store_name || STORE_NAME}
-              </p>
-            </div>
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--store-gold-soft)]"
+            aria-label="حسابي - قريبا"
+            title="حسابي - قريبا"
+          >
+            <UserRound className="h-5 w-5" />
+          </button>
+          <Link
+            href={`${STORE_BASE_PATH}/search`}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full transition hover:bg-[var(--store-gold-soft)]"
+            aria-label="بحث"
+          >
+            <Search className="h-5 w-5" />
           </Link>
-
-          <nav className="hidden items-center gap-8 md:flex" aria-label="التنقل الرئيسي">
-            {NAV_LINKS.map((link) => {
-              const active =
-                link.href === STORE_BASE_PATH
-                  ? pathname === STORE_BASE_PATH || pathname === `${STORE_BASE_PATH}/`
-                  : pathname === link.href || pathname.startsWith(`${link.href}/`);
-
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "store-link-hover text-sm tracking-[0.2em] transition-colors",
-                    active
-                      ? "text-[var(--store-gold)]"
-                      : "text-[var(--store-text)] hover:text-[var(--store-gold)]"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-1 sm:gap-2">
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#1da851] sm:inline-flex"
-            >
-              واتساب
-            </a>
-          </div>
         </div>
+
+        <button
+          type="button"
+          className="absolute right-0 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)] shadow-sm md:hidden"
+          aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+
+        <Link href={STORE_BASE_PATH} className="flex flex-col items-center" aria-label={storeName}>
+          <span className="relative h-20 w-24 md:h-24 md:w-28">
+            <Image
+              src="/images/logo-light.png"
+              alt={storeName}
+              fill
+              sizes="112px"
+              className="object-contain"
+              priority
+            />
+          </span>
+        </Link>
       </div>
+
+      <nav className="hidden border-t border-transparent md:block" aria-label="التنقل الرئيسي">
+        <div className="store-container flex h-12 items-center justify-center gap-10">
+          {NAV_LINKS.map((link) => {
+            const active =
+              link.href === STORE_BASE_PATH
+                ? pathname === STORE_BASE_PATH || pathname === `${STORE_BASE_PATH}/`
+                : pathname === link.href || pathname.startsWith(`${link.href}/`);
+
+            return (
+              <Link
+                key={`${link.href}-${link.label}`}
+                href={link.href}
+                data-active={active}
+                className={cn(
+                  "store-link-hover text-sm font-medium transition-colors",
+                  active
+                    ? "text-[var(--store-gold)]"
+                    : "text-[var(--store-text)] hover:text-[var(--store-gold)]"
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
 
       {menuOpen && (
         <nav
@@ -164,10 +149,10 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
         >
           <ul className="space-y-1">
             {NAV_LINKS.map((link) => (
-              <li key={link.href}>
+              <li key={`${link.href}-${link.label}`}>
                 <Link
                   href={link.href}
-                  className="block rounded-2xl px-3 py-2.5 text-sm text-[var(--store-text)] transition hover:bg-[var(--store-gold-soft)]"
+                  className="block rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--store-text)] transition hover:bg-[var(--store-gold-soft)]"
                 >
                   {link.label}
                 </Link>
@@ -178,7 +163,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block rounded-2xl bg-[#25D366] px-3 py-2.5 text-sm font-medium text-white"
+                className="mt-2 block rounded-lg bg-[var(--store-gold)] px-3 py-2.5 text-sm font-bold text-white"
               >
                 تواصل عبر واتساب
               </a>

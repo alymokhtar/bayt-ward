@@ -1,21 +1,24 @@
 .store-root {
-  --store-bg: #f7efe4;
-  --store-surface: #fff8ee;
-  --store-text: #4b2f1f;
-  --store-muted: #7a6553;
-  --store-gold: #b7833c;
-  --store-gold-soft: color-mix(in srgb, #b7833c 18%, transparent);
-  --store-border: #e7d3b7;
+  --store-bg: #fbf6ee;
+  --store-cream: #f3e8d7;
+  --store-surface: #fffdf9;
+  --store-card: #ffffff;
+  --store-text: #4b3625;
+  --store-muted: #7b6a5b;
+  --store-gold: #b88938;
+  --store-gold-deep: #966c2c;
+  --store-gold-soft: rgba(184, 137, 56, 0.16);
+  --store-border: #eadcc9;
+  --store-shadow: 0 12px 34px rgba(75, 54, 37, 0.1);
   --store-serif: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
 }
 
 .store-root {
+  min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(183, 131, 60, 0.16), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(75, 47, 31, 0.08), transparent 28%),
+    linear-gradient(180deg, rgba(255, 253, 249, 0.92), rgba(251, 246, 238, 0.96)),
     var(--store-bg);
   color: var(--store-text);
-  min-height: 100vh;
   font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
 }
 
@@ -24,49 +27,86 @@
 }
 
 .store-container {
-  width: min(100% - 2rem, 76rem);
+  width: min(100% - 2rem, 69rem);
   margin-inline: auto;
 }
 
-.store-card {
-  border: 1px solid var(--store-border);
-  background: linear-gradient(135deg, rgba(255, 250, 243, 0.98), rgba(252, 247, 239, 0.88));
-  box-shadow: 0 20px 45px rgba(72, 46, 26, 0.08);
+.store-section {
+  padding-block: clamp(2.25rem, 5vw, 4rem);
 }
 
-.store-shell {
+.store-soft-card {
   border: 1px solid var(--store-border);
-  border-radius: 2rem;
-  background: linear-gradient(145deg, rgba(255, 250, 243, 0.98), rgba(252, 247, 239, 0.9));
-  box-shadow: 0 24px 70px rgba(72, 46, 26, 0.08);
+  border-radius: 0.5rem;
+  background: rgba(255, 253, 249, 0.9);
+  box-shadow: 0 10px 28px rgba(75, 54, 37, 0.08);
 }
 
-.store-soft-panel {
-  border: 1px solid var(--store-border);
-  border-radius: 1.75rem;
-  background: rgba(255, 255, 255, 0.74);
-  box-shadow: 0 14px 36px rgba(72, 46, 26, 0.06);
-  backdrop-filter: blur(12px);
+.store-link-hover {
+  position: relative;
 }
 
-.store-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border-radius: 9999px;
-  border: 1px solid var(--store-border);
-  background: color-mix(in srgb, var(--store-surface) 80%, transparent);
-  padding: 0.4rem 0.8rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--store-gold);
+.store-link-hover::after {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -0.55rem;
+  height: 2px;
+  content: "";
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.25s ease;
+}
+
+.store-link-hover:hover::after,
+.store-link-hover:focus-visible::after,
+.store-link-hover[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
+.store-image-zoom {
+  transition: transform 0.55s ease;
+}
+
+.group:hover .store-image-zoom {
+  transform: scale(1.04);
+}
+
+.store-hero-slide {
+  animation: store-hero-fade 15s infinite;
+  opacity: 0;
+}
+
+.store-hero-slide:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.store-hero-slide:nth-child(2) {
+  animation-delay: 5s;
+}
+
+.store-hero-slide:nth-child(3) {
+  animation-delay: 10s;
+}
+
+@keyframes store-hero-fade {
+  0%,
+  30% {
+    opacity: 1;
+  }
+  36%,
+  94% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 @keyframes store-fade-up {
   from {
     opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
@@ -78,43 +118,15 @@
   animation: store-fade-up 0.65s ease both;
 }
 
-.store-animate-delay-1 {
-  animation-delay: 0.1s;
-}
+@media (prefers-reduced-motion: reduce) {
+  .store-hero-slide,
+  .store-animate-in,
+  .store-image-zoom {
+    animation: none;
+    transition: none;
+  }
 
-.store-animate-delay-2 {
-  animation-delay: 0.2s;
-}
-
-.store-animate-delay-3 {
-  animation-delay: 0.3s;
-}
-
-.store-link-hover {
-  position: relative;
-}
-
-.store-link-hover::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  bottom: -2px;
-  height: 1px;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.25s ease;
-}
-
-.store-link-hover:hover::after,
-.store-link-hover:focus-visible::after {
-  transform: scaleX(1);
-}
-
-.store-image-zoom {
-  transition: transform 0.55s ease;
-}
-
-.group:hover .store-image-zoom {
-  transform: scale(1.04);
+  .store-hero-slide:first-child {
+    opacity: 1;
+  }
 }

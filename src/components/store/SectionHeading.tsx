@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SectionHeadingProps = {
@@ -18,23 +19,28 @@ export default function SectionHeading({
   return (
     <div
       className={cn(
-        "mb-8 space-y-3 md:mb-10",
+        "mb-7 space-y-2 md:mb-9",
         align === "center" ? "mx-auto max-w-2xl text-center" : "text-start",
         className
       )}
     >
       {eyebrow && (
-        <div className={cn("flex items-center gap-3 text-[var(--store-gold)]", align === "center" ? "justify-center" : "justify-start")}> 
-          <span className="h-px w-8 bg-[var(--store-border)]" />
-          <p className="text-[11px] uppercase tracking-[0.35em]">
-            {eyebrow}
-          </p>
-          <span className="h-px w-8 bg-[var(--store-border)]" />
-        </div>
+        <p className="text-xs font-medium text-[var(--store-gold)]">{eyebrow}</p>
       )}
-      <h2 className="store-serif text-3xl font-semibold text-[var(--store-text)] md:text-4xl">
+      <h2 className="text-2xl font-bold text-[var(--store-text)] md:text-3xl">
         {title}
       </h2>
+      <div
+        className={cn(
+          "flex items-center gap-3 text-[var(--store-gold)]",
+          align === "center" ? "justify-center" : "justify-start"
+        )}
+        aria-hidden="true"
+      >
+        <span className="h-px w-20 bg-[var(--store-gold)]/50" />
+        <Sparkles className="h-4 w-4" />
+        <span className="h-px w-20 bg-[var(--store-gold)]/50" />
+      </div>
       {description && (
         <p className="text-sm leading-7 text-[var(--store-muted)] md:text-base">
           {description}
