@@ -102,12 +102,12 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
         </button>
 
         <Link href={STORE_BASE_PATH} className="flex items-center justify-center" aria-label={storeName}>
-          <span className="relative h-12 w-20 sm:h-14 sm:w-24 md:h-16 md:w-28">
+          <span className="relative h-16 w-24 sm:h-20 sm:w-28 md:h-24 md:w-36 lg:h-28 lg:w-40 xl:h-32 xl:w-44">
             <Image
               src="/images/icon2.png"
               alt={storeName}
               fill
-              sizes="(min-width: 768px) 112px, 96px"
+              sizes="(min-width: 1280px) 176px, (min-width: 1024px) 160px, (min-width: 768px) 144px, 96px"
               className="object-contain"
               priority
             />
