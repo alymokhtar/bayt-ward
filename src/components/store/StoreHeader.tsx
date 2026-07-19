@@ -30,7 +30,6 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
 
   const storeName = settings.store_name_ar || STORE_NAME_AR;
   const whatsappNumber = settings.store_whatsapp || settings.store_phone || "01234567890";
-  const topPhone = settings.store_phone || settings.store_whatsapp || "01234567890";
 
   useEffect(() => {
     function onScroll() {
@@ -60,46 +59,31 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
       )}
     >
       <div className="border-b border-[var(--store-border)]/70 bg-[var(--store-surface)]/70">
-        <div className="store-container flex flex-wrap items-center justify-between gap-2 px-2 py-2 text-[11px] text-[var(--store-muted)] sm:px-0">
-          <a
-            href={whatsappHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--store-border)] bg-white/70 px-3 py-1.5 text-[var(--store-text)]"
-            dir="ltr"
-          >
-            <span className="text-[var(--store-gold)]">📞</span>
-            {topPhone}
-          </a>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-[var(--store-border)] bg-[var(--store-bg)] px-3 py-1.5 text-[10px] uppercase tracking-[0.3em] text-[var(--store-gold)]">
-              شحن مجاني للطلبات أكثر من 500 جنيه
-            </span>
-            <div className="flex items-center gap-2">
-              <Link
-                href={`${STORE_BASE_PATH}/search`}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
-                aria-label="بحث"
-              >
-                <Search className="h-4 w-4" />
-              </Link>
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
-                aria-label="المفضلة — قريباً"
-                title="المفضلة — قريباً"
-              >
-                <Heart className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
-                aria-label="السلة — قريباً"
-                title="السلة — قريباً"
-              >
-                <ShoppingBag className="h-4 w-4" />
-              </button>
-            </div>
+        <div className="store-container flex flex-wrap items-center justify-end gap-2 px-2 py-2 text-[11px] text-[var(--store-muted)] sm:px-0">
+          <div className="flex items-center gap-2">
+            <Link
+              href={`${STORE_BASE_PATH}/search`}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
+              aria-label="بحث"
+            >
+              <Search className="h-4 w-4" />
+            </Link>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
+              aria-label="المفضلة — قريباً"
+              title="المفضلة — قريباً"
+            >
+              <Heart className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]"
+              aria-label="السلة — قريباً"
+              title="السلة — قريباً"
+            >
+              <ShoppingBag className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
