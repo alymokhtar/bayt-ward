@@ -32,6 +32,21 @@
   box-shadow: 0 20px 45px rgba(72, 46, 26, 0.08);
 }
 
+.store-shell {
+  border: 1px solid var(--store-border);
+  border-radius: 2rem;
+  background: linear-gradient(145deg, rgba(255, 250, 243, 0.98), rgba(252, 247, 239, 0.9));
+  box-shadow: 0 24px 70px rgba(72, 46, 26, 0.08);
+}
+
+.store-soft-panel {
+  border: 1px solid var(--store-border);
+  border-radius: 1.75rem;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 14px 36px rgba(72, 46, 26, 0.06);
+  backdrop-filter: blur(12px);
+}
+
 .store-pill {
   display: inline-flex;
   align-items: center;

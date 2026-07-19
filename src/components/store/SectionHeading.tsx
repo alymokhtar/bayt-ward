@@ -24,7 +24,7 @@ export default function SectionHeading({
       )}
     >
       {eyebrow && (
-        <div className="flex items-center justify-center gap-3 text-[var(--store-gold)] md:justify-start">
+        <div className={cn("flex items-center gap-3 text-[var(--store-gold)]", align === "center" ? "justify-center" : "justify-start")}> 
           <span className="h-px w-8 bg-[var(--store-border)]" />
           <p className="text-[11px] uppercase tracking-[0.35em]">
             {eyebrow}

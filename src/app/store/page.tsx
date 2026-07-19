@@ -74,19 +74,18 @@ export default async function StoreHomePage() {
   return (
     <>
       <section className="relative overflow-hidden">
-        <div className="store-container grid min-h-[72vh] items-center gap-10 py-16 md:grid-cols-2 md:py-24">
+        <div className="store-container grid min-h-[72vh] items-center gap-10 py-16 md:grid-cols-[1.05fr_0.95fr] md:py-24">
           <div className="store-animate-in space-y-6">
-            <p className="text-xs uppercase tracking-[0.4em] text-[var(--store-gold)]">
+            <div className="inline-flex items-center rounded-full border border-[var(--store-border)] bg-[var(--store-surface)]/80 px-3.5 py-2 text-[11px] uppercase tracking-[0.35em] text-[var(--store-gold)] shadow-sm">
               {settings.store_name || STORE_NAME}
-            </p>
-            <h1 className="store-serif text-5xl font-semibold leading-tight text-[var(--store-text)] md:text-6xl">
-              أناقة هادئة
+            </div>
+            <h1 className="store-serif text-5xl font-semibold leading-[0.95] text-[var(--store-text)] md:text-6xl lg:text-7xl">
+              أناقة لا تُضاهى
               <br />
-              <span className="text-[var(--store-gold)]">للمرأة العصرية</span>
+              <span className="text-[var(--store-gold)]">لكل امرأة محتشمة</span>
             </h1>
-            <p className="max-w-lg text-base leading-8 text-[var(--store-muted)]">
-              {storeName} — تشكيلات مختارة من الحجاب والملابس النسائية بلمسة
-              فاخرة، بسيطة، وعصرية.
+            <p className="max-w-xl text-base leading-8 text-[var(--store-muted)]">
+              اكتشفي تشكيلتنا الراقية من الملابس الحريمي والطرح والإكسسوارات. تصاميم فريدة تناسب ذوقكِ الرفيع.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -99,12 +98,26 @@ export default async function StoreHomePage() {
                 href="/store/categories"
                 className="inline-flex items-center justify-center rounded-full border border-[var(--store-border)] bg-white px-8 py-3.5 text-sm font-medium transition hover:border-[var(--store-gold)]"
               >
-                استكشفي الأقسام
+                الجديد
               </Link>
+            </div>
+            <div className="flex flex-wrap gap-4 border-t border-[var(--store-border)] pt-6 text-sm text-[var(--store-muted)]">
+              <div className="rounded-2xl border border-[var(--store-border)] bg-white/70 px-4 py-3">
+                <div className="text-lg font-semibold text-[var(--store-text)]">+1000</div>
+                <div>منتج</div>
+              </div>
+              <div className="rounded-2xl border border-[var(--store-border)] bg-white/70 px-4 py-3">
+                <div className="text-lg font-semibold text-[var(--store-text)]">+500</div>
+                <div>عميلة سعيدة</div>
+              </div>
+              <div className="rounded-2xl border border-[var(--store-border)] bg-white/70 px-4 py-3">
+                <div className="text-lg font-semibold text-[var(--store-text)]">100%</div>
+                <div>جودة</div>
+              </div>
             </div>
           </div>
 
-          <div className="store-animate-in store-animate-delay-1 relative aspect-[4/5] overflow-hidden rounded-sm bg-white shadow-xl shadow-black/5">
+          <div className="store-animate-in store-animate-delay-1 relative aspect-[4/5] overflow-hidden rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-3 shadow-[0_25px_70px_rgba(80,54,28,0.12)]">
             {gallery[0] ? (
               <Image
                 src={optimizeCloudinaryUrl(gallery[0].url, {
@@ -123,17 +136,31 @@ export default async function StoreHomePage() {
                 {storeName}
               </div>
             )}
+            <div className="absolute inset-x-6 bottom-6 rounded-[1.4rem] border border-white/50 bg-white/80 p-4 shadow-lg backdrop-blur">
+              <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--store-gold)]">تشكيلة رمضان 2025</p>
+              <p className="mt-2 text-sm text-[var(--store-muted)]">اختاري من أحدث الإبداعات الفاخرة</p>
+            </div>
           </div>
         </div>
       </section>
 
       {hasProducts && featuredProducts.length > 0 && (
         <section className="store-container py-16 md:py-20">
-          <SectionHeading
-            eyebrow="Featured"
-            title="منتجات مميزة"
-            description="تشكيلاتنا الأكثر طلباً — مختارة بعناية لتناسب ذوقكِ"
-          />
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <SectionHeading
+              eyebrow="Featured"
+              title="منتجات مميزة"
+              description="تشكيلاتنا الأكثر طلباً — مختارة بعناية لتناسب ذوقكِ"
+              align="start"
+              className="mb-0"
+            />
+            <Link
+              href="/store/products"
+              className="text-sm uppercase tracking-[0.25em] text-[var(--store-gold)]"
+            >
+              عرض الكل
+            </Link>
+          </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
             {featuredProducts.map((product, index) => (
               <ProductCard
@@ -143,14 +170,6 @@ export default async function StoreHomePage() {
                 priority={index < 4}
               />
             ))}
-          </div>
-          <div className="mt-10 text-center">
-            <Link
-              href="/store/products"
-              className="store-link-hover text-sm uppercase tracking-[0.25em] text-[var(--store-text)]"
-            >
-              عرض كل المنتجات
-            </Link>
           </div>
         </section>
       )}
@@ -180,8 +199,8 @@ export default async function StoreHomePage() {
         <section className="store-container py-16 md:py-20">
           <SectionHeading
             eyebrow="Collections"
-            title="تسوقي حسب القسم"
-            description="تشكيلات متنوعة لتلبية كل المناسبات"
+            title="تصنيفاتنا"
+            description="اكتشفي تشكيلتنا المتنوعة من المنتجات الراقية"
           />
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {categoriesWithCovers.map(({ category, cover }) => (
@@ -191,7 +210,7 @@ export default async function StoreHomePage() {
         </section>
       )}
 
-      <section className="bg-[var(--store-text)] py-16 text-white md:py-20">
+      <section className="bg-[linear-gradient(135deg,rgba(61,43,32,0.98),rgba(84,57,41,0.98))] py-16 text-white md:py-20">
         <div className="store-container">
           <SectionHeading
             eyebrow="Why Bayt Ward"

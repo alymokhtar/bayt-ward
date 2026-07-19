@@ -22,9 +22,9 @@ export default function CategoryCard({ category, coverImage }: CategoryCardProps
   return (
     <Link
       href={getCategoryPath(category.id)}
-      className="group relative block overflow-hidden rounded-[1.8rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-2 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+      className="group relative block overflow-hidden rounded-[2rem] border border-[var(--store-border)] bg-[linear-gradient(145deg,rgba(255,250,243,1),rgba(252,246,238,0.92))] p-2 shadow-[0_16px_45px_rgba(80,54,28,0.08)] transition hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(80,54,28,0.12)]"
     >
-      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.35rem] bg-[var(--store-border)]">
+      <div className="relative aspect-[4/5] overflow-hidden rounded-[1.5rem] bg-[var(--store-border)]">
         {coverImage ? (
           <Image
             src={optimizeCloudinaryUrl(coverImage, { width: 700, height: 875, crop: "fill" })}
@@ -44,6 +44,9 @@ export default function CategoryCard({ category, coverImage }: CategoryCardProps
             {category._count.products} منتج
           </div>
           <h3 className="store-serif text-2xl font-semibold">{name}</h3>
+          {category.description && (
+            <p className="mt-2 line-clamp-2 text-sm text-white/80">{category.description}</p>
+          )}
         </div>
       </div>
     </Link>

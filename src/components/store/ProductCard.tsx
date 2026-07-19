@@ -44,9 +44,9 @@ export default function ProductCard({
     : null;
 
   return (
-    <article className="group rounded-[1.75rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-3 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+    <article className="group rounded-[1.9rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.96))] p-2.5 shadow-[0_16px_45px_rgba(80,54,28,0.08)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_60px_rgba(80,54,28,0.13)]">
       <Link href={href} className="block">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.35rem] bg-[var(--store-surface)]">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.45rem] bg-[var(--store-surface)]">
           {optimizedUrl ? (
             <Image
               src={optimizedUrl}
@@ -66,18 +66,26 @@ export default function ProductCard({
               غير متوفر
             </span>
           )}
+          <div className="absolute inset-x-3 top-3 flex items-center justify-between">
+            <span className="rounded-full border border-white/30 bg-white/80 px-3 py-1 text-[10px] uppercase tracking-[0.28em] text-[var(--store-gold)] backdrop-blur">
+              {product.category?.nameAr || product.category?.name || "مميزة"}
+            </span>
+            <span className="rounded-full border border-[var(--store-border)] bg-[var(--store-surface)]/90 px-2.5 py-1 text-[10px] text-[var(--store-muted)]">
+              جديد
+            </span>
+          </div>
         </div>
 
-        <div className="mt-4 space-y-2 px-1 pb-2">
+        <div className="mt-4 space-y-2 px-2 pb-2">
           {product.category && (
             <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-muted)]">
               {product.category.nameAr || product.category.name}
             </p>
           )}
-          <h3 className="text-base font-medium text-[var(--store-text)] transition group-hover:text-[var(--store-gold)]">
+          <h3 className="store-serif text-[1.05rem] font-semibold text-[var(--store-text)] transition group-hover:text-[var(--store-gold)]">
             {displayName}
           </h3>
-          <p className="text-sm font-medium text-[var(--store-text)]">
+          <p className="text-sm font-medium text-[var(--store-gold)]">
             {min === max
               ? formatCurrency(min, currencySymbol)
               : `${formatCurrency(min, currencySymbol)} – ${formatCurrency(max, currencySymbol)}`}
