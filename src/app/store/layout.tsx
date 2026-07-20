@@ -20,7 +20,7 @@ export default async function StoreLayout({
   const settings = await getCachedStoreSettingsPublic();
 
   return (
-    <div className={`store-root store-layout ${cairo.variable} ${cairo.className} flex h-screen flex-col overflow-y-auto`}>
+    <div className={`store-root store-layout ${cairo.variable} ${cairo.className} flex min-h-screen flex-col`}>
       <Suspense fallback={<div className="h-16 border-b border-[var(--store-border)] bg-[var(--store-surface)]" />}>
         <StoreHeader settings={settings} />
       </Suspense>
