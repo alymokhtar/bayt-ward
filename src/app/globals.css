@@ -25,9 +25,12 @@
   --color-danger: #b91c1c;
   --color-success: #15803d;
   --color-warning: #ca8a04;
-  --scrollbar-track: #efe3cf;
-  --scrollbar-thumb: #9b7741;
-  --scrollbar-thumb-hover: #7a5b30;
+  --system-scrollbar-track: color-mix(in srgb, var(--theme-accent) 10%, var(--color-cream-dark-base));
+  --system-scrollbar-thumb: color-mix(in srgb, var(--theme-accent) 62%, black);
+  --system-scrollbar-thumb-hover: var(--theme-sidebar);
+  --store-scrollbar-track: #efe3cf;
+  --store-scrollbar-thumb: #9b7741;
+  --store-scrollbar-thumb-hover: #7a5b30;
 
   --background: var(--color-cream);
   --foreground: var(--color-brown);
@@ -89,7 +92,6 @@
 html {
   direction: rtl;
   scroll-behavior: smooth;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 body {
@@ -120,23 +122,55 @@ select {
   font-family: inherit;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
+/* Scoped scrollbar styling */
+.system-layout,
+.system-layout * {
+  scrollbar-color: var(--system-scrollbar-thumb) var(--system-scrollbar-track);
+}
+
+.store-layout,
+.store-layout * {
+  scrollbar-color: var(--store-scrollbar-thumb) var(--store-scrollbar-track);
+}
+
+.system-layout::-webkit-scrollbar,
+.system-layout *::-webkit-scrollbar,
+.store-layout::-webkit-scrollbar,
+.store-layout *::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
+.system-layout::-webkit-scrollbar-track,
+.system-layout *::-webkit-scrollbar-track {
+  background: var(--system-scrollbar-track);
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--scrollbar-thumb);
+.system-layout::-webkit-scrollbar-thumb,
+.system-layout *::-webkit-scrollbar-thumb {
+  background: var(--system-scrollbar-thumb);
   border-radius: 9999px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
+.system-layout::-webkit-scrollbar-thumb:hover,
+.system-layout *::-webkit-scrollbar-thumb:hover {
+  background: var(--system-scrollbar-thumb-hover);
+}
+
+.store-layout::-webkit-scrollbar-track,
+.store-layout *::-webkit-scrollbar-track {
+  background: var(--store-scrollbar-track);
+}
+
+.store-layout::-webkit-scrollbar-thumb,
+.store-layout *::-webkit-scrollbar-thumb {
+  background: var(--store-scrollbar-thumb);
+  border-radius: 9999px;
+}
+
+.store-layout::-webkit-scrollbar-thumb:hover,
+.store-layout *::-webkit-scrollbar-thumb:hover {
+  background: var(--store-scrollbar-thumb-hover);
 }
 
 /* Table utilities */

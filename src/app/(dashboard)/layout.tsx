@@ -21,7 +21,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-cream">
+    <div className="system-layout flex h-screen overflow-y-auto bg-cream">
       <ThemeBootstrap userId={session.id} />
       <Sidebar role={session.role} />
       <div className="flex flex-1 flex-col min-w-0">
