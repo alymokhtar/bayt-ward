@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
@@ -19,15 +20,15 @@ export const revalidate = 60;
 
 const HERO_SLIDES = [
   {
-    src: "https://images.unsplash.com/photo-1545291730-faff8ca1d4b0?auto=format&fit=crop&w=1600&q=80",
+    src: "/images/hero-slide-1.jpg",
     alt: "إطلالة محتشمة بألوان بيج دافئة",
   },
   {
-    src: "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=80",
+    src: "/images/hero-slide-2.jpg",
     alt: "عباية أنيقة بإضاءة ناعمة",
   },
   {
-    src: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1600&q=80",
+    src: "/images/hero-slide-3.jpg",
     alt: "حجاب بتدرجات طبيعية وخلفية هادئة",
   },
 ];
@@ -75,12 +76,15 @@ export default async function StoreHomePage() {
       <section className="relative overflow-hidden bg-[var(--store-cream)]">
         <div className="relative min-h-[24rem] md:min-h-[27rem] lg:min-h-[31rem]">
           <div className="absolute inset-0">
-            {HERO_SLIDES.map((slide) => (
+            {HERO_SLIDES.map((slide, index) => (
               <div key={slide.src} className="store-hero-slide absolute inset-0">
-                <img
+                <Image
                   src={slide.src}
                   alt={slide.alt}
-                  className="h-full w-full object-cover object-left md:object-center"
+                  fill
+                  priority={index === 0}
+                  sizes="(min-width: 1024px) 100vw, 100vw"
+                  className="object-cover object-left md:object-center"
                 />
               </div>
             ))}

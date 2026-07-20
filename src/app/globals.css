@@ -25,6 +25,9 @@
   --color-danger: #b91c1c;
   --color-success: #15803d;
   --color-warning: #ca8a04;
+  --scrollbar-track: #efe3cf;
+  --scrollbar-thumb: #9b7741;
+  --scrollbar-thumb-hover: #7a5b30;
 
   --background: var(--color-cream);
   --foreground: var(--color-brown);
@@ -86,8 +89,7 @@
 html {
   direction: rtl;
   scroll-behavior: smooth;
-  scrollbar-color: color-mix(in srgb, var(--theme-accent) 62%, black)
-    color-mix(in srgb, var(--theme-accent) 10%, var(--color-cream-dark-base));
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 body {
@@ -125,16 +127,16 @@ select {
 }
 
 ::-webkit-scrollbar-track {
-  background: color-mix(in srgb, var(--theme-accent) 10%, var(--color-cream-dark-base));
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--theme-accent) 62%, black);
+  background: var(--scrollbar-thumb);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--theme-sidebar);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Table utilities */
