@@ -93,6 +93,58 @@ export const getCachedNewestProducts = unstable_cache(
   }
 );
 
+export const getCachedSearchProducts = unstable_cache(
+  async (paramsJson: string) => {
+    const { query, page, pageSize } = JSON.parse(paramsJson) as {
+      query?: string;
+      page?: number;
+      pageSize?: number;
+    };
+
+    const searchQuery = query?.trim();
+    const pagination = resolvePagination(page, pageSize ?? STORE_PAGE_SIZE);
+    const where = {
+      ...PUBLISHED_PRODUCT_WHERE,
+      ...(searchQuery
+        ? {
+            OR: [
+              { name: { contains: searchQuery, mode: "insensitive" as const } },
+              { nameAr: { contains: searchQuery, mode: "insensitive" as const } },
+              { brand: { contains: searchQuery, mode: "insensitive" as const } },
+              { description: { contains: searchQuery, mode: "insensitive" as const } },
+              {
+                category: {
+                  OR: [
+                    { name: { contains: searchQuery, mode: "insensitive" as const } },
+                    { nameAr: { contains: searchQuery, mode: "insensitive" as const } },
+                  ],
+                },
+              },
+            ],
+          }
+        : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.product.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: pagination.take,
+        skip: pagination.skip,
+        include: storeProductInclude,
+      }),
+      prisma.product.count({ where }),
+    ]);
+
+    return toPaginatedResult(items, total, pagination.page, pagination.pageSize);
+  },
+  ["storefront-search-products"],
+  {
+    tags: [CACHE_TAG.products, CACHE_TAG.categories, CACHE_TAG.storefront],
+    revalidate: STORE_REVALIDATE_SECONDS,
+  }
+);
+
 export const getCachedStoreCategories = unstable_cache(
   async () =>
     prisma.category.findMany({

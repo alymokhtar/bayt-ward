@@ -71,19 +71,24 @@ function getCartItemId(productId: string, variantId: string) {
 export function StorefrontStateProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<StoreCartItem[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<StoreFavoriteItem[]>([]);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCartItems(readStoredItems<StoreCartItem>(CART_STORAGE_KEY));
     setFavoriteItems(readStoredItems<StoreFavoriteItem>(FAVORITES_STORAGE_KEY));
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
-  }, [cartItems]);
+  }, [cartItems, hydrated]);
 
   useEffect(() => {
+    if (!hydrated) return;
     window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteItems));
-  }, [favoriteItems]);
+  }, [favoriteItems, hydrated]);
 
   const addToCart = useCallback(
     (item: Omit<StoreCartItem, "id" | "quantity">, quantity = 1) => {

@@ -73,9 +73,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMenuOpen(false);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSearchOpen(false);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCartOpen(false);
   }, [pathname]);
 

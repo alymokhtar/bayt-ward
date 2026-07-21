@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import FavoriteButton from "@/components/store/FavoriteButton";
 import { optimizeCloudinaryUrl, STORE_IMAGE_SIZES } from "@/lib/store/images";
 import {
   getAdminProductPath,
@@ -42,11 +42,15 @@ export default function ProductCard({
         crop: "fill",
       })
     : null;
+  const priceLabel =
+    min === max
+      ? formatCurrency(min, currencySymbol)
+      : `${formatCurrency(min, currencySymbol)} - ${formatCurrency(max, currencySymbol)}`;
 
   return (
     <article className="group overflow-hidden rounded-lg border border-[var(--store-border)] bg-white shadow-[0_8px_24px_rgba(75,54,37,0.09)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(75,54,37,0.14)]">
-      <Link href={href} className="block">
-        <div className="relative aspect-[4/5] overflow-hidden bg-[var(--store-cream)]">
+      <div className="relative aspect-[4/5] overflow-hidden bg-[var(--store-cream)]">
+        <Link href={href} className="block h-full">
           {optimizedUrl ? (
             <Image
               src={optimizedUrl}
@@ -61,29 +65,37 @@ export default function ProductCard({
               لا توجد صورة
             </div>
           )}
-          <div className="absolute inset-x-2 top-2 flex items-start justify-between gap-2">
-            <span className="rounded bg-[var(--store-gold)] px-2 py-1 text-[11px] font-medium text-white shadow-sm">
-              جديد
-            </span>
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/75 text-[var(--store-gold)] shadow-sm backdrop-blur">
-              <Heart className="h-4 w-4" />
-            </span>
-          </div>
-          {!inStock && (
-            <span className="absolute inset-x-3 bottom-3 rounded bg-black/70 px-3 py-1.5 text-center text-xs text-white">
-              غير متوفر
-            </span>
-          )}
+        </Link>
+
+        <div className="pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between gap-2">
+          <span className="rounded bg-[var(--store-gold)] px-2 py-1 text-[11px] font-medium text-white shadow-sm">
+            جديد
+          </span>
+          <FavoriteButton
+            item={{
+              id: product.id,
+              name: displayName,
+              href,
+              imageUrl: optimizedUrl,
+              priceLabel,
+            }}
+          />
         </div>
 
+        {!inStock && (
+          <span className="absolute inset-x-3 bottom-3 rounded bg-black/70 px-3 py-1.5 text-center text-xs text-white">
+            غير متوفر
+          </span>
+        )}
+      </div>
+
+      <Link href={href} className="block">
         <div className="space-y-2 px-3 py-4 text-center">
           <h3 className="line-clamp-1 text-sm font-medium text-[var(--store-text)] transition group-hover:text-[var(--store-gold)] md:text-base">
             {displayName}
           </h3>
           <p dir="ltr" className="text-sm font-bold text-[var(--store-text)]">
-            {min === max
-              ? formatCurrency(min, currencySymbol)
-              : `${formatCurrency(min, currencySymbol)} - ${formatCurrency(max, currencySymbol)}`}
+            {priceLabel}
           </p>
         </div>
       </Link>

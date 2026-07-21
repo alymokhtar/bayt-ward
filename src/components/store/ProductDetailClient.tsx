@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { Share2 } from "lucide-react";
+import { Check, ShoppingBag, Share2 } from "lucide-react";
 import ColorSwatches from "@/components/store/ColorSwatches";
+import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import WhatsAppOrderButton from "@/components/store/WhatsAppOrderButton";
 import { optimizeCloudinaryUrl, STORE_IMAGE_SIZES } from "@/lib/store/images";
 import {
@@ -34,6 +35,8 @@ export default function ProductDetailClient({
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const { addToCart } = useStorefrontState();
 
   const displayName = getProductDisplayName(product);
 
@@ -105,6 +108,31 @@ export default function ProductDetailClient({
   }
 
   const activeImage = images[activeImageIndex] ?? images[0];
+  const cartImageUrl = activeImage
+    ? optimizeCloudinaryUrl(activeImage.url, {
+        width: STORE_IMAGE_SIZES.thumbnail.width,
+        height: STORE_IMAGE_SIZES.thumbnail.height,
+        crop: "fill",
+      })
+    : product.imageUrl;
+
+  function handleAddToCart() {
+    if (!selectedVariant || !inStock) return;
+
+    addToCart({
+      productId: product.id,
+      variantId: selectedVariant.variantId,
+      name: displayName,
+      href: productUrl,
+      imageUrl: cartImageUrl ?? null,
+      color: selectedColor || undefined,
+      size: selectedSize || selectedVariant.size,
+      unitPrice: price,
+      currencySymbol,
+    });
+    setAddedToCart(true);
+    window.setTimeout(() => setAddedToCart(false), 1600);
+  }
 
   return (
     <div className="grid gap-8 rounded-[2.3rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.95))] p-4 shadow-[0_24px_70px_rgba(80,54,28,0.12)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
@@ -242,6 +270,15 @@ export default function ProductDetailClient({
         )}
 
         <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={!inStock || !selectedVariant}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--store-gold)] px-6 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--store-gold-deep)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {addedToCart ? <Check className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
+            {addedToCart ? "تمت الإضافة" : "إضافة إلى السلة"}
+          </button>
           <WhatsAppOrderButton
             productName={displayName}
             productUrl={productUrl}
@@ -249,7 +286,7 @@ export default function ProductDetailClient({
             color={selectedColor || undefined}
             size={selectedSize || selectedVariant?.size}
             disabled={!inStock}
-            className="flex-1"
+            className="flex-1 sm:flex-none"
           />
           <button
             type="button"
