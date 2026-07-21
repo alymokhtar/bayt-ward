@@ -29,7 +29,7 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
   {
     name: "كريمي",
-    value: "#E8D5B3",
+    value: "#A07C54",
     description: "ناعم ودافئ",
   },
   {
