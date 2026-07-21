@@ -338,7 +338,7 @@ export async function updateProduct(
     }
 
     const product = await prisma.$transaction(async (tx) => {
-      const updateData: any = {};
+      const updateData: Record<string, string | boolean | null> = {};
       
       if (data.name !== undefined) updateData.name = data.name?.trim() || null;
       if (data.nameAr !== undefined) updateData.nameAr = data.nameAr?.trim() || null;
@@ -399,7 +399,7 @@ export async function updateProduct(
 
         for (const variant of preparedVariants) {
           if (variant.id && existingIds.has(variant.id)) {
-            const updateData: any = {
+            const updateData: Record<string, string | boolean | number | null> = {
               sku: variant.sku,
               barcode: variant.barcode,
               size: variant.size?.trim() || "",
@@ -457,21 +457,37 @@ export async function deleteProduct(id: string) {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
 
-    const existing = await prisma.product.findUnique({ where: { id } });
+    const existing = await prisma.product.findUnique({
+      where: { id },
+      include: { variants: true },
+    });
+
     if (!existing) {
       return { success: false, error: "المنتج غير موجود" };
     }
 
-    await prisma.$transaction([
-      prisma.productVariant.updateMany({
-        where: { productId: id },
-        data: { isActive: false },
-      }),
-      prisma.product.update({
+    await prisma.$transaction(async (tx) => {
+      const variantIds = existing.variants.map((variant) => variant.id);
+
+      if (variantIds.length > 0) {
+        await tx.saleItem.deleteMany({
+          where: { variantId: { in: variantIds } },
+        });
+        await tx.purchaseItem.deleteMany({
+          where: { variantId: { in: variantIds } },
+        });
+        await tx.returnItem.deleteMany({
+          where: { variantId: { in: variantIds } },
+        });
+        await tx.stockMovement.deleteMany({
+          where: { variantId: { in: variantIds } },
+        });
+      }
+
+      await tx.product.delete({
         where: { id },
-        data: { isActive: false },
-      }),
-    ]);
+      });
+    });
 
     revalidateProductPaths();
     return { success: true, data: undefined };

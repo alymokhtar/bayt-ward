@@ -11,11 +11,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
+import { deleteProduct } from "@/lib/actions/products";
+import { getAdminProductPath } from "@/lib/store/product-utils";
 import { formatCurrency } from "@/lib/utils";
-import { ExternalLink, Image as ImageIcon } from "lucide-react";
+import { ExternalLink, Image as ImageIcon, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { getAdminProductPath } from "@/lib/store/product-utils";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 type Product = {
@@ -83,11 +85,33 @@ function getProductSummary(product: Product) {
 export default function ProductsTableClient({
   products,
 }: ProductsTableClientProps) {
+  const router = useRouter();
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const selectedSummary = useMemo(
     () => (selectedProduct ? getProductSummary(selectedProduct) : null),
     [selectedProduct]
   );
+
+  async function handleDeleteProduct() {
+    if (!productToDelete) return;
+
+    setIsDeleting(true);
+    setDeleteError(null);
+
+    const result = await deleteProduct(productToDelete.id);
+
+    if (result.success) {
+      setProductToDelete(null);
+      router.refresh();
+      return;
+    }
+
+    setDeleteError(result.error);
+    setIsDeleting(false);
+  }
 
   return (
     <>
@@ -170,12 +194,26 @@ export default function ProductsTableClient({
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Link
-                    href={getAdminProductPath(product.id)}
-                    className="text-sm text-gold hover:underline"
-                  >
-                    تعديل
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={getAdminProductPath(product.id)}
+                      className="text-sm text-gold hover:underline"
+                    >
+                      تعديل
+                    </Link>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setProductToDelete(product);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      حذف
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             );
@@ -226,12 +264,27 @@ export default function ProductsTableClient({
             <div>
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-brown">المتغيرات</h3>
-                <Link href={getAdminProductPath(selectedProduct.id)}>
-                  <Button size="sm" variant="outline">
-                    <ExternalLink className="h-4 w-4" />
-                    تعديل
+                <div className="flex items-center gap-2">
+                  <Link href={getAdminProductPath(selectedProduct.id)}>
+                    <Button size="sm" variant="outline">
+                      <ExternalLink className="h-4 w-4" />
+                      تعديل
+                    </Button>
+                  </Link>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    onClick={() => {
+                      setSelectedProduct(null);
+                      setDeleteError(null);
+                      setProductToDelete(selectedProduct);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    حذف
                   </Button>
-                </Link>
+                </div>
               </div>
               <div className="max-h-72 overflow-y-auto rounded-lg border border-border">
                 <Table>
@@ -272,6 +325,59 @@ export default function ProductsTableClient({
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        isOpen={!!productToDelete}
+        onClose={() => {
+          if (!isDeleting) {
+            setProductToDelete(null);
+            setDeleteError(null);
+          }
+        }}
+        title="تأكيد الحذف"
+        description="لن تتمكن من التراجع عن هذا الإجراء"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm leading-6 text-brown">
+            هل تريد حذف المنتج{" "}
+            <span className="font-semibold">
+              {productToDelete?.nameAr || productToDelete?.name || "هذا المنتج"}
+            </span>{" "}
+            نهائياً من النظام وقاعدة البيانات؟
+          </p>
+
+          {deleteError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {deleteError}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setProductToDelete(null);
+                setDeleteError(null);
+              }}
+              disabled={isDeleting}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              loading={isDeleting}
+              onClick={handleDeleteProduct}
+            >
+              حذف نهائي
+            </Button>
+          </div>
+        </div>
       </Modal>
     </>
   );
