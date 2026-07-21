@@ -104,7 +104,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 border-b border-[var(--store-border)] transition-all duration-300",
+        "sticky top-0 z-30 border-b border-[var(--store-border)] transition-all duration-300",
         scrolled
           ? "bg-[var(--store-surface)]/95 shadow-[0_10px_30px_rgba(75,54,37,0.08)] backdrop-blur-xl"
           : "bg-[var(--store-surface)]/90 backdrop-blur"
@@ -259,16 +259,18 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
       )}
 
       {cartOpen && (
-        <div
-          className="fixed inset-0 z-[80] bg-black/30 backdrop-blur-sm"
-          role="dialog"
-          aria-modal="true"
-          aria-label="سلة التسوق"
-          onClick={() => setCartOpen(false)}
-        >
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-black/40"
+            aria-label="إغلاق السلة"
+            onClick={() => setCartOpen(false)}
+          />
           <aside
-            className="absolute left-0 top-0 flex h-full w-full max-w-md flex-col bg-[#FDFBF7] shadow-[-16px_0_44px_rgba(75,54,37,0.18)]"
-            onClick={(event) => event.stopPropagation()}
+            className="fixed left-0 top-0 z-50 flex h-screen w-full max-w-sm flex-col bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-label="سلة التسوق"
           >
             <div className="flex items-center justify-between border-b border-[var(--store-border)] px-5 py-4">
               <div>
@@ -289,7 +291,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div className="flex-1 overflow-y-auto bg-[#FDFBF7] px-5 py-4">
               {cartItems.length === 0 ? (
                 <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--store-border)] bg-white/70 px-6 text-center">
                   <ShoppingBag className="h-10 w-10 text-[var(--store-gold)]" />
@@ -379,7 +381,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
               )}
             </div>
 
-            <div className="border-t border-[var(--store-border)] bg-white/80 px-5 py-4">
+            <div className="border-t border-[var(--store-border)] bg-white px-5 py-4">
               <div className="flex items-center justify-between text-sm text-[var(--store-muted)]">
                 <span>الإجمالي</span>
                 <span className="text-lg font-bold text-[var(--store-text)]" dir="ltr">
@@ -405,7 +407,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
               </div>
             </div>
           </aside>
-        </div>
+        </>
       )}
     </header>
   );

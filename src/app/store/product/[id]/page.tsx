@@ -62,7 +62,7 @@ export default async function StoreProductPage({ params }: PageProps) {
 
   return (
     <>
-      <section className="store-container py-10 md:py-14">
+      <section className="store-container pb-10 pt-6 md:pb-14 md:pt-8 lg:pt-10">
         <ProductDetailClient
           product={product}
           productUrl={productUrl}
