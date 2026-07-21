@@ -1,3 +1,4 @@
+import type { Viewport } from "next";
 import { Suspense } from "react";
 import StoreFooter from "@/components/store/StoreFooter";
 import StoreHeader from "@/components/store/StoreHeader";
@@ -11,6 +12,10 @@ const cairo = Cairo({
   weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
+
+export const viewport: Viewport = {
+  themeColor: "#FDFBF7",
+};
 
 export default async function StoreLayout({
   children,

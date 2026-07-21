@@ -90,12 +90,14 @@
 }
 
 html {
+  background-color: #FDFBF7 !important;
   direction: rtl;
+  min-height: 100%;
   scroll-behavior: smooth;
 }
 
 body {
-  background: #fdfbf7;
+  background-color: #FDFBF7 !important;
   color: var(--foreground);
   font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
   min-height: 100vh;

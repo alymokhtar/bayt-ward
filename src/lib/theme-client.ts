@@ -14,13 +14,16 @@ export function applyThemeAccentToDocument(accent: string) {
   const normalizedAccent = normalizeHexColor(accent);
   const accentForeground = getThemeContrastColor(normalizedAccent);
   const sidebar = getThemeSidebarColor(normalizedAccent);
+  const systemLayout = document.querySelector<HTMLElement>(".system-layout");
 
-  document.documentElement.style.setProperty("--theme-accent", normalizedAccent);
-  document.documentElement.style.setProperty(
+  if (!systemLayout) return;
+
+  systemLayout.style.setProperty("--theme-accent", normalizedAccent);
+  systemLayout.style.setProperty(
     "--theme-accent-foreground",
     accentForeground
   );
-  document.documentElement.style.setProperty("--theme-sidebar", sidebar);
+  systemLayout.style.setProperty("--theme-sidebar", sidebar);
 
   const themeMeta = document.querySelector('meta[name="theme-color"]');
   if (themeMeta) {
