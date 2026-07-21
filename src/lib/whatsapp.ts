@@ -18,7 +18,7 @@ export interface WhatsAppMessageParams {
   customMessage?: string;
 }
 
-function formatPhoneForWhatsApp(phone: string): string {
+export function formatPhoneForWhatsApp(phone: string): string {
   let cleaned = phone.replace(/\D/g, "");
   if (cleaned.startsWith("0")) {
     cleaned = `20${cleaned.slice(1)}`;

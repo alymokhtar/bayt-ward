@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Heart,
   Menu,
+  MessageCircle,
   Minus,
   Plus,
   Search,
@@ -17,7 +18,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import { STORE_NAME_AR } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
-import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { formatPhoneForWhatsApp, getWhatsAppUrl } from "@/lib/whatsapp";
 
 type StoreHeaderProps = {
   settings: Record<string, string>;
@@ -52,8 +53,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
   const [scrolled, setScrolled] = useState(false);
 
   const storeName = settings.store_name_ar || STORE_NAME_AR;
-  const whatsappNumber =
-    settings.store_whatsapp || settings.store_phone || "01234567890";
+  const whatsappNumber = settings.store_whatsapp || settings.store_phone || "";
   const currencySymbol = settings.currency_symbol || "MRU";
   const cartTotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
@@ -86,6 +86,32 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
       query
         ? `${STORE_BASE_PATH}/search?q=${encodeURIComponent(query)}`
         : `${STORE_BASE_PATH}/search`
+    );
+  }
+
+  function handleWhatsAppOrder() {
+    if (!whatsappNumber || cartItems.length === 0) return;
+
+    const lines = cartItems.map(
+      (item) =>
+        `- ${item.name} (الكمية: ${item.quantity}) - ${formatCurrency(
+          item.unitPrice * item.quantity,
+          item.currencySymbol
+        )}`
+    );
+    const message = [
+      "مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذه المنتجات:",
+      ...lines,
+      `الإجمالي: ${formatCurrency(cartTotal, currencySymbol)}`,
+    ].join("\n");
+
+    const existingWhatsAppNumber = formatPhoneForWhatsApp(whatsappNumber);
+    const encodedMessage = encodeURIComponent(message);
+
+    window.open(
+      `https://wa.me/${existingWhatsAppNumber}?text=${encodedMessage}`,
+      "_blank",
+      "noopener,noreferrer"
     );
   }
 
@@ -262,12 +288,12 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
         <>
           <button
             type="button"
-            className="fixed inset-0 z-40 bg-black/40"
+            className="fixed inset-0 bg-black/40 z-40"
             aria-label="إغلاق السلة"
             onClick={() => setCartOpen(false)}
           />
           <aside
-            className="fixed left-0 top-0 z-50 flex h-screen w-full max-w-sm flex-col bg-white shadow-2xl"
+            className="fixed top-0 left-0 h-screen w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col"
             role="dialog"
             aria-modal="true"
             aria-label="سلة التسوق"
@@ -388,7 +414,16 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
                   {formatCurrency(cartTotal, currencySymbol)}
                 </span>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50"
+                onClick={handleWhatsAppOrder}
+                disabled={!whatsappNumber || cartItems.length === 0}
+              >
+                <MessageCircle className="h-4 w-4" />
+                اطلبي عبر واتساب
+              </button>
+              <div className="mt-3 grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   className="rounded-full border border-[var(--store-border)] bg-[#FDFBF7] px-4 py-3 text-sm font-semibold text-[var(--store-text)] transition hover:border-[var(--store-gold)] disabled:cursor-not-allowed disabled:opacity-50"
