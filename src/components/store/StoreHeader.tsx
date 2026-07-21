@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import { STORE_NAME_AR } from "@/lib/constants";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -51,6 +52,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const storeName = settings.store_name_ar || STORE_NAME_AR;
   const whatsappNumber = settings.store_whatsapp || settings.store_phone || "";
@@ -59,6 +61,11 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
     () => cartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
     [cartItems]
   );
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     function onScroll() {
@@ -284,16 +291,18 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
         </nav>
       )}
 
-      {cartOpen && (
+      {cartOpen &&
+        mounted &&
+        createPortal(
         <>
           <button
             type="button"
-            className="fixed inset-0 bg-black/40 z-40"
+            className="fixed inset-0 bg-black/40 z-[90]"
             aria-label="إغلاق السلة"
             onClick={() => setCartOpen(false)}
           />
           <aside
-            className="fixed top-0 left-0 h-screen w-full max-w-sm bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed top-0 left-0 h-screen w-full max-w-sm bg-white shadow-2xl z-[100] flex flex-col"
             role="dialog"
             aria-modal="true"
             aria-label="سلة التسوق"
@@ -442,7 +451,8 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
               </div>
             </div>
           </aside>
-        </>
+        </>,
+        document.body
       )}
     </header>
   );

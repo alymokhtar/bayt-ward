@@ -135,7 +135,7 @@ export default function ProductDetailClient({
   }
 
   return (
-    <div className="grid gap-8 rounded-[2.3rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.95))] p-4 shadow-[0_24px_70px_rgba(80,54,28,0.12)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+    <div className="grid overflow-hidden gap-8 rounded-[2.3rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.95))] p-4 shadow-[0_24px_70px_rgba(80,54,28,0.12)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
       <div className="space-y-4">
         <button
           type="button"
@@ -196,7 +196,7 @@ export default function ProductDetailClient({
         )}
       </div>
 
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <div className="space-y-2">
           <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-[var(--store-gold)]">
             {product.category.nameAr || product.category.name}
@@ -269,12 +269,12 @@ export default function ProductDetailClient({
           </div>
         )}
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex w-full flex-wrap gap-3">
           <button
             type="button"
             onClick={handleAddToCart}
             disabled={!inStock || !selectedVariant}
-            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[var(--store-gold)] px-6 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--store-gold-deep)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-w-[12rem] flex-1 items-center justify-center gap-2 rounded-full bg-[var(--store-gold)] px-6 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--store-gold-deep)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {addedToCart ? <Check className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
             {addedToCart ? "تمت الإضافة" : "إضافة إلى السلة"}
@@ -286,12 +286,12 @@ export default function ProductDetailClient({
             color={selectedColor || undefined}
             size={selectedSize || selectedVariant?.size}
             disabled={!inStock}
-            className="flex-1 sm:flex-none"
+            className="min-w-[12rem] flex-1"
           />
           <button
             type="button"
             onClick={handleShare}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] px-6 py-3.5 text-sm font-medium text-[var(--store-text)] transition hover:border-[var(--store-gold)]"
+            className="inline-flex flex-none items-center justify-center gap-2 rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] px-6 py-3.5 text-sm font-medium text-[var(--store-text)] transition hover:border-[var(--store-gold)]"
           >
             <Share2 className="h-4 w-4" />
             مشاركة
