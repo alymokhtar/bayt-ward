@@ -33,9 +33,9 @@ export const THEME_PRESETS: ThemePreset[] = [
     description: "ناعم ودافئ",
   },
   {
-    name: "بيج ناعم",
-    value: "#C7A178",
-    description: "مريح ومتناغم",
+    name: "بني",
+    value: "#69451C",
+    description: "دافئ وأنيق",
   },
   {
     name: "البنفسجي",
