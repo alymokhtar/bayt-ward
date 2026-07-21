@@ -109,7 +109,7 @@ export default function ProductsTableClient({
       return;
     }
 
-    setDeleteError(result.error);
+    setDeleteError(result.error || "حدث خطأ غير متوقع");
     setIsDeleting(false);
   }
 
