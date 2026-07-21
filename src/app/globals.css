@@ -95,10 +95,7 @@ html {
 }
 
 body {
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 12%, transparent) 0%, transparent 38%),
-    radial-gradient(circle at bottom left, color-mix(in srgb, var(--theme-accent) 8%, transparent) 0%, transparent 35%),
-    var(--background);
+  background: #fdfbf7;
   color: var(--foreground);
   font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
   min-height: 100vh;

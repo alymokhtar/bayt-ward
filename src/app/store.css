@@ -15,9 +15,10 @@
 
 .store-root {
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     linear-gradient(180deg, rgba(255, 253, 249, 0.92), rgba(251, 246, 238, 0.96)),
-    var(--store-bg);
+    #fdfbf7;
   color: var(--store-text);
   font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
 }
