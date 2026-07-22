@@ -81,6 +81,20 @@ function getProductSummary(product: Product) {
   return { totalStock, totalMinStock, priceLabel };
 }
 
+function getProductIdentifier(product: Product): string | null {
+  const productWithAlternateIds = product as Product & {
+    productId?: string | null;
+    _id?: string | null;
+  };
+
+  const candidate =
+    productWithAlternateIds.id ??
+    productWithAlternateIds.productId ??
+    productWithAlternateIds._id;
+
+  return typeof candidate === "string" && candidate.trim() ? candidate : null;
+}
+
 export default function ProductsTableClient({
   products,
 }: ProductsTableClientProps) {
@@ -129,6 +143,7 @@ export default function ProductsTableClient({
         <TableBody>
           {products.map((product) => {
             const summary = getProductSummary(product);
+            const productId = getProductIdentifier(product);
             const mediaItems = product.colors.flatMap((color) => color.media);
             const primaryMedia = mediaItems.find((item) => item.isPrimary && item.isActive) ?? mediaItems.find((item) => item.isActive) ?? null;
             const primaryImageUrl = product.imageUrl || primaryMedia?.url || null;
@@ -194,12 +209,20 @@ export default function ProductsTableClient({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <Link
-                      href={`/products/${product.id}`}
-                      className="text-sm text-gold hover:underline"
-                    >
-                      تعديل
-                    </Link>
+                    {productId ? (
+                      <Link
+                        href={`/products/${productId}`}
+                        onClick={() => {
+                          console.log(product);
+                          console.log("Resolved product id:", productId);
+                        }}
+                        className="text-sm text-gold hover:underline"
+                      >
+                        تعديل
+                      </Link>
+                    ) : (
+                      <span className="text-sm text-muted">تعديل</span>
+                    )}
                     <Button
                       type="button"
                       variant="danger"
@@ -264,12 +287,23 @@ export default function ProductsTableClient({
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-brown">المتغيرات</h3>
                 <div className="flex items-center gap-2">
-                  <Link href={`/products/${selectedProduct.id}`}>
-                    <Button size="sm" variant="outline">
-                      <ExternalLink className="h-4 w-4" />
-                      تعديل
-                    </Button>
-                  </Link>
+                  {(() => {
+                    const selectedProductId = getProductIdentifier(selectedProduct);
+                    return selectedProductId ? (
+                      <Link
+                        href={`/products/${selectedProductId}`}
+                        onClick={() => {
+                          console.log(selectedProduct);
+                          console.log("Resolved selected product id:", selectedProductId);
+                        }}
+                      >
+                        <Button size="sm" variant="outline">
+                          <ExternalLink className="h-4 w-4" />
+                          تعديل
+                        </Button>
+                      </Link>
+                    ) : null;
+                  })()}
                   <Button
                     type="button"
                     size="sm"
