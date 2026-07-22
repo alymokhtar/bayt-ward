@@ -51,6 +51,10 @@ function isProtectedRoute(pathname: string): boolean {
   );
 }
 
+function isDashboardProductRoute(pathname: string): boolean {
+  return /^\/products(?:\/|$)/.test(pathname);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("session")?.value;
@@ -72,10 +76,10 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Guests hitting admin-style product URLs should see the public product page.
-  // Skip this rewrite for authenticated dashboard routes such as /products/[id].
+  // Do not rewrite dashboard product routes to the storefront.
+  // Only guest requests to the public storefront product page should be rewritten.
   const adminProductDetailMatch = pathname.match(/^\/products\/([^/]+)$/);
-  if (!hasValidSession && adminProductDetailMatch && !token) {
+  if (!hasValidSession && adminProductDetailMatch && !token && !isDashboardProductRoute(pathname)) {
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `/store/product/${adminProductDetailMatch[1]}`;
     return NextResponse.rewrite(rewriteUrl);
