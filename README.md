@@ -123,5 +123,5 @@ git branch   لمعرفه الفرع الحالي
 git checkout -b website-preparation   أنشئ الـ Branch الجديد
 git push -u origin website-preparation  ارفعه على GitHub
 git checkout main   للرجوع الي فرع main
-----------------------------------------------------
+------------------------------------------------------
 
