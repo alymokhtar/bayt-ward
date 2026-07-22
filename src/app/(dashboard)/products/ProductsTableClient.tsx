@@ -12,7 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { deleteProduct } from "@/lib/actions/products";
-import { getAdminProductPath } from "@/lib/store/product-utils";
 import { formatCurrency } from "@/lib/utils";
 import { ExternalLink, Image as ImageIcon, Trash2 } from "lucide-react";
 import Image from "next/image";
@@ -196,7 +195,7 @@ export default function ProductsTableClient({
                 <TableCell>
                   <div className="flex items-center gap-2">
                     <Link
-                      href={getAdminProductPath(product.id)}
+                      href={`/products/${product.id}`}
                       className="text-sm text-gold hover:underline"
                     >
                       تعديل
@@ -265,7 +264,7 @@ export default function ProductsTableClient({
               <div className="mb-2 flex items-center justify-between gap-3">
                 <h3 className="font-semibold text-brown">المتغيرات</h3>
                 <div className="flex items-center gap-2">
-                  <Link href={getAdminProductPath(selectedProduct.id)}>
+                  <Link href={`/products/${selectedProduct.id}`}>
                     <Button size="sm" variant="outline">
                       <ExternalLink className="h-4 w-4" />
                       تعديل
