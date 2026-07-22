@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Cairo } from "next/font/google";
+import localFont from "next/font/local";
 import PWAExitGuard from "@/components/pwa/PWAExitGuard";
 import PWARegister from "@/components/pwa/PWARegister";
 import "./globals.css";
 
-const cairo = Cairo({
+const cairo = localFont({
+  src: "../../public/fonts/arabtype.ttf",
   variable: "--font-cairo",
-  subsets: ["arabic", "latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: "300 700",
   display: "swap",
 });
 
