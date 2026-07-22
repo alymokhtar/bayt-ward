@@ -4,18 +4,18 @@ import { getProduct, getUsedColors } from "@/lib/actions/products";
 import { notFound } from "next/navigation";
 
 interface EditProductPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ productId: string }>;
 }
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
-  const { id } = await params;
+  const { productId } = await params;
 
   let product;
   let categories;
   let usedColors: string[];
   try {
     [product, categories, usedColors] = await Promise.all([
-      getProduct(id),
+      getProduct(productId),
       getCategories(true),
       getUsedColors(),
     ]);
