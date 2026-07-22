@@ -62,6 +62,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(rewriteUrl);
   }
 
+  if (!hasValidSession && pathname === "/products/new") {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("from", pathname);
+    const response = NextResponse.redirect(loginUrl);
+    if (token) {
+      response.cookies.delete("session");
+    }
+    return response;
+  }
+
   // Guests hitting admin-style product URLs should see the public product page
   const adminProductDetailMatch = pathname.match(/^\/products\/([^/]+)$/);
   if (!hasValidSession && adminProductDetailMatch) {
