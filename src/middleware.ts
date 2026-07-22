@@ -10,6 +10,7 @@ const PROTECTED_ROUTES = [
   "/dashboard",
   "/pos",
   "/products",
+  "/categories",
   "/inventory",
   "/barcodes",
   "/sales",
@@ -26,8 +27,8 @@ const PROTECTED_ROUTES = [
 
 /** Public storefront paths rewritten from dashboard URLs for guests */
 const STOREFRONT_REWRITES: Record<string, string> = {
-  "/products": "/storefront/products",
-  "/categories": "/storefront/categories",
+  "/products": "/store/products",
+  "/categories": "/store/categories",
 };
 
 async function isValidSession(token: string): Promise<boolean> {
@@ -65,7 +66,7 @@ export async function middleware(request: NextRequest) {
   const adminProductDetailMatch = pathname.match(/^\/products\/([^/]+)$/);
   if (!hasValidSession && adminProductDetailMatch) {
     const rewriteUrl = request.nextUrl.clone();
-    rewriteUrl.pathname = `/product/${adminProductDetailMatch[1]}`;
+    rewriteUrl.pathname = `/store/product/${adminProductDetailMatch[1]}`;
     return NextResponse.rewrite(rewriteUrl);
   }
 
