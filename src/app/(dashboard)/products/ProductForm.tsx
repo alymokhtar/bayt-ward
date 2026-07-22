@@ -18,6 +18,7 @@ import {
   type VariantInput,
 } from "@/lib/actions/products";
 import ProductMediaManager from "@/components/products/ProductMediaManager";
+import VariantImageUploader from "@/components/products/VariantImageUploader";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -47,6 +48,15 @@ type ProductData = {
     stockQuantity: number;
     minStockLevel: number;
     isActive: boolean;
+    images: {
+      id: string;
+      url: string;
+      publicId: string;
+      altText: string | null;
+      sortOrder: number;
+      isPrimary: boolean;
+      isActive: boolean;
+    }[];
   }[];
 };
 
@@ -439,6 +449,22 @@ export default function ProductForm({
                 }
               />
             </div>
+            {isEdit && product && (
+              variant.id ? (
+                <VariantImageUploader
+                  productId={product.id}
+                  productVariantId={variant.id}
+                  label={`${variant.color || product.name} ${variant.size}`.trim()}
+                  initialImages={
+                    product.variants.find((item) => item.id === variant.id)?.images ?? []
+                  }
+                />
+              ) : (
+                <div className="rounded-lg border border-dashed border-border bg-muted/5 p-3 text-sm text-muted">
+                  احفظ المنتج أولاً حتى يمكن رفع صور لهذا المتغير.
+                </div>
+              )
+            )}
           </div>
         ))}
 

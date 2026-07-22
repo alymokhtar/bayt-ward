@@ -12,12 +12,25 @@ import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-consta
 import { invalidateProductsData } from "@/lib/revalidate-tags";
 import type {
   ProductColorWithMedia,
+  ProductImageItem,
   ProductMediaItem,
 } from "@/lib/types/product-media";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (error && typeof error === "object" && "message" in error) {
+    return String((error as { message: unknown }).message);
+  }
+
+  return String(error);
+}
 
 const mediaSelect = {
   id: true,
@@ -29,13 +42,18 @@ const mediaSelect = {
   isActive: true,
 } as const;
 
+const imageSelect = {
+  id: true,
+  url: true,
+  publicId: true,
+  altText: true,
+  sortOrder: true,
+  isPrimary: true,
+  isActive: true,
+} as const;
+
 function handleActionError(error: unknown): ActionResult<never> {
-  const message =
-    error instanceof Error
-      ? error.message
-      : error && typeof error === "object" && "message" in error
-      ? String((error as any).message)
-      : String(error);
+  const message = getErrorMessage(error);
 
   if (message === "UNAUTHORIZED") {
     return { success: false, error: "يجب تسجيل الدخول أولاً" };
@@ -250,7 +268,7 @@ export async function uploadProductMedia(formData: FormData): Promise<
       return { success: false, error: "خطأ في معالجة الملف" };
     }
 
-    let uploaded: any;
+    let uploaded: Awaited<ReturnType<typeof uploadImageBuffer>>;
     try {
       console.log("STEP 3: Calling uploadImageBuffer");
       uploaded = await uploadImageBuffer(buffer, { contentType: file.type });
@@ -263,12 +281,7 @@ export async function uploadProductMedia(formData: FormData): Promise<
         throw new Error("CLOUDINARY_UPLOAD_INCOMPLETE: فشل رفع الصورة - بيانات ناقصة");
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : error && typeof error === "object" && "message" in error
-          ? String((error as any).message)
-          : String(error);
+      const errorMessage = getErrorMessage(error);
 
       const normalizedMessage = errorMessage || "خطأ في رفع الصورة";
       return {
@@ -306,6 +319,122 @@ export async function uploadProductMedia(formData: FormData): Promise<
     return { success: true, data: media };
   } catch (error) {
     console.error("Error in uploadProductMedia:", error);
+    return handleActionError(error);
+  }
+}
+
+export async function uploadProductImage(
+  formData: FormData
+): Promise<ActionResult<ProductImageItem>> {
+  try {
+    await requireMediaManager();
+
+    if (!isCloudinaryConfigured()) {
+      return { success: false, error: "Cloudinary is not configured" };
+    }
+
+    const productId = String(formData.get("productId") ?? "").trim();
+    const productVariantId = String(formData.get("productVariantId") ?? "").trim();
+    const altText = String(formData.get("altText") ?? "").trim();
+    const file = formData.get("file");
+
+    if (!productId && !productVariantId) {
+      return { success: false, error: "Product or variant id is required" };
+    }
+
+    if (!(file instanceof File)) {
+      return { success: false, error: "File is required" };
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
+      return { success: false, error: "Unsupported file type (JPG, PNG, WEBP, GIF)" };
+    }
+
+    if (file.size === 0 || file.size > MAX_UPLOAD_BYTES) {
+      return { success: false, error: "Invalid file size (max 5MB)" };
+    }
+
+    if (productVariantId) {
+      const variant = await prisma.productVariant.findUnique({
+        where: { id: productVariantId },
+        select: { id: true, productId: true },
+      });
+
+      if (!variant || (productId && variant.productId !== productId)) {
+        return { success: false, error: "Variant was not found for this product" };
+      }
+    } else {
+      const product = await prisma.product.findUnique({
+        where: { id: productId },
+        select: { id: true },
+      });
+
+      if (!product) {
+        return { success: false, error: "Product was not found" };
+      }
+    }
+
+    let buffer: Buffer;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    } catch (error) {
+      console.error("Error converting file to buffer:", error);
+      return { success: false, error: "Error processing file" };
+    }
+
+    let uploaded: Awaited<ReturnType<typeof uploadImageBuffer>>;
+    try {
+      uploaded = await uploadImageBuffer(buffer, { contentType: file.type });
+
+      if (!uploaded || !uploaded.url || !uploaded.publicId) {
+        throw new Error("CLOUDINARY_UPLOAD_INCOMPLETE");
+      }
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+
+      return {
+        success: false,
+        error: errorMessage.includes("CLOUDINARY_NOT_CONFIGURED")
+          ? "Cloudinary is not configured"
+          : `Error uploading image: ${errorMessage || "Upload failed"}`,
+      };
+    }
+
+    const ownerWhere = productVariantId
+      ? { productVariantId, productId: null }
+      : { productId, productVariantId: null };
+
+    const image = await prisma.$transaction(async (tx) => {
+      const latest = await tx.image.findFirst({
+        where: ownerWhere,
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      });
+      const sortOrder = (latest?.sortOrder ?? -1) + 1;
+      const existingPrimary = await tx.image.findFirst({
+        where: { ...ownerWhere, isPrimary: true, isActive: true },
+        select: { id: true },
+      });
+
+      return tx.image.create({
+        data: {
+          productId: productVariantId ? null : productId,
+          productVariantId: productVariantId || null,
+          url: String(uploaded.url).trim(),
+          publicId: String(uploaded.publicId).trim(),
+          altText: altText || null,
+          sortOrder,
+          isPrimary: !existingPrimary,
+        },
+        select: imageSelect,
+      });
+    });
+
+    revalidateProductMediaPaths();
+    return { success: true, data: image };
+  } catch (error) {
+    console.error("Error in uploadProductImage:", error);
     return handleActionError(error);
   }
 }

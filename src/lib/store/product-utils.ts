@@ -48,10 +48,24 @@ export function getVariantStockForColor(
 export function getAvailableSizesForColor(
   product: StoreProduct,
   color: string
-): { size: string; inStock: boolean; stockQuantity: number; variantId: string; price: number }[] {
+): {
+  size: string;
+  inStock: boolean;
+  stockQuantity: number;
+  variantId: string;
+  price: number;
+  images: { id: string; url: string; altText: string | null }[];
+}[] {
   const seen = new Map<
     string,
-    { size: string; inStock: boolean; stockQuantity: number; variantId: string; price: number }
+    {
+      size: string;
+      inStock: boolean;
+      stockQuantity: number;
+      variantId: string;
+      price: number;
+      images: { id: string; url: string; altText: string | null }[];
+    }
   >();
 
   for (const variant of product.variants) {
@@ -64,6 +78,13 @@ export function getAvailableSizesForColor(
       inStock: variant.stockQuantity > 0,
       variantId: variant.id,
       price: variant.sellingPrice,
+      images: variant.images
+        .filter((item) => item.isActive)
+        .map((item) => ({
+          id: item.id,
+          url: item.url,
+          altText: item.altText,
+        })),
     };
 
     if (!existing || variant.stockQuantity > existing.stockQuantity) {
@@ -75,6 +96,12 @@ export function getAvailableSizesForColor(
 }
 
 export function getPrimaryImageUrl(product: StoreProductListItem): string | null {
+  const productPrimary = product.images.find((item) => item.isPrimary && item.isActive);
+  if (productPrimary?.url) return productPrimary.url;
+
+  const productFirst = product.images.find((item) => item.isActive);
+  if (productFirst?.url) return productFirst.url;
+
   for (const color of product.colors) {
     const primary = color.media.find((item) => item.isPrimary && item.isActive);
     if (primary?.url) return primary.url;
@@ -84,6 +111,18 @@ export function getPrimaryImageUrl(product: StoreProductListItem): string | null
   }
 
   return product.imageUrl ?? null;
+}
+
+export function getProductImages(
+  product: StoreProduct
+): { id: string; url: string; altText: string | null }[] {
+  return product.images
+    .filter((item) => item.isActive)
+    .map((item) => ({
+      id: item.id,
+      url: item.url,
+      altText: item.altText,
+    }));
 }
 
 export function getColorMedia(

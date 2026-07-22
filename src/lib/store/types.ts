@@ -34,6 +34,32 @@ export const storeProductInclude = {
       sellingPrice: true,
       stockQuantity: true,
       isActive: true,
+      images: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }],
+        select: {
+          id: true,
+          url: true,
+          publicId: true,
+          altText: true,
+          sortOrder: true,
+          isPrimary: true,
+          isActive: true,
+        },
+      },
+    },
+  },
+  images: {
+    where: { isActive: true, productVariantId: null },
+    orderBy: [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }],
+    select: {
+      id: true,
+      url: true,
+      publicId: true,
+      altText: true,
+      sortOrder: true,
+      isPrimary: true,
+      isActive: true,
     },
   },
 } satisfies Prisma.ProductInclude;
@@ -52,6 +78,7 @@ export type StoreProductListItem = Pick<
   | "imageUrl"
   | "featuredProduct"
   | "createdAt"
+  | "images"
 > & {
   category: StoreProduct["category"];
   colors: StoreProduct["colors"];

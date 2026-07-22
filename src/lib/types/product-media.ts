@@ -21,3 +21,13 @@ export type ProductListMediaSummary = {
   thumbnailUrl: string | null;
   imageCount: number;
 };
+
+export type ProductImageItem = {
+  id: string;
+  url: string;
+  publicId: string;
+  altText: string | null;
+  sortOrder: number;
+  isPrimary: boolean;
+  isActive: boolean;
+};

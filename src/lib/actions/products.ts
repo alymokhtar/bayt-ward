@@ -69,7 +69,14 @@ export async function getProduct(id: string) {
     where: { id },
     include: {
       category: true,
-      variants: { orderBy: [{ size: "asc" }, { color: "asc" }] },
+      variants: {
+        orderBy: [{ size: "asc" }, { color: "asc" }],
+        include: {
+          images: {
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          },
+        },
+      },
       colors: {
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         include: {
@@ -170,8 +177,7 @@ async function ensureVariantCodes(
 }
 
 function prepareVariantsForSave(
-  variants: VariantSaveInput[],
-  existingRows: { id: string; sku: string; barcode: string | null }[]
+  variants: VariantSaveInput[]
 ): (VariantSaveInput & { barcode: string })[] {
   return variants.map((variant) => {
     const sku = String(variant.sku || "").trim();
@@ -392,7 +398,7 @@ export async function updateProduct(
           return variant;
         });
 
-        const preparedVariants = prepareVariantsForSave(incomingPrepared, allRows);
+        const preparedVariants = prepareVariantsForSave(incomingPrepared);
         validateVariantCodesPayload(preparedVariants, allRows);
 
         await syncProductColors(tx, id, preparedVariants, existing.variants);
@@ -441,7 +447,14 @@ export async function updateProduct(
         where: { id },
         include: {
           category: true,
-          variants: { orderBy: [{ size: "asc" }, { color: "asc" }] },
+          variants: {
+            orderBy: [{ size: "asc" }, { color: "asc" }],
+            include: {
+              images: {
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+              },
+            },
+          },
         },
       });
     });

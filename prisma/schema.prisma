@@ -120,6 +120,7 @@ model Product {
   category Category         @relation(fields: [categoryId], references: [id])
   variants ProductVariant[]
   colors   ProductColor[]
+  images   Image[]
 
   @@index([categoryId])
   @@index([publishToWebsite])
@@ -184,9 +185,33 @@ model ProductVariant {
   purchaseItems  PurchaseItem[]
   returnItems    ReturnItem[]
   stockMovements StockMovement[]
+  images         Image[]
 
   @@index([productId])
   @@index([isActive, stockQuantity])
+}
+
+model Image {
+  id               String   @id @default(cuid())
+  productId        String?
+  productVariantId String?
+  url              String
+  publicId         String
+  altText          String?
+  sortOrder        Int      @default(0)
+  isPrimary        Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  product        Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant? @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([productVariantId])
+  @@index([productId, sortOrder])
+  @@index([productVariantId, sortOrder])
+  @@index([isPrimary, isActive])
 }
 
 model Customer {

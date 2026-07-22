@@ -11,6 +11,7 @@ import {
   getAvailableSizesForColor,
   getColorMedia,
   getDefaultColor,
+  getProductImages,
   getProductDisplayName,
   getVariantStockForColor,
 } from "@/lib/store/product-utils";
@@ -57,26 +58,32 @@ export default function ProductDetailClient({
     [colorOptions, product]
   );
 
-  const images = useMemo(() => {
-    if (!selectedColor) {
-      const fallback = product.colors.flatMap((color) =>
-        getColorMedia(product, color.color)
-      );
-      return fallback.length > 0
-        ? fallback
-        : product.imageUrl
-          ? [{ id: "fallback", url: product.imageUrl, altText: displayName }]
-          : [];
-    }
-    return getColorMedia(product, selectedColor);
-  }, [product, selectedColor, displayName]);
-
   const sizes = useMemo(
     () => (selectedColor ? getAvailableSizesForColor(product, selectedColor) : []),
     [product, selectedColor]
   );
 
   const selectedVariant = sizes.find((item) => item.size === selectedSize) ?? sizes[0];
+  const images = useMemo(() => {
+    if (selectedVariant?.images.length) {
+      return selectedVariant.images;
+    }
+
+    const productImages = getProductImages(product);
+    if (productImages.length > 0) {
+      return productImages;
+    }
+
+    const colorImages = selectedColor
+      ? getColorMedia(product, selectedColor)
+      : product.colors.flatMap((color) => getColorMedia(product, color.color));
+
+    return colorImages.length > 0
+      ? colorImages
+      : product.imageUrl
+        ? [{ id: "fallback", url: product.imageUrl, altText: displayName }]
+        : [];
+  }, [product, selectedColor, selectedVariant, displayName]);
   const price = selectedVariant?.price ?? product.variants[0]?.sellingPrice ?? 0;
   const inStock = selectedVariant ? selectedVariant.inStock : product.variants.some((v) => v.stockQuantity > 0);
 
@@ -244,7 +251,10 @@ export default function ProductDetailClient({
                   key={item.size}
                   type="button"
                   disabled={!item.inStock}
-                  onClick={() => setSelectedSize(item.size)}
+                  onClick={() => {
+                    setSelectedSize(item.size);
+                    setActiveImageIndex(0);
+                  }}
                   className={cn(
                     "min-w-12 rounded-full border px-4 py-2 text-sm transition",
                     selectedSize === item.size || (!selectedSize && item === sizes[0])
