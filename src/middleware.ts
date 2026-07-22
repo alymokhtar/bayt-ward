@@ -72,9 +72,10 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Guests hitting admin-style product URLs should see the public product page
+  // Guests hitting admin-style product URLs should see the public product page.
+  // Skip this rewrite for authenticated dashboard routes such as /products/[id].
   const adminProductDetailMatch = pathname.match(/^\/products\/([^/]+)$/);
-  if (!hasValidSession && adminProductDetailMatch) {
+  if (!hasValidSession && adminProductDetailMatch && !token) {
     const rewriteUrl = request.nextUrl.clone();
     rewriteUrl.pathname = `/store/product/${adminProductDetailMatch[1]}`;
     return NextResponse.rewrite(rewriteUrl);
