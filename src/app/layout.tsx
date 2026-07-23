@@ -49,7 +49,7 @@ export default async function RootLayout({
     <html
       lang="ar"
       dir="rtl"
-      className={`${cairo.variable} h-full`}
+      className={`${cairo.variable} ${cairo.className} h-full`}
     >
       <body className="min-h-full flex flex-col font-sans antialiased">
         {children}
