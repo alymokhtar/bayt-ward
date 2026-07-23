@@ -38,13 +38,11 @@ async function main() {
   const products = await prisma.product.findMany({
     select: {
       id: true,
-      imageUrl: true,
     },
     orderBy: { createdAt: "asc" },
   });
 
   let colorsCreated = 0;
-  let mediaCreated = 0;
   let productsSkipped = 0;
 
   for (const product of products) {
@@ -79,27 +77,12 @@ async function main() {
 
     colorsCreated += createdColors.length;
 
-    const imageUrl = product.imageUrl?.trim();
-    if (imageUrl && createdColors[0]) {
-      await prisma.productMedia.create({
-        data: {
-          productColorId: createdColors[0].id,
-          url: imageUrl,
-          publicId: `migrated/${product.id}`,
-          sortOrder: 0,
-          isPrimary: true,
-          isActive: true,
-        },
-      });
-      mediaCreated += 1;
-    }
   }
 
   console.log("✅ Product color backfill completed");
   console.log(`Products processed: ${products.length}`);
   console.log(`Products skipped (already had colors): ${productsSkipped}`);
   console.log(`ProductColor rows created: ${colorsCreated}`);
-  console.log(`ProductMedia rows created: ${mediaCreated}`);
 }
 
 main()

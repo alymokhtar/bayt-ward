@@ -215,7 +215,6 @@ export async function createProduct(data: {
   description?: string;
   brand?: string;
   categoryId: string;
-  imageUrl?: string;
   publishToWebsite?: boolean;
   featuredProduct?: boolean;
   variants: VariantInput[];
@@ -258,7 +257,6 @@ export async function createProduct(data: {
           description: data.description?.trim() || null,
           brand: data.brand?.trim() || null,
           categoryId: data.categoryId,
-          imageUrl: data.imageUrl || null,
           publishToWebsite: data.publishToWebsite ?? false,
           featuredProduct: data.featuredProduct ?? false,
           variants: {
@@ -315,7 +313,6 @@ export async function updateProduct(
     description?: string;
     brand?: string;
     categoryId?: string;
-    imageUrl?: string;
     publishToWebsite?: boolean;
     featuredProduct?: boolean;
     isActive?: boolean;
@@ -351,7 +348,6 @@ export async function updateProduct(
       if (data.description !== undefined) updateData.description = data.description?.trim() || null;
       if (data.brand !== undefined) updateData.brand = data.brand?.trim() || null;
       if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
-      if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl || null;
       if (data.publishToWebsite !== undefined) updateData.publishToWebsite = data.publishToWebsite;
       if (data.featuredProduct !== undefined) updateData.featuredProduct = data.featuredProduct;
       if (data.isActive !== undefined) updateData.isActive = data.isActive;

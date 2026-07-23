@@ -32,7 +32,6 @@ type ProductData = {
   description: string | null;
   brand: string | null;
   categoryId: string;
-  imageUrl: string | null;
   publishToWebsite: boolean;
   featuredProduct: boolean;
   isActive: boolean;
@@ -98,7 +97,6 @@ export default function ProductForm({
   const [description, setDescription] = useState(product?.description || "");
   const [brand, setBrand] = useState(product?.brand || "");
   const [categoryId, setCategoryId] = useState(product?.categoryId || "");
-  const [imageUrl, setImageUrl] = useState(product?.imageUrl || "");
   const [publishToWebsite, setPublishToWebsite] = useState(product?.publishToWebsite ?? false);
   const [featuredProduct, setFeaturedProduct] = useState(product?.featuredProduct ?? false);
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
@@ -231,7 +229,6 @@ export default function ProductForm({
       description: description || undefined,
       brand: brand || undefined,
       categoryId,
-      imageUrl: imageUrl || undefined,
       publishToWebsite,
       featuredProduct,
       variants: variants.map((v) => ({
@@ -291,13 +288,6 @@ export default function ProductForm({
             onChange={(e) => setCategoryId(e.target.value)}
             placeholder="اختر التصنيف"
             required
-          />
-          <Input
-            label="رابط الصورة"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            dir="ltr"
-            className="sm:col-span-2"
           />
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-brown mb-1.5">الوصف</label>

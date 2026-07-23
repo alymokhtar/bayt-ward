@@ -128,7 +128,7 @@ export function getPrimaryImageUrl(product: ProductWithOptionalImages): string |
     if (first?.url) return first.url;
   }
 
-  return product.imageUrl ?? null;
+  return null;
 }
 
 export function getProductImages(

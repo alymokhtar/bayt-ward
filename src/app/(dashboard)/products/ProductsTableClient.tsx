@@ -25,7 +25,6 @@ type Product = {
   nameAr: string | null;
   description: string | null;
   brand: string | null;
-  imageUrl: string | null;
   publishToWebsite: boolean;
   featuredProduct: boolean;
   isActive: boolean;
@@ -146,7 +145,7 @@ export default function ProductsTableClient({
             const productId = getProductIdentifier(product);
             const mediaItems = product.colors.flatMap((color) => color.media);
             const primaryMedia = mediaItems.find((item) => item.isPrimary && item.isActive) ?? mediaItems.find((item) => item.isActive) ?? null;
-            const primaryImageUrl = product.imageUrl || primaryMedia?.url || null;
+            const primaryImageUrl = primaryMedia?.url || null;
             const imageCount = mediaItems.filter((item) => item.isActive).length;
 
             return (

@@ -227,7 +227,6 @@ export async function restoreBackupSnapshot(
     description: toNullableString(row.description),
     brand: toNullableString(row.brand),
     categoryId: String(row.categoryId),
-    imageUrl: toNullableString(row.imageUrl),
     publishToWebsite: Boolean(row.publishToWebsite),
     featuredProduct: Boolean(row.featuredProduct),
     isActive: Boolean(row.isActive),

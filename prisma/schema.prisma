@@ -110,7 +110,6 @@ model Product {
   description      String?
   brand            String?
   categoryId       String
-  imageUrl         String?
   publishToWebsite Boolean  @default(false)
   featuredProduct  Boolean  @default(false)
   isActive         Boolean  @default(true)

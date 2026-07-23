@@ -75,7 +75,6 @@ export type StoreProductListItem = Pick<
   | "nameAr"
   | "description"
   | "brand"
-  | "imageUrl"
   | "featuredProduct"
   | "createdAt"
   | "images"

@@ -78,11 +78,7 @@ export default function ProductDetailClient({
       ? getColorMedia(product, selectedColor)
       : product.colors.flatMap((color) => getColorMedia(product, color.color));
 
-    return colorImages.length > 0
-      ? colorImages
-      : product.imageUrl
-        ? [{ id: "fallback", url: product.imageUrl, altText: displayName }]
-        : [];
+    return colorImages.length > 0 ? colorImages : [];
   }, [product, selectedColor, selectedVariant, displayName]);
   const price = selectedVariant?.price ?? product.variants[0]?.sellingPrice ?? 0;
   const inStock = selectedVariant ? selectedVariant.inStock : product.variants.some((v) => v.stockQuantity > 0);
@@ -121,7 +117,7 @@ export default function ProductDetailClient({
         height: STORE_IMAGE_SIZES.thumbnail.height,
         crop: "fill",
       })
-    : product.imageUrl;
+    : null;
 
   function handleAddToCart() {
     if (!selectedVariant || !inStock) return;

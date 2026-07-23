@@ -337,7 +337,6 @@ export const getCachedProductsPage = unstable_cache(
           nameAr: true,
           description: true,
           brand: true,
-          imageUrl: true,
           publishToWebsite: true,
           featuredProduct: true,
           isActive: true,
