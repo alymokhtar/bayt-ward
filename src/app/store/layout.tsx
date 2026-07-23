@@ -5,13 +5,13 @@ import StoreFooter from "@/components/store/StoreFooter";
 import StoreHeader from "@/components/store/StoreHeader";
 import { StorefrontStateProvider } from "@/components/store/StorefrontStateProvider";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
-import localFont from "next/font/local";
+import { Cairo } from "next/font/google";
 import "../store.css";
 
-const cairo = localFont({
-  src: "../../../public/fonts/arabtype.ttf",
+const cairo = Cairo({
+  subsets: ["arabic"],
   variable: "--font-cairo",
-  weight: "300 700",
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 

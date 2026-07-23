@@ -100,12 +100,14 @@ html {
 body {
   background-color: #FDFBF7 !important;
   color: var(--foreground);
-  font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif;
+  font-family: var(--font-cairo), "Segoe UI", Tahoma, sans-serif !important;
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+html,
+body,
 .system-layout,
 .system-layout *,
 .store-layout,

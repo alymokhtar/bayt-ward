@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
+import { Cairo } from "next/font/google";
 import PWAExitGuard from "@/components/pwa/PWAExitGuard";
 import PWARegister from "@/components/pwa/PWARegister";
 import "./globals.css";
 
-const cairo = localFont({
-  src: "../../public/fonts/arabtype.ttf",
+const cairo = Cairo({
+  subsets: ["arabic"],
   variable: "--font-cairo",
-  weight: "300 700",
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -51,7 +51,7 @@ export default async function RootLayout({
       dir="rtl"
       className={`${cairo.variable} ${cairo.className} h-full`}
     >
-      <body className="min-h-full flex flex-col font-sans antialiased">
+      <body className="min-h-full flex flex-col antialiased">
         {children}
         <PWAExitGuard />
         <PWARegister />

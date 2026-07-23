@@ -1,4 +1,4 @@
-const CACHE_NAME = "bayt-ward-v2";
+const CACHE_NAME = "bayt-ward-v3";
 const STATIC_ASSETS = [
   "/",
   "/dashboard",
