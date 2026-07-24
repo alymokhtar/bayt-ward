@@ -143,8 +143,40 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
           : "bg-[var(--store-surface)]/90 backdrop-blur"
       )}
     >
-      <div className="store-container relative flex min-h-[3.8rem] items-center justify-center py-1 md:min-h-[5rem]">
-        <div className="absolute left-0 top-3 flex items-center gap-1.5 sm:gap-2 md:gap-4">
+      <div className="store-container flex w-full flex-row items-center justify-between py-2 sm:py-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)] shadow-sm md:hidden"
+            aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+
+          <Link
+            href={STORE_BASE_PATH}
+            className="flex items-center gap-2 sm:gap-3"
+            aria-label={storeName}
+          >
+            <span className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
+              <Image
+                src="/images/icon2.png"
+                alt={storeName}
+                width={56}
+                height={56}
+                className="h-full w-full object-contain"
+                priority
+              />
+            </span>
+            <span className="font-[Cairo,serif] text-base font-semibold leading-none tracking-[0.12em] text-[var(--store-text)] sm:text-lg md:text-xl">
+              Bayt Ward
+            </span>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             type="button"
             className={actionButtonClass}
@@ -176,36 +208,6 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
             {cartCount > 0 && <span className={badgeClass}>{cartCount}</span>}
           </button>
         </div>
-
-        <button
-          type="button"
-          className="absolute right-0 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)] shadow-sm md:hidden"
-          aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </button>
-
-        <Link
-          href={STORE_BASE_PATH}
-          className="flex items-center justify-center gap-1.5 sm:gap-2"
-          aria-label={storeName}
-        >
-          <span className="relative h-24 w-32 sm:h-28 sm:w-36 md:h-32 md:w-44 lg:h-36 lg:w-52 xl:h-40 xl:w-60">
-            <Image
-              src="/images/icon2.png"
-              alt={storeName}
-              fill
-              sizes="(min-width: 1280px) 288px, (min-width: 1024px) 256px, (min-width: 768px) 208px, 144px"
-              className="object-contain"
-              priority
-            />
-          </span>
-          <span className="font-[Cairo,serif] text-base font-semibold leading-none tracking-[0.12em] text-[var(--store-text)] sm:text-lg md:text-xl lg:text-[1.5rem]">
-            Bayt Ward
-          </span>
-        </Link>
       </div>
 
       {searchOpen && (
