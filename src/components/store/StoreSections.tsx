@@ -11,6 +11,7 @@ type CategoryCardProps = {
     name: string;
     nameAr: string | null;
     description: string | null;
+    imageUrl?: string | null;
     _count: { products: number };
   };
   coverImage?: string | null;
@@ -25,9 +26,13 @@ export default function CategoryCard({ category, coverImage }: CategoryCardProps
       className="group block overflow-hidden rounded-lg border border-[var(--store-border)] bg-white shadow-[0_8px_24px_rgba(75,54,37,0.09)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(75,54,37,0.14)]"
     >
       <div className="relative aspect-[1.08/1] overflow-hidden bg-[var(--store-cream)]">
-        {coverImage ? (
+        {(category.imageUrl || coverImage) ? (
           <Image
-            src={optimizeCloudinaryUrl(coverImage, { width: 640, height: 600, crop: "fill" })}
+            src={optimizeCloudinaryUrl(category.imageUrl || coverImage || "", {
+              width: 640,
+              height: 600,
+              crop: "fill",
+            })}
             alt={name}
             fill
             sizes="(max-width: 768px) 50vw, 20vw"

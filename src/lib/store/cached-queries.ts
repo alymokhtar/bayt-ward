@@ -155,6 +155,8 @@ export const getCachedStoreCategories = unstable_cache(
         name: true,
         nameAr: true,
         description: true,
+        imageUrl: true,
+        isActive: true,
         _count: {
           select: {
             products: {
