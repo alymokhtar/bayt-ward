@@ -3,6 +3,8 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { invalidateCategoriesData } from "@/lib/revalidate-tags";
+import { deleteImageByPublicId, isCloudinaryConfigured, uploadImageBuffer } from "@/lib/cloudinary";
+import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-constants";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -72,6 +74,46 @@ export async function createCategory(data: {
 
     revalidateCategoryPaths();
     return { success: true, data: category };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function uploadCategoryImage(formData: FormData): Promise<ActionResult<string>> {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+
+    if (!isCloudinaryConfigured()) {
+      return { success: false, error: "إعدادات Cloudinary غير مكتملة" };
+    }
+
+    const file = formData.get("file");
+    if (!(file instanceof File)) {
+      return { success: false, error: "الملف مطلوب" };
+    }
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
+      return { success: false, error: "نوع الملف غير مدعوم (JPG, PNG, WEBP, GIF)" };
+    }
+
+    if (file.size === 0 || file.size > MAX_UPLOAD_BYTES) {
+      return { success: false, error: "حجم الملف غير صالح (الحد الأقصى 5MB)" };
+    }
+
+    let buffer: Buffer;
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    } catch (error) {
+      return { success: false, error: "خطأ في معالجة الملف" };
+    }
+
+    const uploaded = await uploadImageBuffer(buffer, { contentType: file.type });
+    if (!uploaded?.url) {
+      return { success: false, error: "فشل رفع الصورة إلى Cloudinary" };
+    }
+
+    return { success: true, data: uploaded.url };
   } catch (error) {
     return handleActionError(error);
   }

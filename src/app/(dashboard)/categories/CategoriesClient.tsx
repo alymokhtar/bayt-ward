@@ -16,6 +16,7 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  uploadCategoryImage,
 } from "@/lib/actions/categories";
 import { Eye, EyeOff, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -47,6 +48,7 @@ export default function CategoriesClient({
   const [imageUrl, setImageUrl] = useState<string>("");
   const [categoryActive, setCategoryActive] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState("");
 
   function openCreate() {
@@ -81,14 +83,14 @@ export default function CategoriesClient({
           name,
           nameAr,
           description,
-          imageUrl: imageUrl || undefined,
+          imageUrl: imageUrl === "" ? "" : imageUrl || undefined,
           isActive: categoryActive,
         })
       : await createCategory({
           name,
           nameAr,
           description,
-          imageUrl: imageUrl || undefined,
+          imageUrl: imageUrl === "" ? "" : imageUrl || undefined,
           isActive: categoryActive,
         });
 
@@ -109,6 +111,28 @@ export default function CategoriesClient({
       router.refresh();
     } else {
       alert(result.error);
+    }
+  }
+
+  async function handleImageUpload(files: FileList | null) {
+    if (!files?.length) return;
+    setImageUploading(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", files[0]);
+
+      const result = await uploadCategoryImage(formData);
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      setImageUrl(result.data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "فشل رفع الصورة");
+    } finally {
+      setImageUploading(false);
     }
   }
 
@@ -215,23 +239,27 @@ export default function CategoriesClient({
               <div className="flex flex-wrap items-center gap-2">
                 <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-brown transition hover:border-gold hover:text-gold">
                   <ImagePlus className="h-4 w-4" />
-                  <span>أضف رابط الصورة</span>
+                  رفع صورة
                   <input
-                    type="url"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="sr-only"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(event) => {
+                      void handleImageUpload(event.currentTarget.files);
+                      event.currentTarget.value = "";
+                    }}
                   />
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setImageUrl("")}
-                  className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-brown transition hover:border-red-400 hover:text-red-600"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  حذف الصورة
-                </button>
+                {imageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl("")}
+                    className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-brown transition hover:border-red-400 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    حذف الصورة
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setCategoryActive((current) => !current)}
@@ -241,16 +269,11 @@ export default function CategoriesClient({
                   {categoryActive ? "إخفاء" : "إظهار"}
                 </button>
               </div>
-              <div className="mt-3">
-                <label className="block text-sm font-medium text-brown mb-1.5">رابط الصورة</label>
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full rounded-3xl border border-border bg-white px-4 py-2 text-sm text-brown outline-none transition focus:border-gold focus:ring-2 focus:ring-gold/20"
-                />
-              </div>
+              {imageUploading && (
+                <div className="mt-3 rounded-2xl border border-gold/20 bg-gold/5 px-3 py-2 text-sm text-brown">
+                  جارٍ رفع الصورة...
+                </div>
+              )}
             </div>
           </div>
           <div>
