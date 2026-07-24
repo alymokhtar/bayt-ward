@@ -119,6 +119,13 @@ export default function ProductForm({
   const [loading, setLoading] = useState(false);
   const [addingVariant, setAddingVariant] = useState(false);
   const [error, setError] = useState("");
+  const [primaryImageId, setPrimaryImageId] = useState<string | null>(() => {
+    if (!product) return null;
+    const primaryImage = product.variants
+      .flatMap((variant) => variant.images)
+      .find((image) => image.isPrimary);
+    return primaryImage?.id ?? null;
+  });
 
   useEffect(() => {
     if (isEdit || initialVariantCode) return;
@@ -448,6 +455,8 @@ export default function ProductForm({
                   initialImages={
                     product.variants.find((item) => item.id === variant.id)?.images ?? []
                   }
+                  primaryImageId={primaryImageId}
+                  onMakePrimary={setPrimaryImageId}
                 />
               ) : (
                 <div className="rounded-lg border border-dashed border-border bg-muted/5 p-3 text-sm text-muted">
