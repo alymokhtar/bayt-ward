@@ -58,7 +58,7 @@ export default async function StoreHomePage() {
   ]);
 
   const featuredProducts = featured.length > 0 ? featured : newest.slice(0, 8);
-  const arrivalProducts = newest.length > 0 ? newest.slice(0, 5) : featuredProducts.slice(0, 5);
+  const arrivalProducts = newest.length > 0 ? newest.slice(0, 6) : featuredProducts.slice(0, 6);
   const homeProducts = productsPage.items.slice(0, 6);
   const hasProducts = productsPage.total > 0;
 
@@ -175,13 +175,13 @@ export default async function StoreHomePage() {
         <section className="store-container store-section pt-0">
           <SectionHeading title="وصل حديثاً" />
           <div className="relative">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
               {arrivalProducts.map((product, index) => (
                 <ProductCard
                   key={product.id}
                   product={product}
                   currencySymbol={currencySymbol}
-                  priority={index < 5}
+                  priority={index < 6}
                   showNewBadge
                 />
               ))}
