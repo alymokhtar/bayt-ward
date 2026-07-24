@@ -40,52 +40,54 @@ export default function Header({ user }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-white/90 px-4 py-2 backdrop-blur-md md:px-6 md:py-3">
-      <div className="flex items-center gap-2.5">
-        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-gold/20 md:h-9 md:w-9">
-          <Image
-            src="/images/logo-light.png"
-            alt={STORE_NAME_AR}
-            fill
-            className="object-cover"
-            sizes="36px"
-            priority
-          />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-sm font-semibold text-brown md:text-base">{STORE_NAME_AR}</h1>
-          <p className="hidden text-[11px] text-muted md:block">نظام إدارة المتجر</p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <div className="hidden items-center gap-2 rounded-full bg-gold/10 px-3 py-1.5 sm:flex">
-          <User className="h-4 w-4 text-gold" />
-          <div className="text-start">
-            <p className="text-sm font-medium text-brown">{user.name}</p>
-            <p className="text-[11px] text-muted">{getRoleLabel(user.role)}</p>
+    <header className="sticky top-0 z-40 border-b border-border bg-white/90 backdrop-blur-md">
+      <div className="flex flex-row items-center justify-between w-full px-4 py-2">
+        <div className="flex items-center gap-2">
+          <div className="relative h-12 w-auto shrink-0 overflow-hidden rounded-full border border-gold/20">
+            <Image
+              src="/images/logo-light.png"
+              alt={STORE_NAME_AR}
+              width={48}
+              height={48}
+              className="h-12 w-auto object-cover"
+              priority
+            />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-sm font-semibold text-brown md:text-base">{STORE_NAME_AR}</h1>
+            <p className="hidden text-[11px] text-muted md:block">نظام إدارة المتجر</p>
           </div>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleLogout}
-          loading={loading}
-          className="hidden gap-1.5 sm:inline-flex"
-        >
-          <LogOut className="h-4 w-4" />
-          خروج
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleLogout}
-          loading={loading}
-          className="sm:hidden"
-        >
-          <LogOut className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-2 rounded-full bg-gold/10 px-3 py-1.5 sm:flex">
+            <User className="h-4 w-4 text-gold" />
+            <div className="text-start">
+              <p className="text-sm font-medium text-brown">{user.name}</p>
+              <p className="text-[11px] text-muted">{getRoleLabel(user.role)}</p>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            loading={loading}
+            className="hidden gap-1.5 sm:inline-flex"
+          >
+            <LogOut className="h-4 w-4" />
+            خروج
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleLogout}
+            loading={loading}
+            className="sm:hidden"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </header>
   );
