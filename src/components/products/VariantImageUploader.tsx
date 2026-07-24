@@ -1,6 +1,6 @@
 "use client";
 
-import { uploadProductImage } from "@/lib/actions/product-media";
+import { deleteProductImage, uploadProductImage } from "@/lib/actions/product-media";
 import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-constants";
 import type { ProductImageItem } from "@/lib/types/product-media";
 import { Eye, EyeOff, ImagePlus, Trash2 } from "lucide-react";
@@ -166,7 +166,17 @@ export default function VariantImageUploader({
                     <button
                       type="button"
                       className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-danger hover:bg-red-100"
-                      onClick={() => setImages((current) => current.filter((image) => image.id !== item.id))}
+                      onClick={async () => {
+                        setError(null);
+
+                        const result = await deleteProductImage(item.id, item.publicId);
+                        if (!result.success) {
+                          setError(result.error);
+                          return;
+                        }
+
+                        setImages((current) => current.filter((image) => image.id !== item.id));
+                      }}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       حذف

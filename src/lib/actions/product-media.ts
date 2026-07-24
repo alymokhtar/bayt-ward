@@ -469,6 +469,68 @@ export async function uploadProductImage(
   }
 }
 
+export async function deleteProductImage(
+  imageId: string,
+  publicId: string
+): Promise<ActionResult> {
+  try {
+    await requireMediaManager();
+
+    if (!imageId || !publicId) {
+      return { success: false, error: "معرّف الصورة و public_id مطلوبان" };
+    }
+
+    const image = await prisma.image.findUnique({
+      where: { id: imageId },
+      select: {
+        id: true,
+        publicId: true,
+        isPrimary: true,
+        isActive: true,
+        productId: true,
+        productVariantId: true,
+      },
+    });
+
+    if (!image) {
+      return { success: false, error: "الصورة غير موجودة" };
+    }
+
+    if (isCloudinaryConfigured() && !publicId.startsWith("migrated/")) {
+      await deleteImageByPublicId(publicId);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.image.delete({ where: { id: image.id } });
+
+      if (image.isPrimary) {
+        const nextPrimary = await tx.image.findFirst({
+          where: {
+            productId: image.productId,
+            productVariantId: image.productVariantId,
+            isActive: true,
+          },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: { id: true },
+        });
+
+        if (nextPrimary) {
+          await tx.image.update({
+            where: { id: nextPrimary.id },
+            data: { isPrimary: true },
+          });
+        }
+      }
+    });
+
+    revalidateProductMediaPaths();
+    return { success: true, data: undefined };
+  } catch (error) {
+    console.error("Error in deleteProductImage:", error);
+    return handleActionError(error);
+  }
+}
+
 export async function deleteProductMedia(mediaId: string): Promise<ActionResult> {
   try {
     await requireMediaManager();
