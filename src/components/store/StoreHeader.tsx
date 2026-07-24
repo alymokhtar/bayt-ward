@@ -155,18 +155,18 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
             {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
 
-          <Link
+      <Link
             href={STORE_BASE_PATH}
-            className="flex items-center gap-2 sm:gap-3"
+            className="flex items-center gap-2.5 sm:gap-3"
             aria-label={storeName}
           >
-            <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md sm:h-12 sm:w-12">
+            <span className="relative flex h-14 w-14 shrink-0 items-center justify-center sm:h-16 sm:w-16">
               <Image
                 src="/images/icon2.png"
                 alt={storeName}
-                width={48}
-                height={48}
-                className="h-full w-full -my-1 object-contain"
+                width={64}
+                height={64}
+                className="h-full w-full object-contain scale-125"
                 priority
               />
             </span>
