@@ -43,13 +43,13 @@ export default function Header({ user }: HeaderProps) {
     <header className="sticky top-0 z-40 border-b border-border bg-white/90 backdrop-blur-md">
       <div className="flex flex-row items-center justify-between w-full px-4 py-2">
         <div className="flex items-center gap-2">
-          <div className="relative h-12 w-auto shrink-0 overflow-hidden rounded-full border border-gold/20">
+          <div className="relative h-12 w-auto shrink-0 rounded-full border border-gold/20">
             <Image
               src="/images/logo-light.png"
               alt={STORE_NAME_AR}
               width={48}
               height={48}
-              className="h-12 w-auto object-cover"
+              className="h-12 w-auto scale-[1.8] object-visible"
               priority
             />
           </div>
