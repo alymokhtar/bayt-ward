@@ -242,12 +242,15 @@ export async function uploadProductMedia(formData: FormData): Promise<
 
     const productColor = await prisma.productColor.findUnique({
       where: { id: productColorId },
-      select: { id: true },
+      select: { id: true, productId: true },
     });
 
     if (!productColor) {
       return { success: false, error: "اللون غير موجود" };
     }
+
+    const rawIsPrimary = String(formData.get("isPrimary") ?? "").trim().toLowerCase();
+    const requestedPrimary = rawIsPrimary === "true";
 
     let buffer: Buffer;
     try {
@@ -303,13 +306,20 @@ export async function uploadProductMedia(formData: FormData): Promise<
         select: { id: true },
       });
 
+      if (requestedPrimary) {
+        await tx.productMedia.updateMany({
+          where: { productColor: { productId: productColor.productId } },
+          data: { isPrimary: false },
+        });
+      }
+
       return tx.productMedia.create({
         data: {
           productColorId,
           url: String(uploaded.url).trim(),
           publicId: String(uploaded.publicId).trim(),
           sortOrder,
-          isPrimary: !existingPrimary,
+          isPrimary: requestedPrimary ? true : !existingPrimary,
         },
         select: mediaSelect,
       });
@@ -335,6 +345,8 @@ export async function uploadProductImage(
 
     const productId = String(formData.get("productId") ?? "").trim();
     const productVariantId = String(formData.get("productVariantId") ?? "").trim();
+    const rawIsPrimary = String(formData.get("isPrimary") ?? "").trim().toLowerCase();
+    const requestedPrimary = rawIsPrimary === "true";
     const altText = String(formData.get("altText") ?? "").trim();
     const file = formData.get("file");
 
@@ -354,6 +366,9 @@ export async function uploadProductImage(
       return { success: false, error: "Invalid file size (max 5MB)" };
     }
 
+    let actualProductId = productId;
+    let variantProductId: string | null = null;
+
     if (productVariantId) {
       const variant = await prisma.productVariant.findUnique({
         where: { id: productVariantId },
@@ -363,6 +378,9 @@ export async function uploadProductImage(
       if (!variant || (productId && variant.productId !== productId)) {
         return { success: false, error: "Variant was not found for this product" };
       }
+
+      actualProductId = variant.productId;
+      variantProductId = variant.id;
     } else {
       const product = await prisma.product.findUnique({
         where: { id: productId },
@@ -417,6 +435,18 @@ export async function uploadProductImage(
         select: { id: true },
       });
 
+      if (requestedPrimary && actualProductId) {
+        await tx.image.updateMany({
+          where: {
+            OR: [
+              { productId: actualProductId },
+              { productVariant: { productId: actualProductId } },
+            ],
+          },
+          data: { isPrimary: false },
+        });
+      }
+
       return tx.image.create({
         data: {
           productId: productVariantId ? null : productId,
@@ -425,7 +455,7 @@ export async function uploadProductImage(
           publicId: String(uploaded.publicId).trim(),
           altText: altText || null,
           sortOrder,
-          isPrimary: !existingPrimary,
+          isPrimary: requestedPrimary ? true : !existingPrimary,
         },
         select: imageSelect,
       });
@@ -500,7 +530,7 @@ export async function setPrimaryProductMedia(
 
     const media = await prisma.$transaction(async (tx) => {
       await tx.productMedia.updateMany({
-        where: { productColorId: lookup.media.productColorId },
+        where: { productColor: { productId: lookup.media.productColor.productId } },
         data: { isPrimary: false },
       });
 

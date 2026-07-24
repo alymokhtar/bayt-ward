@@ -28,6 +28,16 @@ export type VariantInput = {
 };
 
 type VariantSaveInput = VariantInput & { id?: string; isActive?: boolean };
+type ProductImageInput = {
+  id?: string;
+  productVariantId?: string;
+  url: string;
+  publicId: string;
+  altText?: string;
+  sortOrder?: number;
+  isPrimary?: boolean;
+  isActive?: boolean;
+};
 
 function handleActionError(error: unknown): ActionResult<never> {
   if (error instanceof Error) {
@@ -218,6 +228,7 @@ export async function createProduct(data: {
   publishToWebsite?: boolean;
   featuredProduct?: boolean;
   variants: VariantInput[];
+  images?: ProductImageInput[];
 }) {
   try {
     const user = await requireRole(["ADMIN", "MANAGER"]);
@@ -276,6 +287,36 @@ export async function createProduct(data: {
         include: { variants: true, category: true },
       });
 
+      const images = data.images ?? [];
+      const firstPrimaryIndex = images.findIndex((image) => image.isPrimary);
+      if (firstPrimaryIndex !== -1) {
+        await tx.image.updateMany({
+          where: {
+            OR: [
+              { productId: created.id },
+              { productVariant: { productId: created.id } },
+            ],
+          },
+          data: { isPrimary: false },
+        });
+      }
+
+      for (let i = 0; i < images.length; i += 1) {
+        const image = images[i];
+        await tx.image.create({
+          data: {
+            productId: image.productVariantId ? null : created.id,
+            productVariantId: image.productVariantId || null,
+            url: image.url.trim(),
+            publicId: image.publicId.trim(),
+            altText: image.altText?.trim() || null,
+            sortOrder: image.sortOrder ?? 0,
+            isPrimary: i === firstPrimaryIndex,
+            isActive: image.isActive ?? true,
+          },
+        });
+      }
+
       await syncProductColors(tx, created.id, preparedVariants, []);
 
       for (const variant of created.variants) {
@@ -317,6 +358,7 @@ export async function updateProduct(
     featuredProduct?: boolean;
     isActive?: boolean;
     variants?: VariantSaveInput[];
+    images?: ProductImageInput[];
   }
 ) {
   try {
@@ -433,6 +475,53 @@ export async function updateProduct(
                 sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
                 stockQuantity: 0,
                 minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
+              },
+            });
+          }
+        }
+      }
+
+      if (data.images) {
+        const firstPrimaryIndex = data.images.findIndex((image) => image.isPrimary);
+        if (firstPrimaryIndex !== -1) {
+          await tx.image.updateMany({
+            where: {
+              OR: [
+                { productId: id },
+                { productVariant: { productId: id } },
+              ],
+            },
+            data: { isPrimary: false },
+          });
+        }
+
+        for (let i = 0; i < data.images.length; i += 1) {
+          const image = data.images[i];
+          const isPrimary = i === firstPrimaryIndex;
+
+          if (image.id) {
+            await tx.image.update({
+              where: { id: image.id },
+              data: {
+                url: image.url.trim(),
+                publicId: image.publicId.trim(),
+                altText: image.altText?.trim() || null,
+                sortOrder: image.sortOrder ?? 0,
+                isPrimary,
+                isActive: image.isActive ?? true,
+              },
+            });
+          } else {
+            await tx.image.create({
+              data: {
+                productId: image.productVariantId ? null : id,
+                productVariantId: image.productVariantId || null,
+                url: image.url.trim(),
+                publicId: image.publicId.trim(),
+                altText: image.altText?.trim() || null,
+                sortOrder: image.sortOrder ?? 0,
+                isPrimary,
+                isActive: image.isActive ?? true,
               },
             });
           }

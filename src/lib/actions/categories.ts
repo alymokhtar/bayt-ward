@@ -37,6 +37,7 @@ export async function getCategories(includeInactive = false) {
       name: true,
       nameAr: true,
       description: true,
+      imageUrl: true,
       isActive: true,
       createdAt: true,
       updatedAt: true,
@@ -49,6 +50,8 @@ export async function createCategory(data: {
   name: string;
   nameAr?: string;
   description?: string;
+  imageUrl?: string;
+  isActive?: boolean;
 }) {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
@@ -62,6 +65,8 @@ export async function createCategory(data: {
         name: data.name.trim(),
         nameAr: data.nameAr?.trim(),
         description: data.description?.trim(),
+        imageUrl: data.imageUrl?.trim() || null,
+        isActive: data.isActive ?? true,
       },
     });
 
@@ -78,6 +83,7 @@ export async function updateCategory(
     name?: string;
     nameAr?: string;
     description?: string;
+    imageUrl?: string;
     isActive?: boolean;
   }
 ) {
@@ -95,6 +101,7 @@ export async function updateCategory(
         name: data.name?.trim(),
         nameAr: data.nameAr?.trim(),
         description: data.description?.trim(),
+        imageUrl: data.imageUrl === undefined ? undefined : data.imageUrl?.trim() || null,
         isActive: data.isActive,
       },
     });
