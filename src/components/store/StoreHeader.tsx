@@ -160,13 +160,13 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
             className="flex items-center gap-2 sm:gap-3"
             aria-label={storeName}
           >
-            <span className="relative h-12 w-12 shrink-0 sm:h-14 sm:w-14">
+            <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md sm:h-12 sm:w-12">
               <Image
                 src="/images/icon2.png"
                 alt={storeName}
-                width={56}
-                height={56}
-                className="h-full w-full object-contain"
+                width={48}
+                height={48}
+                className="h-full w-full -my-1 object-contain"
                 priority
               />
             </span>
