@@ -19,6 +19,7 @@ type ProductCardProps = {
   priority?: boolean;
   /** Set true only when rendering inside the admin dashboard */
   isDashboard?: boolean;
+  showNewBadge?: boolean;
 };
 
 export default function ProductCard({
@@ -26,6 +27,7 @@ export default function ProductCard({
   currencySymbol = "MRU",
   priority = false,
   isDashboard = false,
+  showNewBadge = false,
 }: ProductCardProps) {
   const imageUrl = getPrimaryImageUrl(product);
   const { min, max } = getProductPriceRange(product);
@@ -68,9 +70,11 @@ export default function ProductCard({
         </Link>
 
         <div className="pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between gap-2">
-          <span className="rounded bg-[var(--store-gold)] px-2 py-1 text-[11px] font-medium text-white shadow-sm">
-            جديد
-          </span>
+          {showNewBadge && (
+            <span className="rounded bg-[var(--store-gold)] px-2 py-1 text-[11px] font-medium text-white shadow-sm">
+              جديد
+            </span>
+          )}
           <FavoriteButton
             item={{
               id: product.id,

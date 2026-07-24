@@ -182,6 +182,7 @@ export default async function StoreHomePage() {
                   product={product}
                   currencySymbol={currencySymbol}
                   priority={index < 5}
+                  showNewBadge
                 />
               ))}
             </div>
