@@ -43,14 +43,12 @@ export default function Header({ user }: HeaderProps) {
     <header className="sticky top-0 z-40 border-b border-border bg-white/90 backdrop-blur-md">
       <div className="flex flex-row items-center justify-between w-full px-4 py-2">
         <div className="flex items-center gap-2">
-          <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/20">
-            <Image
+          <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-full border border-gold/20">
+            <img
               src="/images/logo-light.png"
-              alt={STORE_NAME_AR}
-              width={48}
-              height={48}
-              className="absolute top-1/2 left-1/2 h-24 w-24 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain"
-              priority
+              alt="Bayt Ward Logo"
+              className="h-full w-full object-contain"
+              style={{ transform: "scale(2.5)", transformOrigin: "center" }}
             />
           </div>
           <div className="min-w-0">
