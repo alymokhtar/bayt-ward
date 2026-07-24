@@ -52,7 +52,7 @@ export default async function StoreHomePage() {
   const [featured, newest, categories, , productsPage] = await Promise.all([
     getCachedFeaturedProducts(8),
     getCachedNewestProducts(8),
-    getCachedStoreCategories(),
+    getCachedStoreCategories(6),
     getCachedGalleryImages(8),
     getCachedPublishedProducts(JSON.stringify({ page: 1, pageSize: 8 })),
   ]);
@@ -137,7 +137,7 @@ export default async function StoreHomePage() {
       {categoriesWithCovers.length > 0 && (
         <section className="store-container store-section">
           <SectionHeading title="الأقسام" />
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             {categoriesWithCovers.map(({ category, cover }) => (
               <CategoryCard key={category.id} category={category} coverImage={cover} />
             ))}

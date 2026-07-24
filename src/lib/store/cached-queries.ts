@@ -146,10 +146,11 @@ export const getCachedSearchProducts = unstable_cache(
 );
 
 export const getCachedStoreCategories = unstable_cache(
-  async () =>
+  async (limit = 6) =>
     prisma.category.findMany({
       where: publishedCategoryFilter,
       orderBy: { name: "asc" },
+      take: limit,
       select: {
         id: true,
         name: true,
