@@ -40,22 +40,9 @@ export default function Header({ user }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 md:h-16 items-center justify-between border-b border-border bg-white/80 px-4 md:px-6 backdrop-blur-md">
-      <div className="md:hidden flex items-center gap-2">
-        <div className="relative h-8 w-8 rounded-full overflow-hidden border border-gold/20 shrink-0">
-          <Image
-            src="/images/logo-light.png"
-            alt={STORE_NAME_AR}
-            fill
-            className="object-cover"
-            sizes="32px"
-            priority
-          />
-        </div>
-        <h1 className="text-base font-semibold text-brown">{STORE_NAME_AR}</h1>
-      </div>
-      <div className="hidden md:flex items-center gap-2.5">
-        <div className="relative h-9 w-9 rounded-full overflow-hidden border border-gold/20 shrink-0">
+    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-border bg-white/90 px-4 py-2 backdrop-blur-md md:px-6 md:py-3">
+      <div className="flex items-center gap-2.5">
+        <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full border border-gold/20 md:h-9 md:w-9">
           <Image
             src="/images/logo-light.png"
             alt={STORE_NAME_AR}
@@ -65,20 +52,18 @@ export default function Header({ user }: HeaderProps) {
             priority
           />
         </div>
-        <div>
-          <h1 className="text-lg font-semibold text-brown">{STORE_NAME_AR}</h1>
-          <p className="text-xs text-muted">نظام إدارة المتجر</p>
+        <div className="min-w-0">
+          <h1 className="text-sm font-semibold text-brown md:text-base">{STORE_NAME_AR}</h1>
+          <p className="hidden text-[11px] text-muted md:block">نظام إدارة المتجر</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gold/15">
-            <User className="h-4 w-4 text-gold" />
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="hidden items-center gap-2 rounded-full bg-gold/10 px-3 py-1.5 sm:flex">
+          <User className="h-4 w-4 text-gold" />
           <div className="text-start">
             <p className="text-sm font-medium text-brown">{user.name}</p>
-            <p className="text-xs text-muted">{getRoleLabel(user.role)}</p>
+            <p className="text-[11px] text-muted">{getRoleLabel(user.role)}</p>
           </div>
         </div>
 
@@ -87,7 +72,7 @@ export default function Header({ user }: HeaderProps) {
           size="sm"
           onClick={handleLogout}
           loading={loading}
-          className="gap-1.5 hidden sm:inline-flex"
+          className="hidden gap-1.5 sm:inline-flex"
         >
           <LogOut className="h-4 w-4" />
           خروج
