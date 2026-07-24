@@ -253,7 +253,14 @@ export default function CategoriesClient({
                 {imageUrl && (
                   <button
                     type="button"
-                    onClick={() => setImageUrl("")}
+                    onClick={() => {
+                      const confirmed = window.confirm("هل أنت متأكد من حذف هذه الصورة نهائياً؟");
+                      if (!confirmed) {
+                        return;
+                      }
+
+                      setImageUrl("");
+                    }}
                     className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-brown transition hover:border-red-400 hover:text-red-600"
                   >
                     <Trash2 className="h-4 w-4" />

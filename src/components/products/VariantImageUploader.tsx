@@ -169,6 +169,11 @@ export default function VariantImageUploader({
                       onClick={async () => {
                         setError(null);
 
+                        const confirmed = window.confirm("هل أنت متأكد من حذف هذه الصورة نهائياً؟");
+                        if (!confirmed) {
+                          return;
+                        }
+
                         const result = await deleteProductImage(item.id, item.publicId);
                         if (!result.success) {
                           setError(result.error);
