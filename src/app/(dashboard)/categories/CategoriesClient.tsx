@@ -17,7 +17,7 @@ import {
   updateCategory,
   deleteCategory,
 } from "@/lib/actions/categories";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, EyeOff, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -26,6 +26,7 @@ type Category = {
   name: string;
   nameAr: string | null;
   description: string | null;
+  imageUrl: string | null;
   isActive: boolean;
   _count: { products: number };
 };
@@ -43,6 +44,8 @@ export default function CategoriesClient({
   const [name, setName] = useState("");
   const [nameAr, setNameAr] = useState("");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState<string>("");
+  const [categoryActive, setCategoryActive] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -51,6 +54,8 @@ export default function CategoriesClient({
     setName("");
     setNameAr("");
     setDescription("");
+    setImageUrl("");
+    setCategoryActive(true);
     setError("");
     setModalOpen(true);
   }
@@ -60,6 +65,8 @@ export default function CategoriesClient({
     setName(cat.name);
     setNameAr(cat.nameAr || "");
     setDescription(cat.description || "");
+    setImageUrl(cat.imageUrl || "");
+    setCategoryActive(cat.isActive);
     setError("");
     setModalOpen(true);
   }
@@ -70,8 +77,20 @@ export default function CategoriesClient({
     setError("");
 
     const result = editing
-      ? await updateCategory(editing.id, { name, nameAr, description })
-      : await createCategory({ name, nameAr, description });
+      ? await updateCategory(editing.id, {
+          name,
+          nameAr,
+          description,
+          imageUrl: imageUrl || undefined,
+          isActive: categoryActive,
+        })
+      : await createCategory({
+          name,
+          nameAr,
+          description,
+          imageUrl: imageUrl || undefined,
+          isActive: categoryActive,
+        });
 
     setLoading(false);
 
@@ -175,6 +194,65 @@ export default function CategoriesClient({
             value={nameAr}
             onChange={(e) => setNameAr(e.target.value)}
           />
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-brown mb-1.5">
+              صورة التصنيف
+            </label>
+            <div className="rounded-3xl border border-border bg-slate-50 p-4 font-cairo text-brown shadow-sm">
+              <div className="mb-3 flex flex-col items-center gap-3">
+                {imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt="Category image"
+                    className="h-36 w-full max-w-sm rounded-3xl object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-36 w-full max-w-sm items-center justify-center rounded-3xl border border-dashed border-border bg-white text-sm text-muted">
+                    لا توجد صورة بعد
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-brown transition hover:border-gold hover:text-gold">
+                  <ImagePlus className="h-4 w-4" />
+                  <span>أضف رابط الصورة</span>
+                  <input
+                    type="url"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="https://example.com/image.jpg"
+                    className="sr-only"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setImageUrl("")}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-brown transition hover:border-red-400 hover:text-red-600"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  حذف الصورة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCategoryActive((current) => !current)}
+                  className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-brown transition hover:border-gold hover:text-gold"
+                >
+                  {categoryActive ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {categoryActive ? "إخفاء" : "إظهار"}
+                </button>
+              </div>
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-brown mb-1.5">رابط الصورة</label>
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="w-full rounded-3xl border border-border bg-white px-4 py-2 text-sm text-brown outline-none transition focus:border-gold focus:ring-2 focus:ring-gold/20"
+                />
+              </div>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-brown mb-1.5">
               الوصف
