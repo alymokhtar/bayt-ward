@@ -54,11 +54,12 @@ export default async function StoreHomePage() {
     getCachedNewestProducts(8),
     getCachedStoreCategories(),
     getCachedGalleryImages(8),
-    getCachedPublishedProducts(JSON.stringify({ page: 1, pageSize: 1 })),
+    getCachedPublishedProducts(JSON.stringify({ page: 1, pageSize: 8 })),
   ]);
 
   const featuredProducts = featured.length > 0 ? featured : newest.slice(0, 8);
   const arrivalProducts = newest.length > 0 ? newest.slice(0, 5) : featuredProducts.slice(0, 5);
+  const homeProducts = productsPage.items.slice(0, 6);
   const hasProducts = productsPage.total > 0;
 
   const categoriesWithCovers = await Promise.all(
@@ -140,6 +141,32 @@ export default async function StoreHomePage() {
             {categoriesWithCovers.map(({ category, cover }) => (
               <CategoryCard key={category.id} category={category} coverImage={cover} />
             ))}
+          </div>
+        </section>
+      )}
+
+      {hasProducts && homeProducts.length > 0 && (
+        <section className="store-container store-section pt-0">
+          <SectionHeading title="المنتجات" />
+          <div className="relative">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              {homeProducts.map((product, index) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  currencySymbol={currencySymbol}
+                  priority={index < 6}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="mt-8 text-center">
+            <Link
+              href="/store/products"
+              className="inline-flex min-h-11 min-w-64 items-center justify-center rounded border border-[var(--store-gold)] bg-white px-8 text-sm font-bold text-[var(--store-gold)] transition hover:bg-[var(--store-gold)] hover:text-white"
+            >
+              عرض جميع المنتجات
+            </Link>
           </div>
         </section>
       )}

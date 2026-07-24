@@ -10,6 +10,7 @@ type StoreImageLike = {
 
 type ProductWithOptionalImages = StoreProductListItem & {
   images?: StoreImageLike[] | null;
+  variants?: Array<{ images?: StoreImageLike[] | null }> | null;
 };
 
 type StoreProductWithOptionalImages = StoreProduct & {
@@ -112,6 +113,16 @@ export function getAvailableSizesForColor(
 }
 
 export function getPrimaryImageUrl(product: ProductWithOptionalImages): string | null {
+  for (const variant of product.variants ?? []) {
+    const primaryVariantImage = (variant.images ?? []).find(
+      (item) => item.isPrimary && item.isActive !== false
+    );
+    if (primaryVariantImage?.url) return primaryVariantImage.url;
+
+    const firstVariantImage = (variant.images ?? []).find((item) => item.isActive !== false);
+    if (firstVariantImage?.url) return firstVariantImage.url;
+  }
+
   const productImages = product.images ?? [];
   const productPrimary = productImages.find((item) => item.isPrimary && item.isActive !== false);
   if (productPrimary?.url) return productPrimary.url;
