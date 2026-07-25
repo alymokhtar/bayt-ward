@@ -3,6 +3,7 @@ import { StorePageHero } from "@/components/store/StoreSections";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { STORE_NAME_AR } from "@/lib/constants";
+import { MessageCircle, Phone, Mail, MapPin } from "lucide-react";
 
 export const revalidate = 60;
 
@@ -37,10 +38,11 @@ export default async function ContactPage() {
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex text-lg font-medium text-[var(--store-text)] hover:text-[var(--store-gold)]"
+                className="mt-2 inline-flex items-center gap-3 text-lg font-medium text-[var(--store-text)] hover:text-[var(--store-gold)]"
                 dir="ltr"
               >
-                {whatsappNumber}
+                <MessageCircle className="h-5 w-5 text-[var(--store-gold)]" />
+                <span>{whatsappNumber}</span>
               </a>
             </div>
           )}
@@ -49,9 +51,14 @@ export default async function ContactPage() {
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
                 الهاتف
               </p>
-              <p className="mt-2 text-lg" dir="ltr">
-                {settings.store_phone}
-              </p>
+              <a
+                href={`tel:${settings.store_phone}`}
+                className="mt-2 inline-flex items-center gap-3 text-lg font-medium text-[var(--store-text)] hover:text-[var(--store-gold)]"
+                dir="ltr"
+              >
+                <Phone className="h-5 w-5 text-[var(--store-gold)]" />
+                <span>{settings.store_phone}</span>
+              </a>
             </div>
           )}
           {settings.store_address && (
@@ -59,9 +66,17 @@ export default async function ContactPage() {
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
                 العنوان
               </p>
-              <p className="mt-2 text-sm leading-7 text-[var(--store-muted)]">
-                {settings.store_address}
-              </p>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  settings.store_address
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-start gap-3 text-sm leading-7 text-[var(--store-muted)] hover:text-[var(--store-gold)]"
+              >
+                <MapPin className="h-5 w-5 text-[var(--store-gold)] mt-1" />
+                <span>{settings.store_address}</span>
+              </a>
             </div>
           )}
           {settings.store_email && (
@@ -69,9 +84,14 @@ export default async function ContactPage() {
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
                 البريد
               </p>
-              <p className="mt-2" dir="ltr">
-                {settings.store_email}
-              </p>
+              <a
+                href={`mailto:${settings.store_email}`}
+                className="mt-2 inline-flex items-center gap-3 text-lg font-medium text-[var(--store-text)] hover:text-[var(--store-gold)]"
+                dir="ltr"
+              >
+                <Mail className="h-5 w-5 text-[var(--store-gold)]" />
+                <span>{settings.store_email}</span>
+              </a>
             </div>
           )}
         </div>
