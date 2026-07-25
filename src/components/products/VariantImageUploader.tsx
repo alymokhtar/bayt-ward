@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteProductImage, uploadProductImage } from "@/lib/actions/product-media";
+import { deleteProductImage, uploadProductImage, setPrimaryProductImage } from "@/lib/actions/product-media";
 import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-constants";
 import type { ProductImageItem } from "@/lib/types/product-media";
 import { Eye, EyeOff, ImagePlus, Trash2 } from "lucide-react";
@@ -32,6 +32,7 @@ export default function VariantImageUploader({
   const [activePreview, setActivePreview] = useState<ProductImageItem | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingPrimaryId, setLoadingPrimaryId] = useState<string | null>(null);
 
   useEffect(() => {
     setImages(initialImages);
@@ -140,10 +141,26 @@ export default function VariantImageUploader({
                       className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition ${
                         isPrimary ? "border-gold bg-gold/10 text-gold" : "border-border bg-white text-slate-600 hover:border-gold hover:text-gold"
                       }`}
-                      onClick={() => onMakePrimary(item.id)}
+                      onClick={async () => {
+                        setError(null);
+                        setLoadingPrimaryId(item.id);
+                        try {
+                          const result = await setPrimaryProductImage(item.id);
+                          if (!result.success) {
+                            setError(result.error);
+                            setLoadingPrimaryId(null);
+                            return;
+                          }
+                          onMakePrimary(item.id);
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "فشل تعيين الصورة الرئيسية");
+                        } finally {
+                          setLoadingPrimaryId(null);
+                        }
+                      }}
                     >
                       <Eye className="h-3.5 w-3.5" />
-                      جعل رئيسية
+                      {loadingPrimaryId === item.id ? "جاري..." : "جعل رئيسية"}
                     </button>
                     <button
                       type="button"

@@ -614,6 +614,52 @@ export async function setPrimaryProductMedia(
   }
 }
 
+export async function setPrimaryProductImage(
+  imageId: string
+): Promise<ActionResult<ProductImageItem>> {
+  try {
+    console.log("Server: setPrimaryProductImage called", { imageId });
+    await requireMediaManager();
+
+    const image = await prisma.image.findUnique({
+      where: { id: imageId },
+      select: { id: true, productId: true, productVariantId: true, isPrimary: true },
+    });
+
+    if (!image) {
+      console.log("Server: setPrimaryProductImage not found", { imageId });
+      return { success: false, error: "الصورة غير موجودة" };
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (image.productId || image.productVariantId) {
+        await tx.image.updateMany({
+          where: {
+            OR: [
+              { productId: image.productId },
+              { productVariant: { productId: image.productId } },
+            ],
+          },
+          data: { isPrimary: false },
+        });
+      }
+
+      return tx.image.update({
+        where: { id: imageId },
+        data: { isPrimary: true, isActive: true },
+        select: imageSelect,
+      });
+    });
+
+    revalidateProductMediaPaths();
+    console.log("Server: setPrimaryProductImage succeeded", { imageId });
+    return { success: true, data: updated };
+  } catch (error) {
+    console.error("Server error in setPrimaryProductImage:", error);
+    return handleActionError(error);
+  }
+}
+
 export async function toggleProductMediaActive(
   mediaId: string,
   isActive: boolean
