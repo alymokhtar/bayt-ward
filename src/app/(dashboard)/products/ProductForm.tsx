@@ -17,7 +17,6 @@ import {
   type VariantCodePair,
   type VariantInput,
 } from "@/lib/actions/products";
-import ProductMediaManager from "@/components/products/ProductMediaManager";
 import VariantImageUploader from "@/components/products/VariantImageUploader";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -337,11 +336,7 @@ export default function ProductForm({
         </div>
       </div>
 
-      {isEdit && product && (
-        <div className="rounded-xl border border-border bg-white p-6 space-y-4">
-          <ProductMediaManager productId={product.id} />
-        </div>
-      )}
+      {/* Middle product colors/images section removed — image uploads are handled per-variant below */}
 
       <div className="rounded-xl border border-border bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
