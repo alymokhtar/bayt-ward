@@ -22,6 +22,8 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingPrimaryId, setLoadingPrimaryId] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activePreview, setActivePreview] = useState<ProductMediaItem | null>(null);
 
   async function refreshColors() {
@@ -116,16 +118,24 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
   async function handlePrimary(mediaId: string) {
     try {
       console.log("Client: setPrimaryProductMedia called", { mediaId });
+      setError(null);
+      setSuccessMessage(null);
+      setLoadingPrimaryId(mediaId);
       const result = await setPrimaryProductMedia(mediaId);
       console.log("Client: setPrimaryProductMedia result", result);
       if (!result.success) {
         setError(result.error);
+        setLoadingPrimaryId(null);
         return;
       }
+      setSuccessMessage("تم تعيين الصورة الرئيسية");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setLoadingPrimaryId(null);
       await refreshColors();
     } catch (err) {
       console.error("Client error in handlePrimary:", err);
       setError(err instanceof Error ? err.message : "فشل تعيين الصورة الرئيسية");
+      setLoadingPrimaryId(null);
     }
   }
 
@@ -217,7 +227,7 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
                     onBlur={(event) => void handleAltText(item.id, event.currentTarget.value)}
                   />
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" onClick={() => void handlePrimary(item.id)}>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void handlePrimary(item.id)} loading={loadingPrimaryId === item.id}>
                       <Check className="h-4 w-4" />
                       جعل رئيسية
                     </Button>
@@ -240,6 +250,7 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
       )}
 
       {uploading && <div className="rounded-lg border border-gold/20 bg-gold/5 px-3 py-2 text-sm text-brown">جارٍ رفع الصور…</div>}
+      {successMessage && <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-success">{successMessage}</div>}
 
       {activePreview && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setActivePreview(null)}>
