@@ -143,8 +143,15 @@ export default function ProductsTableClient({
           {products.map((product) => {
             const summary = getProductSummary(product);
             const productId = getProductIdentifier(product);
-            const mediaItems = product.colors.flatMap((color) => color.media);
-            const primaryMedia = mediaItems.find((item) => item.isPrimary && item.isActive) ?? mediaItems.find((item) => item.isActive) ?? null;
+            const mediaItems = [
+              ...(product.images ?? []),
+              ...product.colors.flatMap((color) => color.media ?? []),
+              ...product.variants.flatMap((v) => (v.images ? v.images : [])),
+            ];
+            const primaryMedia =
+              mediaItems.find((item) => item.isPrimary && item.isActive) ??
+              mediaItems.find((item) => item.isActive) ??
+              null;
             const primaryImageUrl = primaryMedia?.url || null;
             const imageCount = mediaItems.filter((item) => item.isActive).length;
 

@@ -374,6 +374,28 @@ export const getCachedProductsPage = unstable_cache(
               sellingPrice: true,
               costPrice: true,
               isActive: true,
+              images: {
+                where: { isActive: true },
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+                select: {
+                  id: true,
+                  url: true,
+                  altText: true,
+                  isPrimary: true,
+                  isActive: true,
+                },
+              },
+            },
+          },
+          images: {
+            where: { isActive: true, productVariantId: null },
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            select: {
+              id: true,
+              url: true,
+              altText: true,
+              isPrimary: true,
+              isActive: true,
             },
           },
         },
