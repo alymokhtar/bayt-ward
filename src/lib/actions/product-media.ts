@@ -632,12 +632,22 @@ export async function setPrimaryProductImage(
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      if (image.productId || image.productVariantId) {
+      let targetProductId: string | null = image.productId ?? null;
+
+      if (!targetProductId && image.productVariantId) {
+        const variant = await tx.productVariant.findUnique({
+          where: { id: image.productVariantId },
+          select: { productId: true },
+        });
+        targetProductId = variant?.productId ?? null;
+      }
+
+      if (targetProductId) {
         await tx.image.updateMany({
           where: {
             OR: [
-              { productId: image.productId },
-              { productVariant: { productId: image.productId } },
+              { productId: targetProductId },
+              { productVariant: { productId: targetProductId } },
             ],
           },
           data: { isPrimary: false },
