@@ -114,12 +114,19 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
   }
 
   async function handlePrimary(mediaId: string) {
-    const result = await setPrimaryProductMedia(mediaId);
-    if (!result.success) {
-      setError(result.error);
-      return;
+    try {
+      console.log("Client: setPrimaryProductMedia called", { mediaId });
+      const result = await setPrimaryProductMedia(mediaId);
+      console.log("Client: setPrimaryProductMedia result", result);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+      await refreshColors();
+    } catch (err) {
+      console.error("Client error in handlePrimary:", err);
+      setError(err instanceof Error ? err.message : "فشل تعيين الصورة الرئيسية");
     }
-    await refreshColors();
   }
 
   async function handleToggle(mediaId: string, isActive: boolean) {

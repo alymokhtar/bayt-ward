@@ -583,10 +583,12 @@ export async function setPrimaryProductMedia(
   mediaId: string
 ): Promise<ActionResult<ProductMediaItem>> {
   try {
+    console.log("Server: setPrimaryProductMedia called", { mediaId });
     await requireMediaManager();
 
     const lookup = await getMediaOrError(mediaId);
     if (!lookup.success) {
+      console.log("Server: setPrimaryProductMedia media lookup failed", { mediaId, error: lookup.error });
       return { success: false, error: lookup.error };
     }
 
@@ -604,8 +606,10 @@ export async function setPrimaryProductMedia(
     });
 
     revalidateProductMediaPaths();
+    console.log("Server: setPrimaryProductMedia succeeded", { media });
     return { success: true, data: media };
   } catch (error) {
+    console.error("Server error in setPrimaryProductMedia:", error);
     return handleActionError(error);
   }
 }
