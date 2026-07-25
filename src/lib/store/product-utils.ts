@@ -113,16 +113,21 @@ export function getAvailableSizesForColor(
 }
 
 export function getPrimaryImageUrl(product: ProductWithOptionalImages): string | null {
+  // 1. البحث أولاً عن صورة رئيسية محددة (isPrimary: true) في جميع المتغيرات دون استثناء
   for (const variant of product.variants ?? []) {
     const primaryVariantImage = (variant.images ?? []).find(
       (item) => item.isPrimary && item.isActive !== false
     );
     if (primaryVariantImage?.url) return primaryVariantImage.url;
+  }
 
+  // 2. إذا لم تُوجد أي صورة رئيسية محددة، نلتقط أول صورة نشطة من المتغيرات كخيار ثانٍ
+  for (const variant of product.variants ?? []) {
     const firstVariantImage = (variant.images ?? []).find((item) => item.isActive !== false);
     if (firstVariantImage?.url) return firstVariantImage.url;
   }
 
+  // 3. الصور العامة للمنتج (إن وجدت)
   const productImages = product.images ?? [];
   const productPrimary = productImages.find((item) => item.isPrimary && item.isActive !== false);
   if (productPrimary?.url) return productPrimary.url;
@@ -130,6 +135,7 @@ export function getPrimaryImageUrl(product: ProductWithOptionalImages): string |
   const productFirst = productImages.find((item) => item.isActive !== false);
   if (productFirst?.url) return productFirst.url;
 
+  // 4. وسائط الألوان
   for (const color of product.colors ?? []) {
     const media = color.media ?? [];
     const primary = media.find((item) => item.isPrimary && item.isActive);
