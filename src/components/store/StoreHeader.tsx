@@ -23,20 +23,14 @@ import { formatPhoneForWhatsApp, getWhatsAppUrl } from "@/lib/whatsapp";
 
 type StoreHeaderProps = {
   settings: Record<string, string>;
+  categories?: Array<{ id: string; name?: string | null; nameAr?: string | null }>;
 };
 
 const STORE_BASE_PATH = "/store";
 
-const NAV_LINKS = [
-  { href: `${STORE_BASE_PATH}`, label: "الرئيسية" },
-  { href: `${STORE_BASE_PATH}/categories`, label: "طرح" },
-  { href: `${STORE_BASE_PATH}/categories`, label: "عبايات" },
-  { href: `${STORE_BASE_PATH}/categories`, label: "ملابس منزلية" },
-  { href: `${STORE_BASE_PATH}/products`, label: "إكسسوارات" },
-  { href: `${STORE_BASE_PATH}/products`, label: "عروض" },
-];
 
-export default function StoreHeader({ settings }: StoreHeaderProps) {
+
+export default function StoreHeader({ settings, categories }: StoreHeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
   const {
@@ -53,6 +47,22 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const navLinks = useMemo(() => {
+    const links: { href: string; label: string }[] = [];
+
+    links.push({ href: STORE_BASE_PATH, label: "الرئيسية" });
+
+    if (categories && categories.length > 0) {
+      categories.slice(0, 4).forEach((c) => {
+        links.push({ href: `${STORE_BASE_PATH}/categories/${c.id}`, label: c.nameAr || c.name || "القسم" });
+      });
+    }
+
+    links.push({ href: `${STORE_BASE_PATH}/contact`, label: "تواصل معنا" });
+
+    return links;
+  }, [categories]);
 
   const storeName = settings.store_name_ar || STORE_NAME_AR;
   const whatsappNumber = settings.store_whatsapp || settings.store_phone || "";
@@ -238,7 +248,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
 
       <nav className="hidden border-t border-transparent md:block" aria-label="التنقل الرئيسي">
         <div className="store-container flex h-12 items-center justify-center gap-10">
-          {NAV_LINKS.map((link) => {
+          {navLinks.map((link) => {
             const active =
               link.href === STORE_BASE_PATH
                 ? pathname === STORE_BASE_PATH || pathname === `${STORE_BASE_PATH}/`
@@ -269,7 +279,7 @@ export default function StoreHeader({ settings }: StoreHeaderProps) {
           aria-label="قائمة الجوال"
         >
           <ul className="space-y-1">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <li key={`${link.href}-${link.label}`}>
                 <Link
                   href={link.href}
