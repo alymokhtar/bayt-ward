@@ -41,6 +41,13 @@ type Product = {
       isActive: boolean;
     }[];
   }[];
+  images?: {
+    id: string;
+    url: string;
+    altText: string | null;
+    isPrimary: boolean;
+    isActive: boolean;
+  }[];
   variants: {
     id: string;
     sku: string;
@@ -53,6 +60,13 @@ type Product = {
     costPrice: number;
     sellingPrice: number;
     isActive: boolean;
+    images?: {
+      id: string;
+      url: string;
+      altText: string | null;
+      isPrimary: boolean;
+      isActive: boolean;
+    }[];
   }[];
 };
 
