@@ -45,6 +45,15 @@ export function invalidateProductsData() {
   safeRevalidatePath("/store/categories");
 }
 
+export function invalidateProductPage(productId: string) {
+  safeUpdateTag(CACHE_TAG.products);
+  safeUpdateTag(CACHE_TAG.storefront);
+  safeRevalidatePath(`/store/product/${productId}`);
+  safeRevalidatePath(`/store/products`);
+  safeRevalidatePath(`/store/categories`);
+  safeRevalidatePath(`/`);
+}
+
 export function invalidateStorefrontData() {
   safeUpdateTag(CACHE_TAG.storefront);
   safeRevalidatePath("/store");

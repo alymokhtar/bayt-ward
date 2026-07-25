@@ -9,7 +9,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { syncProductColors } from "@/lib/product-color-sync";
 import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-constants";
-import { invalidateProductsData } from "@/lib/revalidate-tags";
+import { invalidateProductsData, invalidateProductPage } from "@/lib/revalidate-tags";
 import type {
   ProductColorWithMedia,
   ProductImageItem,
@@ -606,6 +606,11 @@ export async function setPrimaryProductMedia(
     });
 
     revalidateProductMediaPaths();
+    try {
+      invalidateProductPage(lookup.media.productColor.productId);
+    } catch (e) {
+      console.error("Failed to invalidate product page for", lookup.media.productColor.productId, e);
+    }
     console.log("Server: setPrimaryProductMedia succeeded", { media });
     return { success: true, data: media };
   } catch (error) {
@@ -631,8 +636,8 @@ export async function setPrimaryProductImage(
       return { success: false, error: "الصورة غير موجودة" };
     }
 
+    let targetProductId: string | null = image.productId ?? null;
     const updated = await prisma.$transaction(async (tx) => {
-      let targetProductId: string | null = image.productId ?? null;
 
       if (!targetProductId && image.productVariantId) {
         const variant = await tx.productVariant.findUnique({
@@ -662,6 +667,13 @@ export async function setPrimaryProductImage(
     });
 
     revalidateProductMediaPaths();
+    if (targetProductId) {
+      try {
+        invalidateProductPage(targetProductId);
+      } catch (e) {
+        console.error("Failed to invalidate product page for", targetProductId, e);
+      }
+    }
     console.log("Server: setPrimaryProductImage succeeded", { imageId });
     return { success: true, data: updated };
   } catch (error) {
