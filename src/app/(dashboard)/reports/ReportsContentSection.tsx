@@ -1,4 +1,4 @@
-import { formatCurrency, formatDateTime, getPaymentMethodLabel, getSaleStatusLabel } from "@/lib/utils";
+import { formatCurrency, formatDateTime, getPaymentDisplayLabel, getPaymentMethodLabel, getSaleStatusLabel } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import LowStockReportPanel from "@/app/(dashboard)/reports/LowStockReportPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -86,7 +86,7 @@ export default async function ReportsContentSection({
                       </Link>
                     </TableCell>
                     <TableCell>{sale.customerName}</TableCell>
-                    <TableCell>{getPaymentMethodLabel(sale.paymentMethod)}</TableCell>
+                    <TableCell>{getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}</TableCell>
                     <TableCell className="font-medium text-gold">
                       {formatCurrency(sale.totalAmount)}
                     </TableCell>

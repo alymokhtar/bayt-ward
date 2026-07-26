@@ -177,6 +177,9 @@ export const getCachedRecentSales = unstable_cache(
         paymentMethod: true,
         status: true,
         createdAt: true,
+        payments: {
+          select: { method: true, amount: true },
+        },
         customer: { select: { id: true, name: true, phone: true } },
         user: { select: { id: true, name: true } },
       },
@@ -456,6 +459,9 @@ export const getCachedSalesPage = unstable_cache(
           paymentMethod: true,
           status: true,
           createdAt: true,
+          payments: {
+            select: { method: true, amount: true },
+          },
           customer: { select: { id: true, name: true, phone: true } },
           user: { select: { id: true, name: true } },
           _count: { select: { items: true } },
@@ -826,6 +832,9 @@ export const getCachedSalesReport = unstable_cache(
           status: true,
           paymentMethod: true,
           createdAt: true,
+          payments: {
+            select: { method: true, amount: true },
+          },
           customer: { select: { name: true } },
           user: { select: { name: true } },
         },
@@ -917,6 +926,7 @@ export const getCachedSalesReport = unstable_cache(
         totalAmount: sale.totalAmount,
         status: sale.status,
         paymentMethod: sale.paymentMethod,
+        payments: sale.payments,
         createdAt: sale.createdAt,
       })),
     };

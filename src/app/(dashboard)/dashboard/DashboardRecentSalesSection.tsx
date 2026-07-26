@@ -11,7 +11,7 @@ import { getDashboardRecentSales } from "@/lib/actions/dashboard";
 import {
   formatCurrency,
   formatDateTime,
-  getPaymentMethodLabel,
+  getPaymentDisplayLabel,
 } from "@/lib/utils";
 import Link from "next/link";
 
@@ -57,7 +57,7 @@ export default async function DashboardRecentSalesSection() {
                 </TableCell>
                 <TableCell>{sale.user.name}</TableCell>
                 <TableCell>
-                  {getPaymentMethodLabel(sale.paymentMethod)}
+                  {getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}
                 </TableCell>
                 <TableCell className="font-semibold">
                   {formatCurrency(sale.totalAmount)}
