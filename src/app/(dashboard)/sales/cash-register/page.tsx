@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/Table";
 import { getCashRegisterReview, getSale } from "@/lib/actions/sales";
 import { formatEgyptChartDateLabel } from "@/lib/business-day";
-import { formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
+import { formatCurrency, formatDateTime, getPaymentDisplayLabel, getPaymentMethodLabel } from "@/lib/utils";
 import type { PaymentMethod } from "@prisma/client";
 import {
   ArrowRight,
@@ -66,6 +66,7 @@ interface ReviewData {
     invoiceNumber: string;
     totalAmount: number;
     paymentMethod: PaymentMethod | null;
+    payments?: Array<{ method?: string | null; amount?: number }>;
     status: string;
     createdAt: Date;
     customer: { name: string | null } | null;
@@ -506,7 +507,7 @@ export default function CashRegisterPage() {
                                 {formatCurrency(sale.totalAmount)}
                               </p>
                               <p className="text-xs text-muted">
-                                {getPaymentMethodLabel(sale.paymentMethod)}
+                                {getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}
                               </p>
                             </div>
                             {isExpanded ? (
@@ -549,7 +550,7 @@ export default function CashRegisterPage() {
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted">طريقة الدفع</p>
-                                    <p className="font-medium">{getPaymentMethodLabel(expandedSaleData.paymentMethod)}</p>
+                                    <p className="font-medium">{getPaymentDisplayLabel(expandedSaleData.paymentMethod, expandedSaleData.payments)}</p>
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted">التاريخ</p>

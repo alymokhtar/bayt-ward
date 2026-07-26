@@ -16,7 +16,7 @@ import {
 import {
   formatCurrency,
   formatDateTime,
-  getPaymentMethodLabel,
+  getPaymentDisplayLabel,
 } from "@/lib/utils";
 import { Search, Wallet } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +36,7 @@ type SaleItem = {
   totalAmount: number;
   status: string;
   paymentMethod: string | null;
+  payments?: Array<{ method?: string | null; amount?: number }>;
   createdAt: Date;
   customer: { name: string } | null;
   user: { name: string };
@@ -146,7 +147,7 @@ export default function SalesClient({
                   </TableCell>
                   <TableCell>{sale.user.name}</TableCell>
                   <TableCell>
-                    {getPaymentMethodLabel(sale.paymentMethod)}
+                    {getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}
                   </TableCell>
                   <TableCell className="font-semibold">
                     {formatCurrency(sale.totalAmount)}

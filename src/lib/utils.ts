@@ -124,6 +124,21 @@ export function getPaymentMethodLabel(method: string | null | undefined): string
   return labels[method] || method;
 }
 
+export function getPaymentDisplayLabel(
+  fallbackMethod: string | null | undefined,
+  payments?: Array<{ method?: string | null; amount?: number }> | null
+): string {
+  if (payments && payments.length > 1) {
+    return getPaymentMethodLabel("MIXED");
+  }
+
+  if (payments && payments.length === 1) {
+    return getPaymentMethodLabel(payments[0]?.method ?? fallbackMethod);
+  }
+
+  return getPaymentMethodLabel(fallbackMethod);
+}
+
 export function getSaleStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     COMPLETED: "مكتملة",

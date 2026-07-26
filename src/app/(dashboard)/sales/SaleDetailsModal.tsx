@@ -20,6 +20,7 @@ import { STORE_NAME_AR } from "@/lib/constants";
 import {
   formatCurrency,
   formatDateTime,
+  getPaymentDisplayLabel,
   getPaymentMethodLabel,
 } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -238,7 +239,7 @@ export default function SaleDetailsModal({
                         </p>
                       ))
                     ) : (
-                      <p>{getPaymentMethodLabel(sale.paymentMethod)}</p>
+                      <p>{getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}</p>
                     )}
                   </div>
                 </div>

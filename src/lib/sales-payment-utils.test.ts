@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { normalizeSalePayments } from "./sales-payment-utils";
+import { getPaymentDisplayLabel } from "./utils";
 
 test("caps a single overpayment to the sale total for payment records", () => {
   const result = normalizeSalePayments({
@@ -27,4 +28,12 @@ test("preserves mixed payments when they exactly match the total", () => {
     { amount: 100, method: "CARD" },
   ]);
   assert.equal(result.effectivePaidAmount, 200);
+});
+
+test("shows the single payment method for one payment entry", () => {
+  assert.equal(getPaymentDisplayLabel("MIXED", [{ method: "CASH" }]), "كاش");
+});
+
+test("shows mixed for multiple payment entries", () => {
+  assert.equal(getPaymentDisplayLabel("CASH", [{ method: "CASH" }, { method: "CARD" }]), "مختلط");
 });
