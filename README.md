@@ -148,3 +148,5 @@ TRUNCATE TABLE
 "Supplier",
 "User"
 RESTART IDENTITY CASCADE;
+
+-----------------------------------------
