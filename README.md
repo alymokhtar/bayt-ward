@@ -125,3 +125,26 @@ git push -u origin website-preparation  ارفعه على GitHub
 git checkout main   للرجوع الي فرع main
 -------------------------------------------------------
 
+تفريغ جادول قاعده البيانات
+
+TRUNCATE TABLE
+"Category",
+"Customer",
+"EmployeeAdjustment",
+"Expense",
+"Image",
+"Product",
+"ProductColor",
+"ProductMedia",
+"ProductVariant",
+"Purchase",
+"PurchaseItem",
+"Return",
+"ReturnItem",
+"Sale",
+"SaleItem",
+"Setting",
+"StockMovement",
+"Supplier",
+"User"
+RESTART IDENTITY CASCADE;

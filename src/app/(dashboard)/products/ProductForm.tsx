@@ -7,6 +7,12 @@ import Select from "@/components/ui/Select";
 import { SIZES } from "@/lib/constants";
 import { resolveStoredBarcode } from "@/lib/barcode";
 import {
+  CUSTOM_SIZE_OPTION_VALUE,
+  getVariantSizeMode,
+  getVariantSizeSelectValue,
+  resolveVariantSize,
+} from "@/lib/variant-size";
+import {
   findVariantCodeIssues,
   registerVariantCodes,
 } from "@/lib/variant-codes";
@@ -65,7 +71,12 @@ interface ProductFormProps {
   initialVariantCode?: VariantCodePair;
 }
 
-type VariantForm = VariantInput & { id?: string; isActive?: boolean };
+type VariantForm = VariantInput & {
+  id?: string;
+  isActive?: boolean;
+  sizeMode?: "preset" | "custom";
+  customSize?: string;
+};
 
 const emptyVariant = (
   template?: VariantForm,
@@ -80,6 +91,8 @@ const emptyVariant = (
   sellingPrice: template?.sellingPrice ?? 0,
   stockQuantity: 0,
   minStockLevel: template?.minStockLevel ?? 5,
+  sizeMode: template?.sizeMode ?? "preset",
+  customSize: template?.customSize ?? "",
 });
 
 export default function ProductForm({
@@ -100,19 +113,24 @@ export default function ProductForm({
   const [featuredProduct, setFeaturedProduct] = useState(product?.featuredProduct ?? false);
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
   const [variants, setVariants] = useState<VariantForm[]>(
-    product?.variants.map((v) => ({
-      id: v.id,
-      sku: v.sku,
-      barcode: v.barcode || "",
-      size: v.size,
-      color: v.color,
-      colorHex: v.colorHex || "",
-      costPrice: v.costPrice,
-      sellingPrice: v.sellingPrice,
-      stockQuantity: v.stockQuantity,
-      minStockLevel: v.minStockLevel,
-      isActive: v.isActive,
-    })) || [emptyVariant(undefined, initialVariantCode)]
+    product?.variants.map((v) => {
+      const sizeMode = getVariantSizeMode(v.size);
+      return {
+        id: v.id,
+        sku: v.sku,
+        barcode: v.barcode || "",
+        size: v.size,
+        color: v.color,
+        colorHex: v.colorHex || "",
+        costPrice: v.costPrice,
+        sellingPrice: v.sellingPrice,
+        stockQuantity: v.stockQuantity,
+        minStockLevel: v.minStockLevel,
+        isActive: v.isActive,
+        sizeMode,
+        customSize: sizeMode === "custom" ? v.size : "",
+      };
+    }) || [emptyVariant(undefined, initialVariantCode)]
   );
 
   const [loading, setLoading] = useState(false);
@@ -175,6 +193,30 @@ export default function ProductForm({
     );
   }
 
+  function updateVariantSize(index: number, mode: "preset" | "custom", value: string) {
+    setVariants((prev) =>
+      prev.map((variant, variantIndex) => {
+        if (variantIndex !== index) return variant;
+
+        if (mode === "custom") {
+          return {
+            ...variant,
+            sizeMode: "custom",
+            customSize: value,
+            size: CUSTOM_SIZE_OPTION_VALUE,
+          };
+        }
+
+        return {
+          ...variant,
+          sizeMode: "preset",
+          customSize: "",
+          size: value,
+        };
+      })
+    );
+  }
+
   async function addVariant() {
     setAddingVariant(true);
     setError("");
@@ -227,6 +269,15 @@ export default function ProductForm({
       return;
     }
 
+    for (const variant of variants) {
+      const mode = variant.sizeMode ?? getVariantSizeMode(variant.size);
+      const resolvedSize = resolveVariantSize(mode, mode === "custom" ? variant.customSize : variant.size);
+      if (mode === "custom" && !resolvedSize.trim()) {
+        setError("أدخل المقاس المخصص لكل متغير تم اختياره كـ مقاس مخصص");
+        return;
+      }
+    }
+
     setLoading(true);
 
     const payload = {
@@ -237,19 +288,24 @@ export default function ProductForm({
       categoryId,
       publishToWebsite,
       featuredProduct,
-      variants: variants.map((v) => ({
-        id: v.id || undefined,
-        sku: String(v.sku).trim(),
-        barcode: v.barcode ? String(v.barcode).trim() : undefined,
-        size: String(v.size).trim(),
-        color: String(v.color).trim(),
-        colorHex: v.colorHex ? String(v.colorHex).trim() : undefined,
-        costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
-        sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
-        stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : parseInt(String(v.stockQuantity) || "0"),
-        minStockLevel: typeof v.minStockLevel === "number" ? v.minStockLevel : parseInt(String(v.minStockLevel) || "5"),
-        isActive: v.isActive ?? true,
-      })),
+      variants: variants.map((v) => {
+        const mode = v.sizeMode ?? getVariantSizeMode(v.size);
+        const resolvedSize = resolveVariantSize(mode, mode === "custom" ? v.customSize : v.size);
+
+        return {
+          id: v.id || undefined,
+          sku: String(v.sku).trim(),
+          barcode: v.barcode ? String(v.barcode).trim() : undefined,
+          size: String(resolvedSize).trim(),
+          color: String(v.color).trim(),
+          colorHex: v.colorHex ? String(v.colorHex).trim() : undefined,
+          costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
+          sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
+          stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : parseInt(String(v.stockQuantity) || "0"),
+          minStockLevel: typeof v.minStockLevel === "number" ? v.minStockLevel : parseInt(String(v.minStockLevel) || "5"),
+          isActive: v.isActive ?? true,
+        };
+      }),
     };
 
     const result = isEdit
@@ -271,7 +327,10 @@ export default function ProductForm({
     label: c.nameAr || c.name,
   }));
 
-  const sizeOptions = SIZES.map((s) => ({ value: s, label: s }));
+  const sizeOptions = [
+    ...SIZES.map((s) => ({ value: s, label: s })),
+    { value: CUSTOM_SIZE_OPTION_VALUE, label: "مقاس مخصص" },
+  ];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -383,12 +442,30 @@ export default function ProductForm({
                     : "فريد لكل متغير — يُستخدم للمسح والطباعة"
                 }
               />
-              <Select
-                label="المقاس"
-                options={sizeOptions}
-                value={variant.size}
-                onChange={(e) => updateVariant(index, "size", e.target.value)}
-              />
+              <div className="space-y-3">
+                <Select
+                  label="المقاس"
+                  options={sizeOptions}
+                  value={getVariantSizeSelectValue(variant.size, variant.sizeMode)}
+                  onChange={(e) => {
+                    const selectedValue = e.target.value;
+                    if (selectedValue === CUSTOM_SIZE_OPTION_VALUE) {
+                      updateVariantSize(index, "custom", variant.customSize || "");
+                    } else {
+                      updateVariantSize(index, "preset", selectedValue);
+                    }
+                  }}
+                />
+                {variant.sizeMode === "custom" && (
+                  <Input
+                    label="المقاس المخصص"
+                    value={variant.customSize || ""}
+                    onChange={(e) => updateVariantSize(index, "custom", e.target.value)}
+                    placeholder="اكتب المقاس يدويًا"
+                    required
+                  />
+                )}
+              </div>
               <ColorAutocomplete
                 label="اللون"
                 value={variant.color}

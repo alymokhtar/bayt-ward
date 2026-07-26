@@ -137,7 +137,7 @@ export function TrustSignals() {
   const items = [
     {
       title: "توصيل سريع",
-      text: "إلى جميع أنحاء موريتانيا",
+      text: "إلى جميع أنحاء الجمهوريه",
       icon: Truck,
     },
     {
