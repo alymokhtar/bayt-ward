@@ -1,0 +1,18 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { normalizeHexColor, resolveColorSelection } from "./color-utils";
+
+test("normalizes hex values to 6-digit format", () => {
+  assert.equal(normalizeHexColor("#abc"), "#AABBCC");
+  assert.equal(normalizeHexColor("123456"), "#123456");
+});
+
+test("returns the preset hex for known color names", () => {
+  const result = resolveColorSelection("أبيض");
+  assert.deepEqual(result, { label: "أبيض", hex: "#FFFFFF" });
+});
+
+test("supports manual hex input", () => {
+  const result = resolveColorSelection("#12ab34");
+  assert.deepEqual(result, { label: "#12AB34", hex: "#12AB34" });
+});

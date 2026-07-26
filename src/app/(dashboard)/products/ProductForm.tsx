@@ -469,6 +469,7 @@ export default function ProductForm({
               <ColorAutocomplete
                 label="اللون"
                 value={variant.color}
+                colorHex={variant.colorHex || ""}
                 usedColors={colorSuggestions}
                 onChange={(color, colorHex) =>
                   updateVariantColor(index, color, colorHex)
