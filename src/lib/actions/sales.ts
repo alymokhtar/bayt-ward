@@ -5,7 +5,7 @@ import { requireAuth } from "@/lib/auth";
 import { generateInvoiceNumber, formatCurrency, formatDateTime } from "@/lib/utils";
 import { getCachedSalesPage } from "@/lib/cached-queries";
 import { getCashRegisterReview as fetchCashRegisterReview } from "@/lib/cash-register";
-import { invalidateSalesData } from "@/lib/revalidate-tags";
+import { invalidateSalesData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import type { PaymentMethod } from "@prisma/client";
@@ -37,6 +37,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidateSalePaths() {
   invalidateSalesData();
+  revalidateInventoryCache();
 }
 
 function formatSaleTelegramMessage(sale: {
@@ -87,10 +88,10 @@ export async function getSales(options?: {
 export async function getCashRegisterReview(
   from?: string,
   to?: string,
-  paymentMethod?: string
+  paymentMethod?: PaymentMethod | "ALL"
 ) {
   await requireAuth();
-  return fetchCashRegisterReview(from, to, paymentMethod as any);
+  return fetchCashRegisterReview(from, to, paymentMethod);
 }
 
 export async function getSale(id: string) {

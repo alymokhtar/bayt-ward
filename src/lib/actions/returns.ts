@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumber, formatCurrency, formatDateTime } from "@/lib/utils";
-import { invalidateReturnsData } from "@/lib/revalidate-tags";
+import { invalidateReturnsData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { getCachedReturnsList } from "@/lib/cached-queries";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import { sendTelegramMessage } from "@/lib/telegram";
@@ -34,6 +34,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidateReturnPaths() {
   invalidateReturnsData();
+  revalidateInventoryCache();
 }
 
 function buildReturnTelegramMessage(returnRecord: {

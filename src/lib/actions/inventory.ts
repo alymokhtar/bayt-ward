@@ -8,7 +8,7 @@ import {
   getCachedInventoryPage,
   getCachedStockMovementsPage,
 } from "@/lib/cached-queries";
-import { invalidateInventoryData } from "@/lib/revalidate-tags";
+import { invalidateInventoryData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { sendTelegramMessage } from "@/lib/telegram";
 
 type ActionResult<T = void> =
@@ -30,6 +30,7 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidateInventoryPaths() {
   invalidateInventoryData();
+  revalidateInventoryCache();
 }
 
 type LowStockNotificationItem = {

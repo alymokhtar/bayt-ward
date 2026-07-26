@@ -17,6 +17,31 @@ function safeUpdateTag(tag: string) {
   }
 }
 
+export function revalidateInventoryCache() {
+  safeUpdateTag(CACHE_TAG.products);
+  safeUpdateTag(CACHE_TAG.inventory);
+  safeUpdateTag(CACHE_TAG.stockMovements);
+  safeUpdateTag(CACHE_TAG.dashboard);
+  safeUpdateTag(CACHE_TAG.reports);
+  safeUpdateTag(CACHE_TAG.storefront);
+  safeUpdateTag(CACHE_TAG.sales);
+  safeUpdateTag(CACHE_TAG.returns);
+  safeUpdateTag(CACHE_TAG.purchases);
+  safeRevalidatePath("/inventory");
+  safeRevalidatePath("/pos");
+  safeRevalidatePath("/products");
+  safeRevalidatePath("/dashboard");
+  safeRevalidatePath("/reports");
+  safeRevalidatePath("/sales");
+  safeRevalidatePath("/returns");
+  safeRevalidatePath("/purchases");
+  safeRevalidatePath("/");
+  safeRevalidatePath("/store");
+  safeRevalidatePath("/store/products");
+  safeRevalidatePath("/store/categories");
+  safeRevalidatePath("/store/product/[id]");
+}
+
 export function invalidateSalesData() {
   safeUpdateTag(CACHE_TAG.sales);
   safeUpdateTag(CACHE_TAG.dashboard);
@@ -70,21 +95,7 @@ export function invalidateCustomersData() {
 }
 
 export function invalidateInventoryData() {
-  safeUpdateTag(CACHE_TAG.inventory);
-  safeUpdateTag(CACHE_TAG.stockMovements);
-  safeUpdateTag(CACHE_TAG.dashboard);
-  safeUpdateTag(CACHE_TAG.reports);
-  safeUpdateTag(CACHE_TAG.products);
-  safeUpdateTag(CACHE_TAG.storefront);
-  safeRevalidatePath("/inventory");
-  safeRevalidatePath("/pos");
-  safeRevalidatePath("/products");
-  safeRevalidatePath("/dashboard");
-  safeRevalidatePath("/reports");
-  safeRevalidatePath("/");
-  safeRevalidatePath("/store");
-  safeRevalidatePath("/store/products");
-  safeRevalidatePath("/store/categories");
+  revalidateInventoryCache();
 }
 
 export function invalidatePurchasesData() {
