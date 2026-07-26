@@ -17,13 +17,14 @@ import {
 import { createExpense, deleteExpense } from "@/lib/actions/expenses";
 import ExpenseDetailsModal from "@/app/(dashboard)/expenses/ExpenseDetailsModal";
 import { getEmployeePayrollSummary } from "@/lib/actions/employees";
+import type { PaymentMethod } from "@prisma/client";
 import {
   BUSINESS_TIME_ZONE,
   dateKeyToUtcNoon,
   getEgyptBusinessDateKey,
   parseDateKey,
 } from "@/lib/business-day";
-import { EXPENSE_CATEGORIES, DISPLAY_LOCALE, PAYMENT_METHODS } from "@/lib/constants";
+import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES, DISPLAY_LOCALE, PAYMENT_METHODS } from "@/lib/constants";
 import { formatCurrency, formatDate, getPaymentMethodLabel } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -67,7 +68,7 @@ export default function ExpensesClient({
   const [category, setCategory] = useState("OTHER");
   const [description, setDescription] = useState("");
   const [employeeId, setEmployeeId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
   const [expenseDate, setExpenseDate] = useState(getEgyptBusinessDateKey);
   const [payrollSummary, setPayrollSummary] = useState<PayrollSummary | null>(
     null
@@ -165,7 +166,7 @@ export default function ExpensesClient({
       description: description || undefined,
       expenseDate: dateKeyToUtcNoon(expenseDate),
       employeeId: isSalaryExpense ? employeeId : undefined,
-      paymentMethod: paymentMethod as "CASH" | "CARD" | "BANK_TRANSFER" | "ONLINE" | "OTHER",
+      paymentMethod,
     });
 
     setLoading(false);
@@ -400,7 +401,7 @@ export default function ExpensesClient({
             label="طريقة الدفع"
             options={PAYMENT_METHODS}
             value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
+            onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
           />
           <Input
             label="التاريخ"
