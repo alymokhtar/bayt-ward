@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumber } from "@/lib/utils";
 import { invalidatePurchasesData } from "@/lib/revalidate-tags";
 import { getCachedPurchasesList } from "@/lib/cached-queries";
+import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
 type ActionResult<T = void> =
@@ -39,6 +40,15 @@ function handleActionError(error: unknown): ActionResult<never> {
 
 function revalidatePurchasePaths() {
   invalidatePurchasesData();
+  revalidatePath("/inventory");
+  revalidatePath("/pos");
+  revalidatePath("/products");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  revalidatePath("/store");
+  revalidatePath("/store/products");
+  revalidatePath("/store/categories");
+  revalidatePath("/");
 }
 
 async function applyPurchaseItemsToInventory(

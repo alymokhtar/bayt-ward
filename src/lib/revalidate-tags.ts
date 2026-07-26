@@ -74,10 +74,17 @@ export function invalidateInventoryData() {
   safeUpdateTag(CACHE_TAG.stockMovements);
   safeUpdateTag(CACHE_TAG.dashboard);
   safeUpdateTag(CACHE_TAG.reports);
+  safeUpdateTag(CACHE_TAG.products);
+  safeUpdateTag(CACHE_TAG.storefront);
   safeRevalidatePath("/inventory");
+  safeRevalidatePath("/pos");
   safeRevalidatePath("/products");
   safeRevalidatePath("/dashboard");
   safeRevalidatePath("/reports");
+  safeRevalidatePath("/");
+  safeRevalidatePath("/store");
+  safeRevalidatePath("/store/products");
+  safeRevalidatePath("/store/categories");
 }
 
 export function invalidatePurchasesData() {
