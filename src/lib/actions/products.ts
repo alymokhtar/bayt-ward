@@ -281,6 +281,7 @@ export async function createProduct(data: {
               sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
               stockQuantity: typeof v.stockQuantity === "number" ? Math.max(0, v.stockQuantity) : parseInt(String(v.stockQuantity) || "0"),
               minStockLevel: typeof v.minStockLevel === "number" ? Math.max(0, v.minStockLevel) : 5,
+              isActive: true,
             })),
           },
         },
@@ -475,6 +476,7 @@ export async function updateProduct(
                 sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
                 stockQuantity: 0,
                 minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
+                isActive: true,
               },
             });
           }

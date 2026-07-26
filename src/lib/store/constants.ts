@@ -6,4 +6,5 @@ export const STORE_PAGE_SIZE = 24;
 export const PUBLISHED_PRODUCT_WHERE = {
   publishToWebsite: true,
   isActive: true,
+  variants: { some: { isActive: true } },
 } as const;

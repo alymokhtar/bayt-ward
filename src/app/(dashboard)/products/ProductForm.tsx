@@ -266,7 +266,9 @@ export default function ProductForm({
   function removeVariant(index: number) {
     if (variants.length <= 1) return;
 
-    const confirmed = window.confirm("هل أنت متأكد من حذف هذا المتغير؟");
+    const confirmed = window.confirm(
+      "هل أنت متأكد من إخفاء هذا المتغير؟ سيتم أرشفته بدلًا من حذفه نهائيًا."
+    );
     if (!confirmed) return;
 
     setVariants((prev) => prev.filter((_, i) => i !== index));
@@ -444,6 +446,8 @@ export default function ProductForm({
                   variant="ghost"
                   size="sm"
                   onClick={() => removeVariant(index)}
+                  title="إخفاء المتغير (أرشفة)"
+                  aria-label="إخفاء المتغير (أرشفة)"
                 >
                   <Trash2 className="h-4 w-4 text-danger" />
                 </Button>
