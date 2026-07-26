@@ -178,8 +178,9 @@ export default function ColorAutocomplete({
               type="button"
               onClick={() => {
                 setQuery(option.name);
-                setHexValue(option.hex);
-                onChange(option.name, option.hex);
+                const nextHex = option.hex || "";
+                setHexValue(nextHex);
+                onChange(option.name, nextHex || undefined);
               }}
               className={cn(
                 "flex items-center gap-2 rounded-full border border-border bg-white px-2.5 py-1.5 text-xs text-brown shadow-sm",
@@ -188,7 +189,7 @@ export default function ColorAutocomplete({
             >
               <span
                 className="h-4 w-4 rounded-full border border-border"
-                style={{ backgroundColor: option.hex }}
+                style={{ backgroundColor: option.hex || "#D4D4D4" }}
               />
               <span>{option.name}</span>
             </button>
