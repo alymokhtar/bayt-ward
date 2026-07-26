@@ -69,7 +69,20 @@ export function mergeColorOptions(options: ColorOption[]): ColorOption[] {
 export function getDuplicateVariantColorError(
   variants: Array<{ color?: string | null }>
 ): string | null {
-  void variants;
+  const seen = new Set<string>();
+
+  for (const variant of variants) {
+    const color = variant.color?.trim();
+    if (!color) continue;
+
+    const key = color.toLowerCase();
+    if (seen.has(key)) {
+      return `لا يمكن إضافة أكثر من متغير بنفس اللون: ${color}`;
+    }
+
+    seen.add(key);
+  }
+
   return null;
 }
 

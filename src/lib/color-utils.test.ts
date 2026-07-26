@@ -34,11 +34,11 @@ test("merges custom colors with presets for future reuse", () => {
   assert.ok(result.some((color) => color.name === "أزرق" && color.hex === "#1E88E5"));
 });
 
-test("allows reusing the same color across multiple variants", () => {
+test("blocks reusing the same color across multiple variants", () => {
   const error = getDuplicateVariantColorError([
     { color: "أبيض" },
     { color: "أبيض" },
   ]);
 
-  assert.equal(error, null);
+  assert.equal(error, "لا يمكن إضافة أكثر من متغير بنفس اللون: أبيض");
 });
