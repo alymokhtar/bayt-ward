@@ -265,6 +265,10 @@ export default function ProductForm({
 
   function removeVariant(index: number) {
     if (variants.length <= 1) return;
+
+    const confirmed = window.confirm("هل أنت متأكد من حذف هذا المتغير؟");
+    if (!confirmed) return;
+
     setVariants((prev) => prev.filter((_, i) => i !== index));
   }
 
