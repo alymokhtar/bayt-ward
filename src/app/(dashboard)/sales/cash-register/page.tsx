@@ -65,7 +65,7 @@ interface ReviewData {
     id: string;
     invoiceNumber: string;
     totalAmount: number;
-    paymentMethod: PaymentMethod;
+    paymentMethod: PaymentMethod | null;
     status: string;
     createdAt: Date;
     customer: { name: string | null } | null;

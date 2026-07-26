@@ -111,7 +111,7 @@ export function getRoleLabel(role: string): string {
   return labels[role] || role;
 }
 
-export function getPaymentMethodLabel(method: string): string {
+export function getPaymentMethodLabel(method: string | null | undefined): string {
   const labels: Record<string, string> = {
     CASH: "كاش",
     CARD: "فيزا",
@@ -120,6 +120,7 @@ export function getPaymentMethodLabel(method: string): string {
     TRANSFER: "تحويل",
     MIXED: "مختلط",
   };
+  if (!method) return "—";
   return labels[method] || method;
 }
 

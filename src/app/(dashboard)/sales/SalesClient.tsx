@@ -35,7 +35,7 @@ type SaleItem = {
   invoiceNumber: string;
   totalAmount: number;
   status: string;
-  paymentMethod: string;
+  paymentMethod: string | null;
   createdAt: Date;
   customer: { name: string } | null;
   user: { name: string };

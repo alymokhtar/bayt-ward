@@ -326,7 +326,7 @@ export default function POSClient({
       totalAmount,
       paidAmount: splitPaymentEnabled ? totalAmount : paid,
       changeAmount: splitPaymentEnabled ? 0 : changeAmount,
-      paymentMethod: splitPaymentEnabled ? "MIXED" : paymentMethod,
+      paymentMethod: splitPaymentEnabled ? "MIXED" as PaymentMethod : (paymentMethod || "CASH") as PaymentMethod,
       payments: splitPaymentEnabled ? splitPaymentEntries.map((entry) => ({
         amount: entry.amount,
         method: entry.method as PaymentMethod,

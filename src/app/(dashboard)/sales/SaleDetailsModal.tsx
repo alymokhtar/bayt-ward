@@ -85,7 +85,7 @@ type SaleData = {
   changeAmount: number;
   notes: string | null;
   createdAt: Date;
-  paymentMethod: string;
+  paymentMethod: string | null;
   payments: SalePayment[];
   customer: { name: string; phone: string | null } | null;
   user: { name: string };
