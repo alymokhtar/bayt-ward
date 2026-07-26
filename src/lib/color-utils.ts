@@ -1,5 +1,9 @@
 import { COLORS } from "@/lib/constants";
 
+export type ColorOption = { name: string; hex?: string | null };
+
+const CUSTOM_COLORS_STORAGE_KEY = "dashboard.custom-colors";
+
 export function normalizeHexColor(value?: string | null): string | undefined {
   if (!value) return undefined;
 
@@ -39,4 +43,65 @@ export function resolveColorSelection(value: string): { label: string; hex?: str
   }
 
   return { label: trimmed, hex: undefined };
+}
+
+export function mergeColorOptions(options: ColorOption[]): ColorOption[] {
+  const merged = new Map<string, ColorOption>();
+
+  COLORS.forEach((color) => {
+    merged.set(color.name, { name: color.name, hex: color.hex });
+  });
+
+  options.forEach((color) => {
+    const normalizedName = color.name?.trim();
+    if (!normalizedName) return;
+
+    const normalizedHex = normalizeHexColor(color.hex);
+    merged.set(normalizedName, {
+      name: normalizedName,
+      hex: normalizedHex ?? undefined,
+    });
+  });
+
+  return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+}
+
+export function readStoredCustomColors(): ColorOption[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = window.localStorage.getItem(CUSTOM_COLORS_STORAGE_KEY);
+    if (!stored) return [];
+
+    const parsed = JSON.parse(stored) as ColorOption[];
+    return Array.isArray(parsed)
+      ? parsed.filter((color) => color?.name?.trim()).map((color) => ({
+          name: color.name.trim(),
+          hex: normalizeHexColor(color.hex) ?? undefined,
+        }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+export function persistCustomColor(color: ColorOption): ColorOption[] {
+  const normalizedName = color.name?.trim();
+  if (!normalizedName) return readStoredCustomColors();
+
+  const existing = readStoredCustomColors();
+  const isPreset = COLORS.some((item) => item.name === normalizedName);
+  if (isPreset) return existing;
+
+  const next = existing.filter((entry) => entry.name !== normalizedName);
+  next.push({
+    name: normalizedName,
+    hex: normalizeHexColor(color.hex) ?? undefined,
+  });
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(CUSTOM_COLORS_STORAGE_KEY, JSON.stringify(next));
+  }
+
+  return next;
 }

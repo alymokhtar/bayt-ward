@@ -1,7 +1,13 @@
 "use client";
 
 import { COLORS } from "@/lib/constants";
-import { normalizeHexColor, resolveColorSelection } from "@/lib/color-utils";
+import {
+  mergeColorOptions,
+  normalizeHexColor,
+  persistCustomColor,
+  readStoredCustomColors,
+  resolveColorSelection,
+} from "@/lib/color-utils";
 import { cn } from "@/lib/utils";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
@@ -28,6 +34,7 @@ export default function ColorAutocomplete({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState(value);
   const [hexValue, setHexValue] = useState(colorHex || "");
+  const [customColors, setCustomColors] = useState(() => readStoredCustomColors());
 
   useEffect(() => {
     setQuery(value);
@@ -38,12 +45,13 @@ export default function ColorAutocomplete({
   }, [colorHex]);
 
   const allSuggestions = useMemo(() => {
-    const merged = new Set<string>([
-      ...COLORS.map((c) => c.name),
-      ...usedColors,
+    const merged = mergeColorOptions([
+      ...COLORS,
+      ...customColors,
+      ...usedColors.map((color) => ({ name: color, hex: undefined })),
     ]);
-    return Array.from(merged).sort((a, b) => a.localeCompare(b, "ar"));
-  }, [usedColors]);
+    return merged.map((color) => color.name);
+  }, [customColors, usedColors]);
 
   const filtered = useMemo(() => {
     const q = query.trim();
@@ -53,11 +61,25 @@ export default function ColorAutocomplete({
       .slice(0, 12);
   }, [query, allSuggestions]);
 
+  function persistSelection(name: string, nextHex?: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
+    const normalizedHex = normalizeHexColor(nextHex) ?? undefined;
+    const selection = resolveColorSelection(trimmedName);
+    const nextCustomColors = persistCustomColor({
+      name: trimmedName,
+      hex: normalizedHex ?? selection.hex,
+    });
+    setCustomColors(nextCustomColors);
+  }
+
   function selectColor(color: string) {
     const selection = resolveColorSelection(color);
     setQuery(color);
     setHexValue(selection.hex || "");
     onChange(color, selection.hex);
+    persistSelection(color, selection.hex);
     setOpen(false);
   }
 
@@ -73,6 +95,10 @@ export default function ColorAutocomplete({
     const normalized = normalizeHexColor(next) || next.trim();
     setHexValue(normalized);
     onChange(query, normalized);
+
+    if (query.trim() && normalized) {
+      persistSelection(query, normalized);
+    }
   }
 
   useEffect(() => {
@@ -107,6 +133,11 @@ export default function ColorAutocomplete({
           autoComplete="off"
           placeholder="اكتب اللون..."
           onChange={(e) => handleInputChange(e.target.value)}
+          onBlur={() => {
+            if (query.trim()) {
+              persistSelection(query, hexValue);
+            }
+          }}
           onFocus={() => setOpen(true)}
           className={cn(
             "flex h-11 w-full rounded-lg border border-border bg-white px-4 py-2 text-sm text-brown",
@@ -139,7 +170,7 @@ export default function ColorAutocomplete({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {COLORS.map((option) => {
+        {[...COLORS, ...customColors].map((option) => {
           const isActive = resolvedHex === option.hex;
           return (
             <button

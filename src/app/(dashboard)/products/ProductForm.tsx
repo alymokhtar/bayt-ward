@@ -175,6 +175,21 @@ export default function ProductForm({
     return Array.from(new Set([...usedColors, ...fromForm]));
   }, [usedColors, variants]);
 
+  const persistedColorOptions = useMemo(() => {
+    const fromForm = variants
+      .filter((variant) => variant.color?.trim())
+      .map((variant) => ({ name: variant.color.trim(), hex: variant.colorHex || undefined }));
+    return fromForm;
+  }, [variants]);
+
+  const allColorChoices = useMemo(() => {
+    const next = new Set<string>(usedColors);
+    variants.forEach((variant) => {
+      if (variant.color?.trim()) next.add(variant.color.trim());
+    });
+    return Array.from(next);
+  }, [usedColors, variants]);
+
   function updateVariant(
     index: number,
     field: keyof VariantForm,
@@ -470,7 +485,7 @@ export default function ProductForm({
                 label="اللون"
                 value={variant.color}
                 colorHex={variant.colorHex || ""}
-                usedColors={colorSuggestions}
+                usedColors={allColorChoices}
                 onChange={(color, colorHex) =>
                   updateVariantColor(index, color, colorHex)
                 }
