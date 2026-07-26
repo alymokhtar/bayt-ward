@@ -22,6 +22,11 @@ export type SaleItemInput = {
   totalPrice: number;
 };
 
+export type SalePaymentInput = {
+  amount: number;
+  method: PaymentMethod;
+};
+
 function handleActionError(error: unknown): ActionResult<never> {
   if (error instanceof Error) {
     if (error.message === "UNAUTHORIZED") {
@@ -111,6 +116,12 @@ export async function getSale(id: string) {
       paidAmount: true,
       changeAmount: true,
       paymentMethod: true,
+      payments: {
+        select: {
+          method: true,
+          amount: true,
+        },
+      },
       status: true,
       notes: true,
       createdAt: true,
@@ -191,6 +202,7 @@ export async function createSale(data: {
   paidAmount: number;
   changeAmount?: number;
   paymentMethod?: PaymentMethod;
+  payments?: SalePaymentInput[];
   notes?: string;
 }) {
   try {
@@ -204,7 +216,21 @@ export async function createSale(data: {
       return { success: false, error: "إجمالي الفاتورة يجب أن يكون أكبر من صفر" };
     }
 
-    if (data.paidAmount < data.totalAmount) {
+    const normalizedPayments = (data.payments?.length
+      ? data.payments
+      : [{ amount: data.paidAmount, method: data.paymentMethod ?? "CASH" }]
+    ).map((payment) => ({
+      amount: Number(payment.amount.toFixed(2)),
+      method: payment.method,
+    }));
+
+    const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+
+    if (normalizedPayments.length > 1) {
+      if (Math.abs(paymentTotal - data.totalAmount) > 0.01) {
+        return { success: false, error: "مجموع المدفوعات المختلطة يجب أن يساوي الإجمالي" };
+      }
+    } else if (data.paidAmount < data.totalAmount) {
       return { success: false, error: "المبلغ المدفوع أقل من الإجمالي" };
     }
 
@@ -260,9 +286,9 @@ export async function createSale(data: {
           discountPercent: data.discountPercent ?? 0,
           taxAmount: data.taxAmount ?? 0,
           totalAmount: data.totalAmount,
-          paidAmount: data.paidAmount,
-          changeAmount: data.changeAmount ?? data.paidAmount - data.totalAmount,
-          paymentMethod: data.paymentMethod ?? "CASH",
+          paidAmount: data.payments?.length ? data.totalAmount : data.paidAmount,
+          changeAmount: data.payments?.length ? 0 : (data.changeAmount ?? data.paidAmount - data.totalAmount),
+          paymentMethod: data.payments?.length ? "MIXED" : (data.paymentMethod ?? "CASH"),
           status: "COMPLETED",
           notes: data.notes,
           items: {
@@ -272,6 +298,12 @@ export async function createSale(data: {
               unitPrice: item.unitPrice,
               discountAmount: item.discountAmount ?? 0,
               totalPrice: item.totalPrice,
+            })),
+          },
+          payments: {
+            create: normalizedPayments.map((payment) => ({
+              amount: payment.amount,
+              method: payment.method,
             })),
           },
         },

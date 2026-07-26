@@ -1,5 +1,10 @@
 import { formatCurrency, formatDateTime, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
+export type ReceiptPayment = {
+  method: string;
+  amount: number;
+};
+
 export type ReceiptItem = {
   name: string;
   size: string;
@@ -19,6 +24,7 @@ export type ReceiptData = {
   customerName?: string;
   customerPhone?: string;
   paymentMethod: string;
+  payments?: ReceiptPayment[];
   items: ReceiptItem[];
   subtotal: number;
   discountAmount: number;
@@ -146,8 +152,12 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
           </div>
         )}
         <div className="flex justify-between gap-2">
-          <span>طريقة الدفع</span>
-          <span>{getPaymentMethodLabel(data.paymentMethod)}</span>
+          <span>المدفوعات</span>
+          <span className="text-end">
+            {data.payments && data.payments.length > 0
+              ? data.payments.map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatNumber(payment.amount)}`).join(" • ")
+              : getPaymentMethodLabel(data.paymentMethod)}
+          </span>
         </div>
       </div>
 

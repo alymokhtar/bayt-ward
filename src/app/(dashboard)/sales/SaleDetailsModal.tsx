@@ -68,6 +68,11 @@ type SaleReturn = {
   items: ReturnItem[];
 };
 
+type SalePayment = {
+  method: string;
+  amount: number;
+};
+
 type SaleData = {
   id: string;
   invoiceNumber: string;
@@ -81,6 +86,7 @@ type SaleData = {
   notes: string | null;
   createdAt: Date;
   paymentMethod: string;
+  payments: SalePayment[];
   customer: { name: string; phone: string | null } | null;
   user: { name: string };
   items: SaleItem[];
@@ -223,10 +229,18 @@ export default function SaleDetailsModal({
                   <p className="font-medium">{sale.user.name}</p>
                 </div>
                 <div>
-                  <p className="text-muted">طريقة الدفع</p>
-                  <p className="font-medium">
-                    {getPaymentMethodLabel(sale.paymentMethod)}
-                  </p>
+                  <p className="text-muted">المدفوعات</p>
+                  <div className="space-y-1 font-medium">
+                    {sale.payments?.length ? (
+                      sale.payments.map((payment) => (
+                        <p key={`${payment.method}-${payment.amount}`}>
+                          {getPaymentMethodLabel(payment.method)}: {formatCurrency(payment.amount)}
+                        </p>
+                      ))
+                    ) : (
+                      <p>{getPaymentMethodLabel(sale.paymentMethod)}</p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="text-muted">التاريخ</p>

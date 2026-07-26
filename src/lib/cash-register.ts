@@ -37,7 +37,7 @@ export async function getCashRegisterReview(
       : {}),
   };
 
-  const [salesAgg, returnsAgg, expensesAgg, salesByMethod, returnsByMethod, expensesByMethod, salesList] = await Promise.all([
+  const [salesAgg, returnsAgg, expensesAgg, paymentAgg, salesByMethod, returnsByMethod, expensesByMethod, salesList] = await Promise.all([
     prisma.sale.aggregate({
       where: saleWhere,
       _sum: { totalAmount: true },
@@ -53,13 +53,27 @@ export async function getCashRegisterReview(
       _sum: { amount: true },
       _count: true,
     }),
-    prisma.sale.groupBy({
-      by: ["paymentMethod"],
+    prisma.payment.aggregate({
       where: {
-        status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
         createdAt: { gte: start, lt: end },
+        sale: {
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+          createdAt: { gte: start, lt: end },
+        },
       },
-      _sum: { totalAmount: true },
+      _sum: { amount: true },
+      _count: true,
+    }),
+    prisma.payment.groupBy({
+      by: ["method"],
+      where: {
+        createdAt: { gte: start, lt: end },
+        sale: {
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+          createdAt: { gte: start, lt: end },
+        },
+      },
+      _sum: { amount: true },
       _count: true,
     }),
     prisma.return.groupBy({
@@ -95,7 +109,7 @@ export async function getCashRegisterReview(
     }),
   ]);
 
-  const totalRevenue = salesAgg._sum.totalAmount ?? 0;
+  const totalRevenue = paymentAgg._sum.amount ?? 0;
   const totalReturns = returnsAgg._sum.refundAmount ?? 0;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
 
@@ -110,11 +124,11 @@ export async function getCashRegisterReview(
   );
 
   const paymentBreakdown = salesByMethod.map((group) => {
-    const revenue = group._sum.totalAmount ?? 0;
-    const refund = refundMap.get(group.paymentMethod) ?? 0;
-    const expense = expensesMap.get(group.paymentMethod) ?? 0;
+    const revenue = group._sum.amount ?? 0;
+    const refund = refundMap.get(group.method as PaymentMethod) ?? 0;
+    const expense = expensesMap.get(group.method as PaymentMethod) ?? 0;
     return {
-      method: group.paymentMethod as PaymentMethod,
+      method: group.method as PaymentMethod,
       revenue,
       refund,
       expense,

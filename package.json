@@ -10,6 +10,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:bootstrap": "tsx prisma/bootstrap.ts",
     "db:backfill-colors": "tsx prisma/backfill-product-colors.ts",
+    "db:backfill-payments": "tsx prisma/backfill-payments.ts",
     "db:push": "npx prisma db push",
     "db:deploy": "npx prisma migrate deploy",
     "db:reset": "npx prisma migrate reset --force",

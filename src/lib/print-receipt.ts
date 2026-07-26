@@ -162,7 +162,18 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
       ? row("الباقي", fmt(data.changeAmount), true)
       : ""
   }
-  ${row("طريقة الدفع", escapeHtml(getPaymentMethodLabel(data.paymentMethod)))}
+  ${
+    data.payments && data.payments.length > 0
+      ? row(
+          "المدفوعات",
+          escapeHtml(
+            data.payments
+              .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatNumber(payment.amount)}`)
+              .join(" • ")
+          )
+        )
+      : row("طريقة الدفع", escapeHtml(getPaymentMethodLabel(data.paymentMethod)))
+  }
 
   ${
     data.notes

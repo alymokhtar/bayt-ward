@@ -9,6 +9,7 @@ import { createCustomer, searchCustomers } from "@/lib/actions/customers";
 import { searchVariants } from "@/lib/actions/products";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency } from "@/lib/utils";
+import type { PaymentMethod } from "@prisma/client";
 import {
   Banknote,
   CreditCard,
@@ -26,7 +27,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type VariantResult = Awaited<ReturnType<typeof searchVariants>>[number];
 type CustomerResult = Awaited<ReturnType<typeof searchCustomers>>[number];
-type PosPaymentMethod = "CASH" | "CARD" | "INSTAPAY" | "WALLET";
+type PosPaymentMethod = PaymentMethod | "MIXED";
+type SplitPaymentKey = "CASH" | "CARD" | "WALLET" | "INSTAPAY";
+
+type SplitPaymentValues = Record<SplitPaymentKey, string>;
 
 const POS_PAYMENT_METHODS = [
   { value: "CASH", label: "كاش", icon: Banknote },
@@ -41,6 +45,20 @@ interface CartItem {
   unitPrice: number;
   discountAmount: number;
 }
+
+const SPLIT_PAYMENT_FIELDS: Array<{ value: SplitPaymentKey; label: string }> = [
+  { value: "CASH", label: "كاش" },
+  { value: "CARD", label: "فيزا" },
+  { value: "WALLET", label: "محفظة" },
+  { value: "INSTAPAY", label: "إنستاباي" },
+];
+
+const DEFAULT_SPLIT_PAYMENT_VALUES: SplitPaymentValues = {
+  CASH: "",
+  CARD: "",
+  WALLET: "",
+  INSTAPAY: "",
+};
 
 interface POSClientProps {
   storeNameAr?: string;
@@ -64,6 +82,8 @@ export default function POSClient({
   const [discountPercent, setDiscountPercent] = useState(dailyDiscountPercent);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod | "">("");
+  const [splitPaymentEnabled, setSplitPaymentEnabled] = useState(false);
+  const [splitPaymentAmounts, setSplitPaymentAmounts] = useState<SplitPaymentValues>(DEFAULT_SPLIT_PAYMENT_VALUES);
   const [paidAmount, setPaidAmount] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -87,7 +107,22 @@ export default function POSClient({
   const totalDiscount = discountAmount + percentDiscount;
   const totalAmount = Math.max(0, subtotal - totalDiscount);
   const paid = parseFloat(paidAmount) || 0;
+  const splitPaymentEntries = Object.entries(splitPaymentAmounts)
+    .filter(([, value]) => value !== "" && parseFloat(value) > 0)
+    .map(([method, value]) => ({
+      method: method as SplitPaymentKey,
+      amount: parseFloat(value),
+    }));
+  const splitPaymentTotal = splitPaymentEntries.reduce((sum, entry) => sum + entry.amount, 0);
+  const remainingAmount = Math.max(totalAmount - splitPaymentTotal, 0);
   const changeAmount = Math.max(0, paid - totalAmount);
+  const isSplitPaymentValid =
+    splitPaymentEnabled &&
+    totalAmount > 0 &&
+    splitPaymentEntries.length > 0 &&
+    Math.abs(splitPaymentTotal - totalAmount) < 0.01;
+  const isSinglePaymentValid = !!paymentMethod && paid >= totalAmount && totalAmount > 0;
+  const isPaymentReady = splitPaymentEnabled ? isSplitPaymentValid : isSinglePaymentValid;
 
   function looksLikePhoneNumber(value: string) {
     const trimmed = value.trim();
@@ -230,6 +265,25 @@ export default function POSClient({
     }
   }
 
+  function updateSplitPaymentField(key: SplitPaymentKey, rawValue: string) {
+    const nextValue = rawValue.replace(/[^\d.]/g, "");
+    const nextAmounts = { ...splitPaymentAmounts, [key]: nextValue };
+    const entries = Object.entries(nextAmounts).filter(([, value]) => value !== "" && parseFloat(value) > 0);
+
+    if (entries.length === 1 && totalAmount > 0) {
+      const [firstKey, firstValue] = entries[0];
+      const initialAmount = parseFloat(firstValue);
+      const remaining = Math.max(totalAmount - initialAmount, 0);
+      const nextField = SPLIT_PAYMENT_FIELDS.find(({ value }) => value !== firstKey && nextAmounts[value as SplitPaymentKey] === "");
+
+      if (remaining > 0 && nextField) {
+        nextAmounts[nextField.value] = remaining.toFixed(2);
+      }
+    }
+
+    setSplitPaymentAmounts(nextAmounts);
+  }
+
   async function handleCompleteSale() {
     setError("");
     setSuccess("");
@@ -237,14 +291,22 @@ export default function POSClient({
       setError("أضف منتجات إلى السلة أولاً");
       return;
     }
-    if (paid < totalAmount) {
-      setError("المبلغ المدفوع أقل من الإجمالي");
-      return;
-    }
 
-    if (!paymentMethod) {
-      setError("اختر طريقة الدفع أولاً");
-      return;
+    if (splitPaymentEnabled) {
+      if (!isSplitPaymentValid) {
+        setError("مجموع المدفوعات المختلطة يجب أن يساوي الإجمالي بالضبط");
+        return;
+      }
+    } else {
+      if (paid < totalAmount) {
+        setError("المبلغ المدفوع أقل من الإجمالي");
+        return;
+      }
+
+      if (!paymentMethod) {
+        setError("اختر طريقة الدفع أولاً");
+        return;
+      }
     }
 
     setLoading(true);
@@ -262,9 +324,13 @@ export default function POSClient({
       discountAmount: totalDiscount,
       discountPercent,
       totalAmount,
-      paidAmount: paid,
-      changeAmount,
-      paymentMethod,
+      paidAmount: splitPaymentEnabled ? totalAmount : paid,
+      changeAmount: splitPaymentEnabled ? 0 : changeAmount,
+      paymentMethod: splitPaymentEnabled ? "MIXED" : paymentMethod,
+      payments: splitPaymentEnabled ? splitPaymentEntries.map((entry) => ({
+        amount: entry.amount,
+        method: entry.method as PaymentMethod,
+      })) : [{ amount: paid, method: (paymentMethod || "CASH") as PaymentMethod }],
       notes: notes || undefined,
     });
 
@@ -285,7 +351,7 @@ export default function POSClient({
         cashierName: result.data.user.name,
         customerName: customer?.name,
         customerPhone: customer?.phone,
-        paymentMethod,
+        paymentMethod: splitPaymentEnabled ? "مختلط" : paymentMethod,
         items: soldItems.map((item) => ({
           name: item.variant.product.nameAr || item.variant.product.name,
           size: item.variant.size,
@@ -312,6 +378,8 @@ export default function POSClient({
       setNotes("");
       setSelectedCustomer(null);
       setPaymentMethod("");
+      setSplitPaymentEnabled(false);
+      setSplitPaymentAmounts(DEFAULT_SPLIT_PAYMENT_VALUES);
 
     } else {
       setError(result.success ? "حدث خطأ" : (result.error ?? "حدث خطأ"));
@@ -566,37 +634,76 @@ export default function POSClient({
             />
           </div>
 
-          <div className="space-y-2">
-            <span className="text-sm font-medium text-brown">طريقة الدفع</span>
-            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="طريقة الدفع">
-              {POS_PAYMENT_METHODS.map((method) => {
-                const Icon = method.icon;
-                const selected = paymentMethod === method.value;
-
-                return (
-                  <button
-                    key={method.value}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => {
-                      setPaymentMethod(method.value);
-                      setError("");
-                    }}
-                    className={`
-                      flex h-12 items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-all
-                      ${selected
-                        ? "border-gold bg-gold text-primary-foreground shadow-sm"
-                        : "border-border bg-white text-brown hover:border-gold hover:bg-gold/5"}
-                    `}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {method.label}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="rounded-lg border border-border bg-cream-dark/40 p-3">
+            <label className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-brown">دفع مختلط / Split Payment</p>
+                <p className="text-xs text-muted">افصل الدفع بين أكثر من طريقة دون مغادرة الشاشة</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={splitPaymentEnabled}
+                onChange={(e) => {
+                  setSplitPaymentEnabled(e.target.checked);
+                  setError("");
+                }}
+                className="h-4 w-4 rounded border-border text-gold focus:ring-gold"
+              />
+            </label>
           </div>
+
+          {splitPaymentEnabled ? (
+            <div className="space-y-3">
+              {SPLIT_PAYMENT_FIELDS.map((field) => (
+                <Input
+                  key={field.value}
+                  label={field.label}
+                  type="number"
+                  min={0}
+                  value={splitPaymentAmounts[field.value]}
+                  onChange={(e) => updateSplitPaymentField(field.value, e.target.value)}
+                  dir="ltr"
+                />
+              ))}
+              <div className="rounded-lg border border-dashed border-gold/30 bg-gold/5 px-3 py-2">
+                <p className="text-xs text-muted">المبلغ المتبقي</p>
+                <p className="text-lg font-semibold text-brown">{formatCurrency(remainingAmount)}</p>
+              </div>
+              <p className="text-sm text-muted">المجموع المدخل: {formatCurrency(splitPaymentTotal)}</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <span className="text-sm font-medium text-brown">طريقة الدفع</span>
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="طريقة الدفع">
+                {POS_PAYMENT_METHODS.map((method) => {
+                  const Icon = method.icon;
+                  const selected = paymentMethod === method.value;
+
+                  return (
+                    <button
+                      key={method.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => {
+                        setPaymentMethod(method.value);
+                        setError("");
+                      }}
+                      className={`
+                        flex h-12 items-center justify-center gap-2 rounded-lg border text-sm font-medium transition-all
+                        ${selected
+                          ? "border-gold bg-gold text-primary-foreground shadow-sm"
+                          : "border-border bg-white text-brown hover:border-gold hover:bg-gold/5"}
+                      `}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {method.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
@@ -615,18 +722,22 @@ export default function POSClient({
             </div>
           </div>
 
-          <Input
-            label="المبلغ المدفوع"
-            type="number"
-            min={0}
-            value={paidAmount}
-            onChange={(e) => setPaidAmount(e.target.value)}
-            dir="ltr"
-          />
-          {paid >= totalAmount && totalAmount > 0 && (
-            <p className="text-sm text-success font-medium">
-              الباقي: {formatCurrency(changeAmount)}
-            </p>
+          {!splitPaymentEnabled && (
+            <>
+              <Input
+                label="المبلغ المدفوع"
+                type="number"
+                min={0}
+                value={paidAmount}
+                onChange={(e) => setPaidAmount(e.target.value)}
+                dir="ltr"
+              />
+              {paid >= totalAmount && totalAmount > 0 && (
+                <p className="text-sm text-success font-medium">
+                  الباقي: {formatCurrency(changeAmount)}
+                </p>
+              )}
+            </>
           )}
 
           {error && (
@@ -644,7 +755,7 @@ export default function POSClient({
             className="w-full"
             size="lg"
             loading={loading}
-            disabled={cart.length === 0 || !paymentMethod}
+            disabled={cart.length === 0 || !isPaymentReady}
             onClick={handleCompleteSale}
           >
             إتمام البيع
