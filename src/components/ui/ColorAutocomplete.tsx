@@ -32,17 +32,9 @@ export default function ColorAutocomplete({
   const hexInputId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState(value);
-  const [hexValue, setHexValue] = useState(colorHex || "");
   const [customColors, setCustomColors] = useState(() => readStoredCustomColors());
-
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
-
-  useEffect(() => {
-    setHexValue(colorHex || "");
-  }, [colorHex]);
+  const query = value;
+  const hexValue = colorHex || "";
 
   const allSuggestions = useMemo(() => {
     const merged = mergeColorOptions([
@@ -76,24 +68,19 @@ export default function ColorAutocomplete({
 
   function selectColor(color: string) {
     const selection = resolveColorSelection(color);
-    setQuery(color);
-    setHexValue(selection.hex || "");
     onChange(color, selection.hex);
     persistSelection(color, selection.hex);
     setOpen(false);
   }
 
   function handleInputChange(next: string) {
-    setQuery(next);
     const selection = resolveColorSelection(next);
-    setHexValue(selection.hex || "");
     onChange(next, selection.hex);
     setOpen(true);
   }
 
   function handleHexChange(next: string) {
     const normalized = normalizeHexColor(next) || next.trim();
-    setHexValue(normalized);
     onChange(query, normalized);
 
     if (query.trim() && normalized) {
@@ -177,9 +164,7 @@ export default function ColorAutocomplete({
               key={option.name}
               type="button"
               onClick={() => {
-                setQuery(option.name);
                 const nextHex = option.hex || "";
-                setHexValue(nextHex);
                 onChange(option.name, nextHex || undefined);
               }}
               className={cn(

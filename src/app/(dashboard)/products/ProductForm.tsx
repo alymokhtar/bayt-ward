@@ -169,20 +169,6 @@ export default function ProductForm({
     };
   }, [isEdit, initialVariantCode]);
 
-  const colorSuggestions = useMemo(() => {
-    const fromForm = variants
-      .map((v) => v.color.trim())
-      .filter(Boolean);
-    return Array.from(new Set([...usedColors, ...fromForm]));
-  }, [usedColors, variants]);
-
-  const persistedColorOptions = useMemo(() => {
-    const fromForm = variants
-      .filter((variant) => variant.color?.trim())
-      .map((variant) => ({ name: variant.color.trim(), hex: variant.colorHex || undefined }));
-    return fromForm;
-  }, [variants]);
-
   const allColorChoices = useMemo(() => {
     const next = new Set<string>(usedColors);
     variants.forEach((variant) => {
