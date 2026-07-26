@@ -8,6 +8,7 @@ import { getCashRegisterReview as fetchCashRegisterReview } from "@/lib/cash-reg
 import { invalidateSalesData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { sendTelegramMessage } from "@/lib/telegram";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
+import { normalizeSalePayments } from "@/lib/sales-payment-utils";
 import type { PaymentMethod } from "@prisma/client";
 
 type ActionResult<T = void> =
@@ -216,13 +217,12 @@ export async function createSale(data: {
       return { success: false, error: "إجمالي الفاتورة يجب أن يكون أكبر من صفر" };
     }
 
-    const normalizedPayments = (data.payments?.length
-      ? data.payments
-      : [{ amount: data.paidAmount, method: data.paymentMethod ?? "CASH" }]
-    ).map((payment) => ({
-      amount: Number(payment.amount.toFixed(2)),
-      method: payment.method,
-    }));
+    const { normalizedPayments, effectivePaidAmount } = normalizeSalePayments({
+      payments: data.payments,
+      paidAmount: data.paidAmount,
+      totalAmount: data.totalAmount,
+      paymentMethod: data.paymentMethod,
+    });
 
     const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
@@ -286,8 +286,8 @@ export async function createSale(data: {
           discountPercent: data.discountPercent ?? 0,
           taxAmount: data.taxAmount ?? 0,
           totalAmount: data.totalAmount,
-          paidAmount: data.payments?.length ? data.totalAmount : data.paidAmount,
-          changeAmount: data.payments?.length ? 0 : (data.changeAmount ?? data.paidAmount - data.totalAmount),
+          paidAmount: data.payments?.length ? data.totalAmount : effectivePaidAmount,
+          changeAmount: data.payments?.length ? 0 : (data.changeAmount ?? Math.max(0, effectivePaidAmount - data.totalAmount)),
           paymentMethod: data.payments?.length ? "MIXED" : (data.paymentMethod ?? "CASH"),
           status: "COMPLETED",
           notes: data.notes,
