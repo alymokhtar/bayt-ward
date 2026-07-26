@@ -4,6 +4,7 @@ import Button from "@/components/ui/Button";
 import EmptyState from "@/components/ui/EmptyState";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
+import ConfirmDeleteDialog from "@/components/ui/ConfirmDeleteDialog";
 import { Card, CardContent } from "@/components/ui/Card";
 import {
   Table,
@@ -67,6 +68,8 @@ export default function CustomersClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const hasSearch = Boolean(search?.trim());
 
@@ -111,11 +114,17 @@ export default function CustomersClient({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("هل أنت متأكد من حذف هذا العميل؟")) return;
-    const result = await deleteCustomer(id);
-    if (result.success) router.refresh();
-    else alert(result.error);
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteCustomer(deleteTarget.id);
+    setDeleting(false);
+    if (result.success) {
+      setDeleteTarget(null);
+      router.refresh();
+    } else {
+      alert(result.error);
+    }
   }
 
   return (
@@ -228,7 +237,7 @@ export default function CustomersClient({
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleDelete(c.id)}
+                              onClick={() => setDeleteTarget(c)}
                             >
                               <Trash2 className="h-4 w-4 text-danger" />
                             </Button>
@@ -249,6 +258,20 @@ export default function CustomersClient({
           />
         </CardContent>
       </Card>
+
+      <ConfirmDeleteDialog
+        isOpen={!!deleteTarget}
+        onClose={() => {
+          if (!deleting) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={handleDelete}
+        title="تأكيد حذف العميل"
+        description="هل أنت متأكد؟ هذا الإجراء سيؤدي إلى حذف العميل نهائياً ولا يمكن التراجع عنه."
+        itemName={deleteTarget?.name || undefined}
+        loading={deleting}
+      />
 
       <Modal
         isOpen={modalOpen}

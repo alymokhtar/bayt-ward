@@ -2,6 +2,7 @@
 
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import ConfirmDeleteDialog from "@/components/ui/ConfirmDeleteDialog";
 import Modal from "@/components/ui/Modal";
 import {
   Table,
@@ -380,7 +381,7 @@ export default function ProductsTableClient({
         )}
       </Modal>
 
-      <Modal
+      <ConfirmDeleteDialog
         isOpen={!!productToDelete}
         onClose={() => {
           if (!isDeleting) {
@@ -388,50 +389,18 @@ export default function ProductsTableClient({
             setDeleteError(null);
           }
         }}
-        title="تأكيد الحذف"
-        description="لن تتمكن من التراجع عن هذا الإجراء"
-        size="md"
+        onConfirm={handleDeleteProduct}
+        title="تأكيد حذف المنتج"
+        description="هل أنت متأكد؟ هذا الإجراء سيؤدي إلى حذف المنتج نهائياً ولا يمكن التراجع عنه."
+        itemName={productToDelete?.nameAr || productToDelete?.name || undefined}
+        loading={isDeleting}
       >
-        <div className="space-y-4">
-          <p className="text-sm leading-6 text-brown">
-            هل تريد حذف المنتج{" "}
-            <span className="font-semibold">
-              {productToDelete?.nameAr || productToDelete?.name || "هذا المنتج"}
-            </span>{" "}
-            نهائياً من النظام وقاعدة البيانات؟
-          </p>
-
-          {deleteError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {deleteError}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setProductToDelete(null);
-                setDeleteError(null);
-              }}
-              disabled={isDeleting}
-            >
-              إلغاء
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              loading={isDeleting}
-              onClick={handleDeleteProduct}
-            >
-              حذف نهائي
-            </Button>
+        {deleteError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {deleteError}
           </div>
-        </div>
-      </Modal>
+        )}
+      </ConfirmDeleteDialog>
     </>
   );
 }

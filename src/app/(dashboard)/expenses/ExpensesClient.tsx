@@ -3,6 +3,7 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
+import ConfirmDeleteDialog from "@/components/ui/ConfirmDeleteDialog";
 import Select from "@/components/ui/Select";
 import Badge from "@/components/ui/Badge";
 import {
@@ -22,7 +23,7 @@ import {
   getEgyptBusinessDateKey,
   parseDateKey,
 } from "@/lib/business-day";
-import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES, DISPLAY_LOCALE, PAYMENT_METHODS } from "@/lib/constants";
+import { EXPENSE_CATEGORIES, DISPLAY_LOCALE, PAYMENT_METHODS } from "@/lib/constants";
 import { formatCurrency, formatDate, getPaymentMethodLabel } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -75,6 +76,8 @@ export default function ExpensesClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const total = initial.reduce((s, e) => s + e.amount, 0);
   const isSalaryExpense = category === "SALARIES";
@@ -84,7 +87,6 @@ export default function ExpensesClient({
 
   useEffect(() => {
     if (!isSalaryExpense || !employeeId) {
-      setPayrollSummary(null);
       return;
     }
 
@@ -163,7 +165,7 @@ export default function ExpensesClient({
       description: description || undefined,
       expenseDate: dateKeyToUtcNoon(expenseDate),
       employeeId: isSalaryExpense ? employeeId : undefined,
-      paymentMethod: paymentMethod as any,
+      paymentMethod: paymentMethod as "CASH" | "CARD" | "BANK_TRANSFER" | "ONLINE" | "OTHER",
     });
 
     setLoading(false);
@@ -176,11 +178,17 @@ export default function ExpensesClient({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("حذف هذا المصروف؟")) return;
-    const result = await deleteExpense(id);
-    if (result.success) router.refresh();
-    else alert(result.error);
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteExpense(deleteTarget.id);
+    setDeleting(false);
+    if (result.success) {
+      setDeleteTarget(null);
+      router.refresh();
+    } else {
+      alert(result.error);
+    }
   }
 
   return (
@@ -248,7 +256,7 @@ export default function ExpensesClient({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(e.id)}
+                  onClick={() => setDeleteTarget(e)}
                 >
                   <Trash2 className="h-4 w-4 text-danger" />
                 </Button>
@@ -257,6 +265,20 @@ export default function ExpensesClient({
           ))}
         </TableBody>
       </Table>
+
+      <ConfirmDeleteDialog
+        isOpen={!!deleteTarget}
+        onClose={() => {
+          if (!deleting) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={handleDelete}
+        title="تأكيد حذف المصروف"
+        description="هل أنت متأكد؟ هذا الإجراء سيؤدي إلى حذف المصروف نهائياً ولا يمكن التراجع عنه."
+        itemName={deleteTarget?.title || undefined}
+        loading={deleting}
+      />
 
       <Modal
         isOpen={modalOpen}

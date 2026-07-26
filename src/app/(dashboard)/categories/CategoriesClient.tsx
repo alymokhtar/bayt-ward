@@ -3,6 +3,7 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
+import ConfirmDeleteDialog from "@/components/ui/ConfirmDeleteDialog";
 import Badge from "@/components/ui/Badge";
 import {
   Table,
@@ -19,6 +20,7 @@ import {
   uploadCategoryImage,
 } from "@/lib/actions/categories";
 import { Eye, EyeOff, ImagePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -50,6 +52,8 @@ export default function CategoriesClient({
   const [loading, setLoading] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
   const [error, setError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   function openCreate() {
     setEditing(null);
@@ -104,15 +108,20 @@ export default function CategoriesClient({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("هل أنت متأكد من حذف هذا التصنيف؟")) return;
-    const result = await deleteCategory(id);
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteCategory(deleteTarget.id);
+    setDeleting(false);
     if (result.success) {
+      setDeleteTarget(null);
       router.refresh();
     } else {
       alert(result.error);
     }
   }
+
+  const [imageDeleteTarget, setImageDeleteTarget] = useState(false);
 
   async function handleImageUpload(files: FileList | null) {
     if (!files?.length) return;
@@ -185,7 +194,7 @@ export default function CategoriesClient({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(cat.id)}
+                    onClick={() => setDeleteTarget(cat)}
                   >
                     <Trash2 className="h-4 w-4 text-danger" />
                   </Button>
@@ -195,6 +204,33 @@ export default function CategoriesClient({
           ))}
         </TableBody>
       </Table>
+
+      <ConfirmDeleteDialog
+        isOpen={!!deleteTarget}
+        onClose={() => {
+          if (!deleting) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={handleDelete}
+        title="تأكيد حذف التصنيف"
+        description="هل أنت متأكد؟ هذا الإجراء سيؤدي إلى حذف التصنيف نهائياً ولا يمكن التراجع عنه."
+        itemName={deleteTarget?.nameAr || deleteTarget?.name || undefined}
+        loading={deleting}
+      />
+
+      <ConfirmDeleteDialog
+        isOpen={imageDeleteTarget}
+        onClose={() => setImageDeleteTarget(false)}
+        onConfirm={() => {
+          setImageUrl("");
+          setImageDeleteTarget(false);
+        }}
+        title="تأكيد حذف الصورة"
+        description="هل أنت متأكد؟ هذا الإجراء سيؤدي إلى حذف الصورة المرتبطة بهذا التصنيف نهائياً."
+        confirmLabel="حذف الصورة"
+        loading={false}
+      />
 
       <Modal
         isOpen={modalOpen}
@@ -225,9 +261,11 @@ export default function CategoriesClient({
             <div className="rounded-3xl border border-border bg-slate-50 p-4 font-cairo text-brown shadow-sm">
               <div className="mb-3 flex flex-col items-center gap-3">
                 {imageUrl ? (
-                  <img
+                  <Image
                     src={imageUrl}
                     alt="Category image"
+                    width={400}
+                    height={144}
                     className="h-36 w-full max-w-sm rounded-3xl object-cover shadow-sm"
                   />
                 ) : (
@@ -253,14 +291,7 @@ export default function CategoriesClient({
                 {imageUrl && (
                   <button
                     type="button"
-                    onClick={() => {
-                      const confirmed = window.confirm("هل أنت متأكد من حذف هذه الصورة نهائياً؟");
-                      if (!confirmed) {
-                        return;
-                      }
-
-                      setImageUrl("");
-                    }}
+                    onClick={() => setImageDeleteTarget(true)}
                     className="inline-flex items-center gap-2 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-brown transition hover:border-red-400 hover:text-red-600"
                   >
                     <Trash2 className="h-4 w-4" />

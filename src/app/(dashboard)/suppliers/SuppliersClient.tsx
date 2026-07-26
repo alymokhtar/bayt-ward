@@ -3,6 +3,7 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
+import ConfirmDeleteDialog from "@/components/ui/ConfirmDeleteDialog";
 import Badge from "@/components/ui/Badge";
 import {
   Table,
@@ -55,6 +56,8 @@ export default function SuppliersClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [detailSupplierId, setDetailSupplierId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   function openCreate() {
     setEditing(null);
@@ -97,11 +100,17 @@ export default function SuppliersClient({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("هل أنت متأكد؟")) return;
-    const result = await deleteSupplier(id);
-    if (result.success) router.refresh();
-    else alert(result.error);
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const result = await deleteSupplier(deleteTarget.id);
+    setDeleting(false);
+    if (result.success) {
+      setDeleteTarget(null);
+      router.refresh();
+    } else {
+      alert(result.error);
+    }
   }
 
   async function toggleActive(s: Supplier) {
@@ -180,7 +189,7 @@ export default function SuppliersClient({
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handleDelete(s.id)}
+                    onClick={() => setDeleteTarget(s)}
                   >
                     <Trash2 className="h-4 w-4 text-danger" />
                   </Button>
@@ -190,6 +199,20 @@ export default function SuppliersClient({
           ))}
         </TableBody>
       </Table>
+
+      <ConfirmDeleteDialog
+        isOpen={!!deleteTarget}
+        onClose={() => {
+          if (!deleting) {
+            setDeleteTarget(null);
+          }
+        }}
+        onConfirm={handleDelete}
+        title="تأكيد حذف المورد"
+        description="هل أنت متأكد؟ هذا الإجراء سيؤدي إلى حذف المورد نهائياً ولا يمكن التراجع عنه."
+        itemName={deleteTarget?.name || undefined}
+        loading={deleting}
+      />
 
       <Modal
         isOpen={modalOpen}
