@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { mergeColorOptions, normalizeHexColor, resolveColorSelection } from "./color-utils";
+import {
+  getDuplicateVariantColorError,
+  mergeColorOptions,
+  normalizeHexColor,
+  resolveColorSelection,
+} from "@/lib/color-utils";
 
 test("normalizes hex values to 6-digit format", () => {
   assert.equal(normalizeHexColor("#abc"), "#AABBCC");
@@ -23,8 +28,17 @@ test("merges custom colors with presets for future reuse", () => {
     { name: "أبيض", hex: "#FFFFFF" },
   ]);
 
-  const names = result.map((color) => color.name);
+  const names = result.map((color: { name: string }) => color.name);
   assert.ok(names.includes("أبيض"));
   assert.ok(names.includes("أزرق"));
   assert.ok(result.some((color) => color.name === "أزرق" && color.hex === "#1E88E5"));
+});
+
+test("detects duplicate variant colors", () => {
+  const error = getDuplicateVariantColorError([
+    { color: "أبيض" },
+    { color: "أبيض" },
+  ]);
+
+  assert.equal(error, "لا يمكن إضافة أكثر من متغير بنفس اللون: أبيض");
 });

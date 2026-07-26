@@ -66,6 +66,26 @@ export function mergeColorOptions(options: ColorOption[]): ColorOption[] {
   return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name, "ar"));
 }
 
+export function getDuplicateVariantColorError(
+  variants: Array<{ color?: string | null }>
+): string | null {
+  const seen = new Set<string>();
+
+  for (const variant of variants) {
+    const color = variant.color?.trim();
+    if (!color) continue;
+
+    const key = color.toLowerCase();
+    if (seen.has(key)) {
+      return `لا يمكن إضافة أكثر من متغير بنفس اللون: ${color}`;
+    }
+
+    seen.add(key);
+  }
+
+  return null;
+}
+
 export function readStoredCustomColors(): ColorOption[] {
   if (typeof window === "undefined") return [];
 

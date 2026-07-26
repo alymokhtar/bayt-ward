@@ -5,6 +5,7 @@ import ColorAutocomplete from "@/components/ui/ColorAutocomplete";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { SIZES } from "@/lib/constants";
+import { getDuplicateVariantColorError } from "@/lib/color-utils";
 import { resolveStoredBarcode } from "@/lib/barcode";
 import {
   CUSTOM_SIZE_OPTION_VALUE,
@@ -201,11 +202,22 @@ export default function ProductForm({
   }
 
   function updateVariantColor(index: number, color: string, colorHex?: string) {
-    setVariants((prev) =>
-      prev.map((v, i) =>
+    const trimmedColor = color.trim();
+
+    setVariants((prev) => {
+      const next = prev.map((v, i) =>
         i === index ? { ...v, color, colorHex: colorHex ?? "" } : v
-      )
-    );
+      );
+
+      const duplicateColorError = getDuplicateVariantColorError(next);
+      setError(duplicateColorError ?? "");
+
+      return next;
+    });
+
+    if (!trimmedColor) {
+      setError("");
+    }
   }
 
   function updateVariantSize(index: number, mode: "preset" | "custom", value: string) {
@@ -281,6 +293,12 @@ export default function ProductForm({
     const localCodeError = validateLocalVariantCodes();
     if (localCodeError) {
       setError(localCodeError);
+      return;
+    }
+
+    const duplicateColorError = getDuplicateVariantColorError(variants);
+    if (duplicateColorError) {
+      setError(duplicateColorError);
       return;
     }
 
