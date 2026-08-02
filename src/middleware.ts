@@ -57,6 +57,11 @@ function isDashboardProductRoute(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/_next/") || pathname.startsWith("/api/") || pathname.includes(".")) {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get("session")?.value;
   const hasValidSession = token ? await isValidSession(token) : false;
 
@@ -100,21 +105,37 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/dashboard",
     "/dashboard/:path*",
+    "/pos",
     "/pos/:path*",
+    "/products",
     "/products/:path*",
+    "/categories",
     "/categories/:path*",
+    "/inventory",
     "/inventory/:path*",
+    "/barcodes",
     "/barcodes/:path*",
+    "/sales",
     "/sales/:path*",
+    "/returns",
     "/returns/:path*",
+    "/customers",
     "/customers/:path*",
+    "/whatsapp",
     "/whatsapp/:path*",
+    "/suppliers",
     "/suppliers/:path*",
+    "/purchases",
     "/purchases/:path*",
+    "/expenses",
     "/expenses/:path*",
+    "/reports",
     "/reports/:path*",
+    "/employees",
     "/employees/:path*",
+    "/settings",
     "/settings/:path*",
     "/login",
   ],

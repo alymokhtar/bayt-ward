@@ -6,6 +6,7 @@ import ProductCard from "@/components/store/ProductCard";
 import SectionHeading from "@/components/store/SectionHeading";
 import CategoryCard, { TrustSignals, WhatsAppCta } from "@/components/store/StoreSections";
 import { STORE_NAME_AR } from "@/lib/constants";
+import { prisma } from "@/lib/prisma";
 import {
   getCachedFeaturedProducts,
   getCachedGalleryImages,
@@ -14,6 +15,7 @@ import {
   getCachedStoreCategories,
   getCachedStoreSettingsPublic,
 } from "@/lib/store/cached-queries";
+import { PUBLISHED_PRODUCT_WHERE } from "@/lib/store/constants";
 import { getPrimaryImageUrl } from "@/lib/store/product-utils";
 
 export const revalidate = 60;
@@ -62,15 +64,43 @@ export default async function StoreHomePage() {
   const homeProducts = productsPage.items.slice(0, 6);
   const hasProducts = productsPage.total > 0;
 
-  const categoriesWithCovers = await Promise.all(
-    categories.slice(0, 5).map(async (category) => {
-      const result = await getCachedPublishedProducts(
-        JSON.stringify({ categoryId: category.id, page: 1, pageSize: 1 })
-      );
-      const cover = result.items[0] ? getPrimaryImageUrl(result.items[0]) : null;
-      return { category, cover };
-    })
-  );
+  const categoryIds = categories.slice(0, 5).map((category) => category.id);
+
+  const coverProducts = categoryIds.length
+    ? await prisma.product.findMany({
+        where: {
+          categoryId: { in: categoryIds },
+          ...PUBLISHED_PRODUCT_WHERE,
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          categoryId: true,
+          images: {
+            where: { isActive: true, productVariantId: null },
+            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+            select: {
+              id: true,
+              url: true,
+              isPrimary: true,
+              sortOrder: true,
+            },
+            take: 1,
+          },
+        },
+      })
+    : [];
+
+  const coverByCategory = new Map<string, string | null>();
+  for (const product of coverProducts) {
+    if (!coverByCategory.has(product.categoryId)) {
+      coverByCategory.set(product.categoryId, product.images[0]?.url ?? null);
+    }
+  }
+
+  const categoriesWithCovers = categories.slice(0, 5).map((category) => ({
+    category,
+    cover: coverByCategory.get(category.id) ?? null,
+  }));
 
   return (
     <>

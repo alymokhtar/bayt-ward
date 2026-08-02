@@ -133,6 +133,7 @@ TRUNCATE TABLE
 "EmployeeAdjustment",
 "Expense",
 "Image",
+"Payment",
 "Product",
 "ProductColor",
 "ProductMedia",
@@ -150,3 +151,5 @@ TRUNCATE TABLE
 RESTART IDENTITY CASCADE;
 
 -----------------------------------------
+تشغيل الموقع محليا
+npm run dev
