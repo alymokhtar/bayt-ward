@@ -7,7 +7,7 @@ import {
   STORE_PAGE_SIZE,
   STORE_REVALIDATE_SECONDS,
 } from "@/lib/store/constants";
-import { storeProductInclude } from "@/lib/store/types";
+import { storeProductInclude, storeProductListSelect } from "@/lib/store/types";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 const publishedCategoryFilter = {
@@ -46,7 +46,7 @@ export const getCachedPublishedProducts = unstable_cache(
         orderBy: { createdAt: "desc" },
         take: pagination.take,
         skip: pagination.skip,
-        include: storeProductInclude,
+        select: storeProductListSelect,
       }),
       prisma.product.count({ where }),
     ]);
@@ -69,7 +69,7 @@ export const getCachedFeaturedProducts = unstable_cache(
       },
       orderBy: { updatedAt: "desc" },
       take: limit,
-      include: storeProductInclude,
+      select: storeProductListSelect,
     }),
   ["storefront-featured"],
   {
@@ -84,7 +84,7 @@ export const getCachedNewestProducts = unstable_cache(
       where: PUBLISHED_PRODUCT_WHERE,
       orderBy: { createdAt: "desc" },
       take: limit,
-      include: storeProductInclude,
+      select: storeProductListSelect,
     }),
   ["storefront-newest"],
   {
@@ -131,7 +131,7 @@ export const getCachedSearchProducts = unstable_cache(
         orderBy: { createdAt: "desc" },
         take: pagination.take,
         skip: pagination.skip,
-        include: storeProductInclude,
+        select: storeProductListSelect,
       }),
       prisma.product.count({ where }),
     ]);

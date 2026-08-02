@@ -11,6 +11,7 @@ type StoreImageLike = {
 type ProductWithOptionalImages = StoreProductListItem & {
   images?: StoreImageLike[] | null;
   variants?: Array<{ images?: StoreImageLike[] | null }> | null;
+  colors?: Array<{ media?: StoreImageLike[] | null }> | null;
 };
 
 type StoreProductWithOptionalImages = StoreProduct & {
