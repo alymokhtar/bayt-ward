@@ -140,6 +140,11 @@ export default function POSClient({
     setShowNewCustomer(true);
   }
 
+  const isBarcodeQuery = (value: string) => {
+    const trimmed = value.trim();
+    return trimmed.length > 0 && /^[0-9]+$/.test(trimmed);
+  };
+
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
       setResults([]);
@@ -155,6 +160,13 @@ export default function POSClient({
     const timer = setTimeout(() => doSearch(query), 300);
     return () => clearTimeout(timer);
   }, [query, doSearch]);
+
+  async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    if (!isBarcodeQuery(query)) return;
+    await resolveScanAndAdd(query);
+  }
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -222,12 +234,6 @@ export default function POSClient({
       setError("لم يتم العثور على منتج بهذا الباركود");
       setResults([]);
     }
-  }
-
-  async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
-    e.preventDefault();
-    await resolveScanAndAdd(query);
   }
 
   function updateQuantity(variantId: string, delta: number) {

@@ -596,11 +596,31 @@ export async function deleteProduct(id: string) {
   }
 }
 
+function isNumericQuery(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 && /^[0-9]+$/.test(trimmed);
+}
+
 export async function searchVariants(query: string) {
   await requireAuth();
 
   const q = query?.trim();
   if (!q) return [];
+
+  if (isNumericQuery(q)) {
+    const exactMatch = await prisma.productVariant.findFirst({
+      where: {
+        isActive: true,
+        product: { isActive: true },
+        OR: [{ barcode: q }, { sku: q }],
+      },
+      select: variantSearchSelect,
+    });
+
+    if (exactMatch) {
+      return [exactMatch];
+    }
+  }
 
   return prisma.productVariant.findMany({
     where: {
