@@ -66,10 +66,6 @@ export async function getCustomer(id: string) {
           },
         },
       },
-      returns: {
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      },
     },
   });
 
