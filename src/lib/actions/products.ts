@@ -80,6 +80,7 @@ export async function getProduct(id: string) {
     include: {
       category: true,
       variants: {
+        where: { isActive: true },
         orderBy: [{ size: "asc" }, { color: "asc" }],
         include: {
           images: {
@@ -359,6 +360,7 @@ export async function updateProduct(
     featuredProduct?: boolean;
     isActive?: boolean;
     variants?: VariantSaveInput[];
+    deletedVariantIds?: string[];
     images?: ProductImageInput[];
   }
 ) {
@@ -406,7 +408,17 @@ export async function updateProduct(
           data.variants.filter((v) => v.id).map((v) => v.id!)
         );
 
-        const toDelete = [...existingIds].filter((vid) => !incomingIds.has(vid));
+        const explicitDeletedVariantIds = (data.deletedVariantIds ?? [])
+          .map((id) => id?.trim())
+          .filter((id): id is string => Boolean(id));
+
+        const toDelete = Array.from(
+          new Set([
+            ...explicitDeletedVariantIds,
+            ...[...existingIds].filter((vid) => !incomingIds.has(vid)),
+          ])
+        ).filter((vid) => existingIds.has(vid));
+
         if (toDelete.length > 0) {
           await tx.productVariant.updateMany({
             where: { id: { in: toDelete } },
@@ -535,6 +547,7 @@ export async function updateProduct(
         include: {
           category: true,
           variants: {
+            where: { isActive: true },
             orderBy: [{ size: "asc" }, { color: "asc" }],
             include: {
               images: {

@@ -23,6 +23,7 @@ import {
   type VariantCodePair,
   type VariantInput,
 } from "@/lib/actions/products";
+import { getDeletedVariantIds } from "@/lib/variant-sync";
 import VariantImageUploader from "@/components/products/VariantImageUploader";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -132,6 +133,7 @@ export default function ProductForm({
       };
     }) || [emptyVariant(undefined, initialVariantCode)]
   );
+  const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [addingVariant, setAddingVariant] = useState(false);
@@ -271,7 +273,15 @@ export default function ProductForm({
     );
     if (!confirmed) return;
 
-    setVariants((prev) => prev.filter((_, i) => i !== index));
+    setVariants((prev) => {
+      const target = prev[index];
+      if (target?.id) {
+        setDeletedVariantIds((current) =>
+          current.includes(target.id!) ? current : [...current, target.id!]
+        );
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   }
 
   function validateLocalVariantCodes(): string | null {
@@ -309,6 +319,16 @@ export default function ProductForm({
 
     setLoading(true);
 
+    const existingVariantIds = product?.variants.map((variant) => variant.id) ?? [];
+    const incomingVariantIds = variants
+      .map((variant) => variant.id)
+      .filter((id): id is string => Boolean(id));
+    const resolvedDeletedVariantIds = getDeletedVariantIds(
+      existingVariantIds,
+      incomingVariantIds,
+      deletedVariantIds
+    );
+
     const payload = {
       name,
       nameAr: nameAr || undefined,
@@ -317,6 +337,7 @@ export default function ProductForm({
       categoryId,
       publishToWebsite,
       featuredProduct,
+      deletedVariantIds: resolvedDeletedVariantIds,
       variants: variants.map((v) => {
         const mode = v.sizeMode ?? getVariantSizeMode(v.size);
         const resolvedSize = resolveVariantSize(mode, mode === "custom" ? v.customSize : v.size);
