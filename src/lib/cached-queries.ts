@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { Prisma, type ExpenseCategory } from "@prisma/client";
 import {
+  BUSINESS_TIME_ZONE,
   getBusinessDayBoundsForDateKey,
   getBusinessDayBoundsFromDateKeys,
   getEgyptBusinessDateKey,
@@ -37,75 +38,81 @@ export const getCachedDashboardKpis = unstable_cache(
       monthRange.to
     );
 
-    const [row, todayReturnsAgg, monthReturnsAgg, todayExpensesAgg] = await Promise.all([
-      prisma.$queryRaw<
-        [
-          {
-            todayGrossSales: number;
-            todaySalesCount: number;
-            monthSales: number;
-            monthSalesCount: number;
-            totalProducts: number;
-            totalCustomers: number;
-            lowStockCount: number;
-          },
-        ]
-      >`
+    const [row] = await prisma.$queryRaw<
+      [
+        {
+          todayGrossSales: number;
+          todaySalesCount: number;
+          monthSales: number;
+          monthSalesCount: number;
+          todayReturns: number;
+          monthReturns: number;
+          todayExpenses: number;
+          totalProducts: number;
+          totalCustomers: number;
+          lowStockCount: number;
+        }
+      ]
+    >`
       SELECT
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todayGrossSales",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+            AND "createdAt" >= ${todayStart}
+            AND "createdAt" < ${todayEnd}) AS "todayGrossSales",
         (SELECT COUNT(*)::int FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED') AND "createdAt" >= ${todayStart} AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+            AND "createdAt" >= ${todayStart}
+            AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
         (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED') AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSales",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+            AND "createdAt" >= ${monthStart}
+            AND "createdAt" < ${monthEnd}) AS "monthSales",
         (SELECT COUNT(*)::int FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED') AND "createdAt" >= ${monthStart} AND "createdAt" < ${monthEnd}) AS "monthSalesCount",
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+            AND "createdAt" >= ${monthStart}
+            AND "createdAt" < ${monthEnd}) AS "monthSalesCount",
+        (SELECT COALESCE(SUM("refundAmount"), 0)::float FROM "Return"
+          WHERE status = 'APPROVED'
+            AND "createdAt" >= ${todayStart}
+            AND "createdAt" < ${todayEnd}) AS "todayReturns",
+        (SELECT COALESCE(SUM("refundAmount"), 0)::float FROM "Return"
+          WHERE status = 'APPROVED'
+            AND "createdAt" >= ${monthStart}
+            AND "createdAt" < ${monthEnd}) AS "monthReturns",
+        (SELECT COALESCE(SUM("amount"), 0)::float FROM "Expense"
+          WHERE "expenseDate" >= ${todayStart}
+            AND "expenseDate" < ${todayEnd}) AS "todayExpenses",
         (SELECT COUNT(*)::int FROM "Product" WHERE "isActive" = true) AS "totalProducts",
         (SELECT COUNT(*)::int FROM "Customer") AS "totalCustomers",
         (SELECT COUNT(*)::int FROM "ProductVariant"
-          WHERE "isActive" = true AND "stockQuantity" <= "minStockLevel") AS "lowStockCount"
-      `,
-      prisma.return.aggregate({
-        where: {
-          status: "APPROVED",
-          createdAt: { gte: todayStart, lt: todayEnd },
-        },
-        _sum: { refundAmount: true },
-      }),
-      prisma.return.aggregate({
-        where: {
-          status: "APPROVED",
-          createdAt: { gte: monthStart, lt: monthEnd },
-        },
-        _sum: { refundAmount: true },
-      }),
-      prisma.expense.aggregate({
-        where: {
-          expenseDate: { gte: todayStart, lt: todayEnd },
-        },
-        _sum: { amount: true },
-      }),
-    ]);
+          WHERE "isActive" = true
+            AND "stockQuantity" <= "minStockLevel") AS "lowStockCount"
+      `;
 
-    const todayReturns = todayReturnsAgg._sum.refundAmount ?? 0;
-    const monthReturns = monthReturnsAgg._sum.refundAmount ?? 0;
-    const todayExpenses = todayExpensesAgg._sum.amount ?? 0;
-    const data = row[0] ?? {
+    const data = row ?? {
       todayGrossSales: 0,
       todaySalesCount: 0,
       monthSales: 0,
       monthSalesCount: 0,
+      todayReturns: 0,
+      monthReturns: 0,
+      todayExpenses: 0,
       totalProducts: 0,
       totalCustomers: 0,
       lowStockCount: 0,
     };
 
     return {
-      ...data,
-      todayReturns,
-      todayExpenses,
-      todayNetSales: data.todayGrossSales - todayReturns - todayExpenses,
-      monthSales: data.monthSales - monthReturns,
+      todayGrossSales: data.todayGrossSales,
+      todayReturns: data.todayReturns,
+      todayExpenses: data.todayExpenses,
+      todayNetSales: data.todayGrossSales - data.todayReturns - data.todayExpenses,
+      todaySalesCount: data.todaySalesCount,
+      monthSales: data.monthSales - data.monthReturns,
+      monthSalesCount: data.monthSalesCount,
+      totalProducts: data.totalProducts,
+      totalCustomers: data.totalCustomers,
+      lowStockCount: data.lowStockCount,
     };
   },
   ["dashboard-kpis"],
@@ -133,28 +140,36 @@ export const getCachedSalesChartData = unstable_cache(
     const firstDayStart = firstDay
       ? getBusinessDayBoundsForDateKey(firstDay).start
       : getEgyptBusinessDayBounds(now).start;
-    const rows = await prisma.sale.findMany({
-      where: {
-        status: "COMPLETED",
-        createdAt: { gte: firstDayStart },
-      },
-      select: {
-        createdAt: true,
-        totalAmount: true,
-      },
+
+    const rows = await prisma.$queryRaw<
+      {
+        day: string;
+        total: number;
+        count: number;
+      }[]
+    >`
+      SELECT
+        TO_CHAR(("createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours', 'YYYY-MM-DD') AS day,
+        COALESCE(SUM("totalAmount"), 0)::float AS total,
+        COUNT(*)::int AS count
+      FROM "Sale"
+      WHERE status = 'COMPLETED'
+        AND "createdAt" >= ${firstDayStart}
+      GROUP BY day
+      ORDER BY day ASC
+    `;
+
+    const byDay = new Map(rows.map((row) => [row.day, row]));
+
+    return salesChartData.map((day) => {
+      const match = byDay.get(day.date);
+      if (!match) return day;
+      return {
+        date: day.date,
+        total: match.total,
+        count: match.count,
+      };
     });
-    const byDay = new Map(salesChartData.map((day) => [day.date, day]));
-
-    for (const row of rows) {
-      const entry = byDay.get(getEgyptBusinessDateKey(row.createdAt));
-
-      if (entry) {
-        entry.total += row.totalAmount;
-        entry.count += 1;
-      }
-    }
-
-    return salesChartData;
   },
   ["dashboard-chart"],
   {
