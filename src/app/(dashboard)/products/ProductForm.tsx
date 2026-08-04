@@ -580,19 +580,19 @@ export default function ProductForm({
                           key={color.id}
                           type="button"
                           onClick={() => selectGlobalColor(index, color)}
-                          className={`group inline-flex min-w-[72px] flex-col items-center gap-1 rounded-xl border px-1.5 py-1 text-center text-[10px] transition ${
+                          className={`group inline-flex min-w-[64px] flex-col items-center gap-0.5 rounded-xl border px-1 py-1 text-center text-[9px] transition ${
                             selected
                               ? "border-gold bg-gold/10 shadow-sm ring-2 ring-gold/30"
                               : "border-border bg-white hover:border-gold/80"
                           }`}
                         >
                           <span
-                            className={`flex h-7 w-7 items-center justify-center rounded-full border ${
+                            className={`flex h-6 w-6 items-center justify-center rounded-full border ${
                               selected ? "border-gold" : "border-border"
                             }`}
                             style={{ backgroundColor: color.hexCode }}
                           />
-                          <span className="max-w-[64px] truncate text-[10px] font-medium text-brown">
+                          <span className="max-w-[56px] truncate text-[9px] font-medium text-brown">
                             {color.name}
                           </span>
                         </button>
