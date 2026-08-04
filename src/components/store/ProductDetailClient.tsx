@@ -161,8 +161,13 @@ export default function ProductDetailClient({
           priceLabel={formatCurrency(price, currencySymbol)}
           colorVariants={galleryVariants}
           selectedColor={selectedColor}
+          activeImageIndex={activeImageIndex}
           onSelectColor={handleColorChange}
-          onMainImageClick={() => setZoomOpen(true)}
+          onSelectImage={setActiveImageIndex}
+          onMainImageClick={(index) => {
+            setActiveImageIndex(index);
+            setZoomOpen(true);
+          }}
         />
       </div>
 

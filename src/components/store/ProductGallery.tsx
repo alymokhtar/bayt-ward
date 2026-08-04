@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 
 type GalleryImage = {
   id: string;
@@ -20,8 +20,10 @@ type ProductGalleryProps = {
   priceLabel: string;
   colorVariants: ColorVariant[];
   selectedColor: string;
+  activeImageIndex: number;
   onSelectColor: (color: string) => void;
-  onMainImageClick?: () => void;
+  onSelectImage: (index: number) => void;
+  onMainImageClick?: (index: number) => void;
 };
 
 export default function ProductGallery({
@@ -29,11 +31,11 @@ export default function ProductGallery({
   priceLabel,
   colorVariants,
   selectedColor,
+  activeImageIndex,
   onSelectColor,
+  onSelectImage,
   onMainImageClick,
 }: ProductGalleryProps) {
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-
   const selectedVariant = useMemo(
     () => colorVariants.find((variant) => variant.name === selectedColor) ?? colorVariants[0],
     [colorVariants, selectedColor]
@@ -42,24 +44,20 @@ export default function ProductGallery({
   const images = selectedVariant?.images ?? [];
   const activeImage = images[activeImageIndex] ?? images[0];
 
-  useEffect(() => {
-    setActiveImageIndex(0);
-  }, [selectedColor]);
-
   function handleColorChange(color: string) {
     onSelectColor(color);
   }
 
   function handleThumbnailClick(index: number) {
-    setActiveImageIndex(index);
+    onSelectImage(index);
   }
 
   return (
-    <section className="mx-auto w-full max-w-md px-4 pb-6 sm:px-0">
+    <section className="mx-auto w-full max-w-md pb-6">
       <div className="overflow-hidden rounded-[2rem] bg-[#fff6ed] p-3 shadow-sm shadow-[rgba(111,80,47,0.12)]">
         <button
           type="button"
-          onClick={onMainImageClick}
+          onClick={() => onMainImageClick?.(activeImageIndex)}
           aria-label="تكبير الصورة"
           className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] bg-[#fff1e0] shadow-sm"
         >
