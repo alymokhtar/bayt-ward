@@ -11,7 +11,7 @@ type GlobalColor = {
   id: string;
   name: string;
   hexCode: string;
-  createdAt: string;
+  createdAt: Date;
 };
 
 export default function GlobalColorManager() {
