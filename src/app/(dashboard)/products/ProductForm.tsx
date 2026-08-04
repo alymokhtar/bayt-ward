@@ -567,9 +567,9 @@ export default function ProductForm({
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6">
+                <div className="flex flex-wrap items-center gap-2">
                   {globalColors.length === 0 ? (
-                    <div className="col-span-2 sm:col-span-4 rounded-xl border border-dashed border-border bg-cream px-3 py-3 text-sm text-muted">
+                    <div className="rounded-xl border border-dashed border-border bg-cream px-3 py-3 text-sm text-muted">
                       لا توجد ألوان مركزية مسجلة.
                     </div>
                   ) : (
@@ -580,7 +580,7 @@ export default function ProductForm({
                           key={color.id}
                           type="button"
                           onClick={() => selectGlobalColor(index, color)}
-                          className={`group inline-flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center text-xs transition ${
+                          className={`group inline-flex min-w-[96px] flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center text-xs transition ${
                             selected
                               ? "border-gold bg-gold/10 shadow-sm ring-2 ring-gold/30"
                               : "border-border bg-white hover:border-gold/80"
@@ -592,7 +592,7 @@ export default function ProductForm({
                             }`}
                             style={{ backgroundColor: color.hexCode }}
                           />
-                          <span className="max-w-[72px] truncate text-[11px] font-medium text-brown">
+                          <span className="max-w-[80px] truncate text-[11px] font-medium text-brown">
                             {color.name}
                           </span>
                         </button>
