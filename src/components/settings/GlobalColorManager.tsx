@@ -129,7 +129,7 @@ export default function GlobalColorManager() {
 
       <div className="mt-6 space-y-3">
         <h4 className="text-sm font-semibold text-brown">الألوان المسجلة</h4>
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="flex flex-wrap items-center gap-2">
           {colors.length === 0 ? (
             <div className="rounded-2xl border border-border bg-cream px-4 py-4 text-center text-sm text-muted">
               لا توجد ألوان مسجلة بعد.
@@ -138,29 +138,25 @@ export default function GlobalColorManager() {
             colors.map((color) => (
               <div
                 key={color.id}
-                className="rounded-2xl border border-border bg-white p-3 shadow-sm transition hover:border-gold/50"
+                className="inline-flex items-center gap-2 rounded-2xl border border-border bg-white px-2 py-1.5 text-xs shadow-sm transition hover:border-gold/50"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="h-8 w-8 rounded-full border border-border"
-                      style={{ backgroundColor: color.hexCode }}
-                    />
-                    <div>
-                      <p className="text-sm font-semibold text-brown">{color.name}</p>
-                      <p className="text-[11px] text-muted">{color.hexCode}</p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDelete(color.id)}
-                    disabled={deleteLoading !== null}
-                  >
-                    <Trash2 className="h-4 w-4 text-danger" />
-                  </Button>
+                <div
+                  className="h-7 w-7 rounded-full border border-border"
+                  style={{ backgroundColor: color.hexCode }}
+                />
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-brown">{color.name}</p>
+                  <p className="truncate text-[10px] text-muted">{color.hexCode}</p>
                 </div>
+                <button
+                  type="button"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-danger transition hover:bg-danger/10"
+                  onClick={() => handleDelete(color.id)}
+                  disabled={deleteLoading !== null}
+                  aria-label={`حذف ${color.name}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             ))
           )}
