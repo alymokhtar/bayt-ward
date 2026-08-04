@@ -1,7 +1,6 @@
 "use client";
 
 import Button from "@/components/ui/Button";
-import ColorAutocomplete from "@/components/ui/ColorAutocomplete";
 import Input from "@/components/ui/Input";
 import Select from "@/components/ui/Select";
 import { SIZES } from "@/lib/constants";
@@ -27,7 +26,7 @@ import { getDeletedVariantIds } from "@/lib/variant-sync";
 import VariantImageUploader from "@/components/products/VariantImageUploader";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Category = { id: string; name: string; nameAr: string | null };
 
@@ -48,6 +47,7 @@ type ProductData = {
     size: string;
     color: string;
     colorHex: string | null;
+    globalColorId?: string | null;
     costPrice: number;
     sellingPrice: number;
     stockQuantity: number;
@@ -65,10 +65,16 @@ type ProductData = {
   }[];
 };
 
+type GlobalColor = {
+  id: string;
+  name: string;
+  hexCode: string;
+};
+
 interface ProductFormProps {
   categories: Category[];
   product?: ProductData;
-  usedColors?: string[];
+  globalColors?: GlobalColor[];
   initialVariantCode?: VariantCodePair;
 }
 
@@ -77,6 +83,7 @@ type VariantForm = VariantInput & {
   isActive?: boolean;
   sizeMode?: "preset" | "custom";
   customSize?: string;
+  globalColorId?: string;
 };
 
 const emptyVariant = (
@@ -88,6 +95,7 @@ const emptyVariant = (
   size: template?.size ?? "M",
   color: "",
   colorHex: "",
+  globalColorId: undefined,
   costPrice: template?.costPrice ?? 0,
   sellingPrice: template?.sellingPrice ?? 0,
   stockQuantity: 0,
@@ -99,7 +107,7 @@ const emptyVariant = (
 export default function ProductForm({
   categories,
   product,
-  usedColors = [],
+  globalColors = [],
   initialVariantCode,
 }: ProductFormProps) {
   const router = useRouter();
@@ -123,6 +131,7 @@ export default function ProductForm({
         size: v.size,
         color: v.color,
         colorHex: v.colorHex || "",
+        globalColorId: v.globalColorId || undefined,
         costPrice: v.costPrice,
         sellingPrice: v.sellingPrice,
         stockQuantity: v.stockQuantity,
@@ -138,6 +147,7 @@ export default function ProductForm({
   const [loading, setLoading] = useState(false);
   const [addingVariant, setAddingVariant] = useState(false);
   const [error, setError] = useState("");
+  const [variantErrors, setVariantErrors] = useState<Record<number, string>>({});
   const [primaryImageId, setPrimaryImageId] = useState<string | null>(() => {
     if (!product) return null;
     const primaryImage = product.variants
@@ -170,14 +180,6 @@ export default function ProductForm({
     };
   }, [isEdit, initialVariantCode]);
 
-  const allColorChoices = useMemo(() => {
-    const next = new Set<string>(usedColors);
-    variants.forEach((variant) => {
-      if (variant.color?.trim()) next.add(variant.color.trim());
-    });
-    return Array.from(next);
-  }, [usedColors, variants]);
-
   function updateVariant(
     index: number,
     field: keyof VariantForm,
@@ -188,34 +190,52 @@ export default function ProductForm({
     );
   }
 
-  function updateVariantColor(index: number, color: string, colorHex?: string) {
-    const trimmedColor = color.trim();
-
+  function selectGlobalColor(index: number, color: GlobalColor) {
     setVariants((prev) => {
-      if (!trimmedColor) {
-        setError("");
-        return prev.map((v, i) =>
-          i === index ? { ...v, color, colorHex: colorHex ?? "" } : v
-        );
-      }
-
       const next = prev.map((v, i) =>
-        i === index ? { ...v, color, colorHex: colorHex ?? "" } : v
+        i === index
+          ? {
+              ...v,
+              globalColorId: color.id,
+              color: color.name,
+              colorHex: color.hexCode,
+            }
+          : v
       );
 
-      const wouldDuplicate = next.some((variant, variantIndex) => {
+      const duplicate = next.some((variant, variantIndex) => {
         if (variantIndex === index) return false;
-        return variant.color?.trim().toLowerCase() === trimmedColor.toLowerCase();
+        return variant.globalColorId === color.id;
       });
 
-      if (wouldDuplicate) {
-        setError(`لا يمكن استخدام اللون "${trimmedColor}" أكثر من مرة لنفس المنتج`);
+      if (duplicate) {
+        setError(`لا يمكن اختيار هذا اللون أكثر من مرة لنفس المنتج`);
         return prev;
       }
 
       setError("");
+      setVariantErrors((current) => {
+        const nextErrors = { ...current };
+        delete nextErrors[index];
+        return nextErrors;
+      });
       return next;
     });
+  }
+
+  function clearGlobalColor(index: number) {
+    setVariants((prev) =>
+      prev.map((v, i) =>
+        i === index
+          ? {
+              ...v,
+              globalColorId: undefined,
+              color: "",
+              colorHex: "",
+            }
+          : v
+      )
+    );
   }
 
   function updateVariantSize(index: number, mode: "preset" | "custom", value: string) {
@@ -317,6 +337,19 @@ export default function ProductForm({
       }
     }
 
+    const colorSelectionErrors: Record<number, string> = {};
+    variants.forEach((variant, index) => {
+      if (!variant.globalColorId) {
+        colorSelectionErrors[index] = "يرجى اختيار لون لهذا المتغير";
+      }
+    });
+
+    if (Object.keys(colorSelectionErrors).length > 0) {
+      setVariantErrors(colorSelectionErrors);
+      setError("يرجى اختيار لون مركزي لكل المتغيرات");
+      return;
+    }
+
     setLoading(true);
 
     const existingVariantIds = product?.variants.map((variant) => variant.id) ?? [];
@@ -349,6 +382,7 @@ export default function ProductForm({
           size: String(resolvedSize).trim(),
           color: String(v.color).trim(),
           colorHex: v.colorHex ? String(v.colorHex).trim() : undefined,
+          globalColorId: v.globalColorId || undefined,
           costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
           sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
           stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : parseInt(String(v.stockQuantity) || "0"),
@@ -518,16 +552,61 @@ export default function ProductForm({
                   />
                 )}
               </div>
-              <ColorAutocomplete
-                label="اللون"
-                value={variant.color}
-                colorHex={variant.colorHex || ""}
-                usedColors={allColorChoices}
-                onChange={(color, colorHex) =>
-                  updateVariantColor(index, color, colorHex)
-                }
-                required
-              />
+              <div className={`sm:col-span-3 rounded-2xl p-3 ${variantErrors[index] ? "border border-red-300 bg-red-50" : ""}`}>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className={`block text-sm font-medium ${variantErrors[index] ? "text-danger" : "text-brown"}`}>
+                    اللون المركزي
+                  </label>
+                  {variant.globalColorId && (
+                    <button
+                      type="button"
+                      className="text-sm text-muted hover:text-red-600"
+                      onClick={() => clearGlobalColor(index)}
+                    >
+                      إزالة الاختيار
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {globalColors.length === 0 ? (
+                    <div className="col-span-4 rounded-xl border border-dashed border-border bg-cream px-3 py-3 text-sm text-muted">
+                      لا توجد ألوان مركزية مسجلة.
+                    </div>
+                  ) : (
+                    globalColors.map((color) => {
+                      const selected = variant.globalColorId === color.id;
+                      return (
+                        <button
+                          key={color.id}
+                          type="button"
+                          onClick={() => selectGlobalColor(index, color)}
+                          className={`flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition ${
+                            selected
+                              ? "border-gold bg-gold/10 shadow-sm"
+                              : "border-border hover:border-gold/80"
+                          }`}
+                        >
+                          <span
+                            className={`h-10 w-10 rounded-full border ${
+                              selected ? "border-gold" : "border-border"
+                            }`}
+                            style={{ backgroundColor: color.hexCode }}
+                          />
+                          <span className="text-[11px] text-brown truncate max-w-[72px]">
+                            {color.name}
+                          </span>
+                          <span className="text-[11px] text-muted truncate max-w-[72px]">
+                            {color.hexCode}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+                {variantErrors[index] && (
+                  <p className="mt-2 text-sm text-danger">{variantErrors[index]}</p>
+                )}
+              </div>
               <Input
                 label="سعر التكلفة"
                 type="number"
@@ -576,7 +655,7 @@ export default function ProductForm({
                 <VariantImageUploader
                   productId={product.id}
                   productVariantId={variant.id}
-                  label={`${variant.color || product.name} ${variant.size}`.trim()}
+                  label={`${globalColors.find((color) => color.id === variant.globalColorId)?.name || variant.color || product.name} ${variant.size}`.trim()}
                   initialImages={
                     product.variants.find((item) => item.id === variant.id)?.images ?? []
                   }

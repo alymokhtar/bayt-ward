@@ -79,10 +79,15 @@ export default function VariantImageUploader({
     <div className="rounded-lg border border-dashed border-border bg-muted/5 p-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-brown">صور المتغير</p>
+          <p className="text-sm font-medium text-brown">
+            {label ? `صور المتغير: ${label}` : "صور المتغير"}
+          </p>
           <p className="text-xs text-muted">
             {images.length} صورة • الحد الأقصى {formatBytes(MAX_UPLOAD_BYTES)}
           </p>
+          {label && (
+            <p className="text-xs text-muted">الصور ستُربط بلون مركزي: {label}</p>
+          )}
         </div>
         <label className="cursor-pointer">
           <input

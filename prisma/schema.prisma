@@ -127,21 +127,34 @@ model Product {
   @@index([featuredProduct])
 }
 
-model ProductColor {
-  id        String   @id @default(cuid())
-  productId String
-  color     String
-  colorHex  String?
-  sortOrder Int      @default(0)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model GlobalColor {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  hexCode   String
+  createdAt DateTime       @default(now())
 
-  product Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
-  media   ProductMedia[]
+  productColors   ProductColor[]
+  productVariants ProductVariant[]
+}
+
+model ProductColor {
+  id            String       @id @default(cuid())
+  productId     String
+  color         String
+  colorHex      String?
+  globalColorId String?
+  sortOrder     Int          @default(0)
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  product     Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  globalColor GlobalColor?   @relation(fields: [globalColorId], references: [id], onDelete: Restrict)
+  media       ProductMedia[]
 
   @@unique([productId, color])
   @@index([productId])
+  @@index([globalColorId])
   @@index([sortOrder])
 }
 
@@ -172,6 +185,7 @@ model ProductVariant {
   size          String
   color         String
   colorHex      String?
+  globalColorId String?
   costPrice     Float
   sellingPrice  Float
   stockQuantity Int      @default(0)
@@ -181,6 +195,7 @@ model ProductVariant {
   updatedAt     DateTime @updatedAt
 
   product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  globalColor    GlobalColor?    @relation(fields: [globalColorId], references: [id], onDelete: Restrict)
   saleItems      SaleItem[]
   purchaseItems  PurchaseItem[]
   returnItems    ReturnItem[]
@@ -188,6 +203,7 @@ model ProductVariant {
   images         Image[]
 
   @@index([productId])
+  @@index([globalColorId])
   @@index([isActive, stockQuantity])
 }
 

@@ -1,5 +1,6 @@
 import SettingsClient from "@/app/(dashboard)/settings/SettingsClient";
 import AppearanceSettingsPanel from "@/app/(dashboard)/settings/AppearanceSettingsPanel";
+import GlobalColorManager from "@/components/settings/GlobalColorManager";
 import ManualBackupPanel from "@/components/backup/ManualBackupPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getSettings } from "@/lib/actions/settings";
@@ -43,12 +44,13 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <CardHeader>
             <CardTitle>المظهر</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
             <AppearanceSettingsPanel
               themeAccent={themeAccent}
               userId={session.id}
               canSaveGlobally={canManageStoreSettings}
             />
+            {canManageStoreSettings && <GlobalColorManager />}
           </CardContent>
         </Card>
       )}

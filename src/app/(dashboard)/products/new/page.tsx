@@ -1,11 +1,12 @@
 import ProductForm from "@/app/(dashboard)/products/ProductForm";
 import { getCategories } from "@/lib/actions/categories";
-import { getNextVariantCodes, getUsedColors } from "@/lib/actions/products";
+import { getNextVariantCodes } from "@/lib/actions/products";
+import { getGlobalColors } from "@/lib/actions/global-colors";
 
 export default async function NewProductPage() {
-  const [categories, usedColors, codesResult] = await Promise.all([
+  const [categories, globalColors, codesResult] = await Promise.all([
     getCategories(),
-    getUsedColors(),
+    getGlobalColors(),
     getNextVariantCodes(1),
   ]);
 
@@ -21,7 +22,7 @@ export default async function NewProductPage() {
       </div>
       <ProductForm
         categories={categories}
-        usedColors={usedColors}
+        globalColors={globalColors}
         initialVariantCode={initialVariantCode}
       />
     </div>

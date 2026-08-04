@@ -21,6 +21,7 @@ export type VariantInput = {
   size: string;
   color: string;
   colorHex?: string;
+  globalColorId?: string;
   costPrice: number;
   sellingPrice: number;
   stockQuantity?: number;
@@ -166,6 +167,10 @@ async function ensureVariantCodes(
   let codeIndex = 0;
 
   const prepared = variants.map((variant) => {
+    if (!variant.globalColorId?.trim()) {
+      throw new Error("يرجى اختيار لون مركزي لكل متغير");
+    }
+
     let sku = variant.sku?.trim() ?? "";
     let barcode = variant.barcode?.trim() ?? "";
 
@@ -194,6 +199,10 @@ function prepareVariantsForSave(
     const sku = String(variant.sku || "").trim();
     if (!sku) {
       throw new Error("رمز SKU مطلوب لكل متغير");
+    }
+
+    if (!variant.globalColorId) {
+      throw new Error("يرجى اختيار لون مركزي لكل متغير");
     }
 
     const barcode = resolveStoredBarcode(sku, variant.barcode);
@@ -278,6 +287,7 @@ export async function createProduct(data: {
               size: String(v.size).trim() || "",
               color: String(v.color).trim() || "",
               colorHex: v.colorHex?.trim() || null,
+              globalColorId: v.globalColorId || undefined,
               costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
               sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
               stockQuantity: typeof v.stockQuantity === "number" ? Math.max(0, v.stockQuantity) : parseInt(String(v.stockQuantity) || "0"),
@@ -456,11 +466,12 @@ export async function updateProduct(
 
         for (const variant of preparedVariants) {
           if (variant.id && existingIds.has(variant.id)) {
-            const updateData: Record<string, string | boolean | number | null> = {
+const updateData: Record<string, string | boolean | number | null | undefined> = {
               sku: variant.sku,
               barcode: variant.barcode,
               size: variant.size?.trim() || "",
               color: variant.color?.trim() || "",
+              globalColorId: variant.globalColorId || undefined,
               costPrice: typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0"),
               sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
               minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
@@ -484,6 +495,7 @@ export async function updateProduct(
                 size: variant.size?.trim() || "",
                 color: variant.color?.trim() || "",
                 colorHex: variant.colorHex?.trim() || null,
+                globalColorId: variant.globalColorId || undefined,
                 costPrice: typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0"),
                 sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
                 stockQuantity: 0,
