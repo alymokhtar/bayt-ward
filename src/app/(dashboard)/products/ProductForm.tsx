@@ -567,7 +567,7 @@ export default function ProductForm({
                     </button>
                   )}
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-1">
                   {globalColors.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-border bg-cream px-3 py-3 text-sm text-muted">
                       لا توجد ألوان مركزية مسجلة.
@@ -580,19 +580,19 @@ export default function ProductForm({
                           key={color.id}
                           type="button"
                           onClick={() => selectGlobalColor(index, color)}
-                          className={`group inline-flex min-w-[96px] flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center text-xs transition ${
+                          className={`group inline-flex min-w-[72px] flex-col items-center gap-1 rounded-xl border px-1.5 py-1 text-center text-[10px] transition ${
                             selected
                               ? "border-gold bg-gold/10 shadow-sm ring-2 ring-gold/30"
                               : "border-border bg-white hover:border-gold/80"
                           }`}
                         >
                           <span
-                            className={`flex h-8 w-8 items-center justify-center rounded-full border ${
+                            className={`flex h-7 w-7 items-center justify-center rounded-full border ${
                               selected ? "border-gold" : "border-border"
                             }`}
                             style={{ backgroundColor: color.hexCode }}
                           />
-                          <span className="max-w-[80px] truncate text-[11px] font-medium text-brown">
+                          <span className="max-w-[64px] truncate text-[10px] font-medium text-brown">
                             {color.name}
                           </span>
                         </button>
