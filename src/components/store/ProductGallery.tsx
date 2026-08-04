@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type GalleryImage = {
   id: string;
@@ -19,17 +19,19 @@ type ProductGalleryProps = {
   productName: string;
   priceLabel: string;
   colorVariants: ColorVariant[];
-  initialColor?: string;
+  selectedColor: string;
+  onSelectColor: (color: string) => void;
+  onMainImageClick?: () => void;
 };
 
 export default function ProductGallery({
   productName,
   priceLabel,
   colorVariants,
-  initialColor,
+  selectedColor,
+  onSelectColor,
+  onMainImageClick,
 }: ProductGalleryProps) {
-  const defaultColor = initialColor || colorVariants[0]?.name || "";
-  const [selectedColor, setSelectedColor] = useState(defaultColor);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const selectedVariant = useMemo(
@@ -40,9 +42,12 @@ export default function ProductGallery({
   const images = selectedVariant?.images ?? [];
   const activeImage = images[activeImageIndex] ?? images[0];
 
-  function handleColorChange(color: string) {
-    setSelectedColor(color);
+  useEffect(() => {
     setActiveImageIndex(0);
+  }, [selectedColor]);
+
+  function handleColorChange(color: string) {
+    onSelectColor(color);
   }
 
   function handleThumbnailClick(index: number) {
@@ -52,7 +57,12 @@ export default function ProductGallery({
   return (
     <section className="mx-auto w-full max-w-md px-4 pb-6 sm:px-0">
       <div className="overflow-hidden rounded-[2rem] bg-[#fff6ed] p-3 shadow-sm shadow-[rgba(111,80,47,0.12)]">
-        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] bg-[#fff1e0] shadow-sm">
+        <button
+          type="button"
+          onClick={onMainImageClick}
+          aria-label="تكبير الصورة"
+          className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] bg-[#fff1e0] shadow-sm"
+        >
           {activeImage ? (
             <Image
               src={activeImage.url}
@@ -66,7 +76,7 @@ export default function ProductGallery({
               لا توجد صورة متاحة
             </div>
           )}
-        </div>
+        </button>
 
         {images.length > 1 && (
           <div className="mt-3 flex gap-3 overflow-x-auto pb-1 hide-scrollbar">

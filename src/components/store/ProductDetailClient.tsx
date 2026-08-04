@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { Check, ShoppingBag, Share2 } from "lucide-react";
-import ColorSwatches from "@/components/store/ColorSwatches";
+import ProductGallery from "@/components/store/ProductGallery";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import WhatsAppOrderButton from "@/components/store/WhatsAppOrderButton";
 import { optimizeCloudinaryUrl, STORE_IMAGE_SIZES } from "@/lib/store/images";
@@ -48,6 +48,22 @@ export default function ProductDetailClient({
         hex: color.colorHex,
       })),
     [product.colors]
+  );
+
+  const galleryVariants = useMemo(
+    () =>
+      product.colors.map((color) => {
+        const colorMedia = getColorMedia(product, color.color);
+        const sizesForColor = getAvailableSizesForColor(product, color.color);
+        const images = colorMedia.length > 0 ? colorMedia : sizesForColor[0]?.images ?? [];
+
+        return {
+          name: color.color,
+          hex: color.colorHex || "#d4cfc7",
+          images,
+        };
+      }),
+    [product]
   );
 
   const unavailableColors = useMemo(
@@ -140,63 +156,14 @@ export default function ProductDetailClient({
   return (
     <div className="grid overflow-hidden gap-8 rounded-[2.3rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.95))] p-4 shadow-[0_24px_70px_rgba(80,54,28,0.12)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
       <div className="space-y-4">
-        <button
-          type="button"
-          className="relative aspect-[4/5] w-full overflow-hidden rounded-[2rem] border border-[var(--store-border)] bg-[var(--store-surface)] p-2 shadow-sm"
-          onClick={() => activeImage && setZoomOpen(true)}
-          aria-label="تكبير الصورة"
-        >
-          {activeImage ? (
-            <Image
-              src={optimizeCloudinaryUrl(activeImage.url, {
-                width: STORE_IMAGE_SIZES.gallery.width,
-                height: STORE_IMAGE_SIZES.gallery.height,
-                crop: "fill",
-              })}
-              alt={activeImage.altText || displayName}
-              fill
-              sizes="(max-width: 1024px) 100vw, 50vw"
-              className="object-cover"
-              priority
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center text-[var(--store-muted)]">
-              لا توجد صورة
-            </div>
-          )}
-        </button>
-
-        {images.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {images.map((image, index) => (
-              <button
-                key={image.id}
-                type="button"
-                aria-label={`صورة ${index + 1}`}
-                aria-current={index === activeImageIndex}
-                onClick={() => setActiveImageIndex(index)}
-                className={cn(
-                  "relative h-20 w-16 shrink-0 overflow-hidden rounded-xl border-2",
-                  index === activeImageIndex
-                    ? "border-[var(--store-gold)]"
-                    : "border-transparent"
-                )}
-              >
-                <Image
-                  src={optimizeCloudinaryUrl(image.url, {
-                    width: STORE_IMAGE_SIZES.thumbnail.width,
-                    height: STORE_IMAGE_SIZES.thumbnail.height,
-                    crop: "fill",
-                  })}
-                  alt=""
-                  fill
-                  sizes="64px"
-                  className="object-cover"
-                />
-              </button>
-            ))}
-          </div>
-        )}
+        <ProductGallery
+          productName={displayName}
+          priceLabel={formatCurrency(price, currencySymbol)}
+          colorVariants={galleryVariants}
+          selectedColor={selectedColor}
+          onSelectColor={handleColorChange}
+          onMainImageClick={() => setZoomOpen(true)}
+        />
       </div>
 
       <div className="min-w-0 space-y-6">
@@ -204,16 +171,12 @@ export default function ProductDetailClient({
           <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-[var(--store-gold)]">
             {product.category.nameAr || product.category.name}
           </p>
-          <h1 className="store-serif text-3xl font-semibold md:text-4xl">{displayName}</h1>
           {product.brand && (
             <p className="text-sm text-[var(--store-muted)]">{product.brand}</p>
           )}
         </div>
 
         <div className="flex flex-wrap items-end gap-3 rounded-[1.4rem] border border-[var(--store-border)] bg-white/70 px-4 py-3">
-          <p className="text-2xl font-semibold text-[var(--store-text)]">
-            {formatCurrency(price, currencySymbol)}
-          </p>
           <p
             className={cn(
               "inline-flex rounded-full px-3 py-1 text-xs font-medium",
@@ -225,18 +188,6 @@ export default function ProductDetailClient({
             {inStock ? "متوفر" : "غير متوفر حالياً"}
           </p>
         </div>
-
-        {colorOptions.length > 0 && (
-          <div className="space-y-3 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">
-            <p className="text-sm font-medium">اللون: {selectedColor || "—"}</p>
-            <ColorSwatches
-              colors={colorOptions}
-              activeColor={selectedColor}
-              onSelect={handleColorChange}
-              unavailableColors={unavailableColors}
-            />
-          </div>
-        )}
 
         {sizes.length > 0 && (
           <div className="space-y-3 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">
