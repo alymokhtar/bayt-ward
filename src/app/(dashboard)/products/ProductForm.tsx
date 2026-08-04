@@ -553,23 +553,23 @@ export default function ProductForm({
                 )}
               </div>
               <div className={`sm:col-span-3 rounded-2xl p-3 ${variantErrors[index] ? "border border-red-300 bg-red-50" : ""}`}>
-                <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <label className={`block text-sm font-medium ${variantErrors[index] ? "text-danger" : "text-brown"}`}>
                     اللون المركزي
                   </label>
                   {variant.globalColorId && (
                     <button
                       type="button"
-                      className="text-sm text-muted hover:text-red-600"
+                      className="text-xs text-muted transition hover:text-brown"
                       onClick={() => clearGlobalColor(index)}
                     >
-                      إزالة الاختيار
+                      × إزالة الاختيار
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-6">
                   {globalColors.length === 0 ? (
-                    <div className="col-span-4 rounded-xl border border-dashed border-border bg-cream px-3 py-3 text-sm text-muted">
+                    <div className="col-span-2 sm:col-span-4 rounded-xl border border-dashed border-border bg-cream px-3 py-3 text-sm text-muted">
                       لا توجد ألوان مركزية مسجلة.
                     </div>
                   ) : (
@@ -580,23 +580,20 @@ export default function ProductForm({
                           key={color.id}
                           type="button"
                           onClick={() => selectGlobalColor(index, color)}
-                          className={`flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition ${
+                          className={`group inline-flex w-full flex-col items-center gap-1 rounded-xl border px-2 py-2 text-center text-xs transition ${
                             selected
-                              ? "border-gold bg-gold/10 shadow-sm"
-                              : "border-border hover:border-gold/80"
+                              ? "border-gold bg-gold/10 shadow-sm ring-2 ring-gold/30"
+                              : "border-border bg-white hover:border-gold/80"
                           }`}
                         >
                           <span
-                            className={`h-10 w-10 rounded-full border ${
+                            className={`flex h-8 w-8 items-center justify-center rounded-full border ${
                               selected ? "border-gold" : "border-border"
                             }`}
                             style={{ backgroundColor: color.hexCode }}
                           />
-                          <span className="text-[11px] text-brown truncate max-w-[72px]">
+                          <span className="max-w-[72px] truncate text-[11px] font-medium text-brown">
                             {color.name}
-                          </span>
-                          <span className="text-[11px] text-muted truncate max-w-[72px]">
-                            {color.hexCode}
                           </span>
                         </button>
                       );
