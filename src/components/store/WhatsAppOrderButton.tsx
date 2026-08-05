@@ -5,6 +5,7 @@ import { getStoreOrderWhatsAppUrl } from "@/lib/store/whatsapp";
 type WhatsAppOrderButtonProps = {
   productName: string;
   productUrl: string;
+  productId?: string;
   whatsappNumber: string;
   color?: string;
   size?: string;
@@ -15,6 +16,7 @@ type WhatsAppOrderButtonProps = {
 export default function WhatsAppOrderButton({
   productName,
   productUrl,
+  productId,
   whatsappNumber,
   color,
   size,
@@ -35,6 +37,7 @@ export default function WhatsAppOrderButton({
   const href = getStoreOrderWhatsAppUrl({
     productName,
     productUrl,
+    productId,
     whatsappNumber,
     color,
     size,

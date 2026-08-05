@@ -244,6 +244,7 @@ export default function ProductDetailClient({
           <WhatsAppOrderButton
             productName={displayName}
             productUrl={productUrl}
+            productId={product.id}
             whatsappNumber={whatsappNumber}
             color={selectedColor || undefined}
             size={selectedSize || selectedVariant?.size}
