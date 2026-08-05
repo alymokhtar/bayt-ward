@@ -11,6 +11,7 @@ import {
 } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
+import { calculateProfitMetrics } from "@/lib/report-math";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 type KpiData = {
@@ -1127,9 +1128,12 @@ export const getCachedProfitReport = unstable_cache(
     const costOfGoodsSold = totalCogs - returnedCogs;
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
-    const netRevenue = revenue - totalReturns;
-    const grossProfit = netRevenue - costOfGoodsSold;
-    const netProfit = grossProfit - totalExpenses;
+    const { netRevenue, grossProfit, netProfit, profitMargin } = calculateProfitMetrics({
+      revenue,
+      totalReturns,
+      costOfGoodsSold,
+      totalExpenses,
+    });
 
     return {
       period: { from: start, to: end },
@@ -1141,7 +1145,7 @@ export const getCachedProfitReport = unstable_cache(
       totalExpenses,
       expensesCount: expenses._count,
       netProfit,
-      profitMargin: netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0,
+      profitMargin,
       purchasesTotal: purchases._sum.totalAmount ?? 0,
       purchasesCount: purchases._count,
     };
