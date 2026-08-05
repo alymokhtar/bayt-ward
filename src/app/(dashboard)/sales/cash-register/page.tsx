@@ -59,16 +59,6 @@ function formatPeriodLabel(from: string, to: string) {
   return `${formatEgyptChartDateLabel(from)} — ${formatEgyptChartDateLabel(to)}`;
 }
 
-const ALL_METHODS: (PaymentMethod | "ALL")[] = [
-  "ALL",
-  "CASH",
-  "CARD",
-  "INSTAPAY",
-  "WALLET",
-  "TRANSFER",
-  "MIXED",
-];
-
 export default function CashRegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -80,7 +70,6 @@ export default function CashRegisterPage() {
 
   const from = searchParams.get("from") || "";
   const to = searchParams.get("to") || "";
-  const paymentMethod = (searchParams.get("paymentMethod") || "ALL") as PaymentMethod | "ALL";
 
   useEffect(() => {
     let cancelled = false;
@@ -89,7 +78,7 @@ export default function CashRegisterPage() {
       setLoading(true);
       setError("");
       try {
-        const result = await getCashRegisterReview(from, to, paymentMethod);
+        const result = await getCashRegisterReview(from, to);
         if (!cancelled) setReview(result);
       } catch {
         if (!cancelled) setError("تعذر تحميل بيانات الخزنة");
@@ -102,7 +91,7 @@ export default function CashRegisterPage() {
     return () => {
       cancelled = true;
     };
-  }, [from, to, paymentMethod]);
+  }, [from, to]);
 
   const todayKey = review && review.from === review.to ? review.from : undefined;
 
@@ -181,25 +170,6 @@ export default function CashRegisterPage() {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {ALL_METHODS.map((method) => {
-              const isActive = paymentMethod === method;
-              return (
-                <button
-                  key={method}
-                  type="button"
-                  onClick={() => updateFilter("paymentMethod", method)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                    isActive
-                      ? "bg-brown text-white border-brown"
-                      : "bg-white text-brown border-border hover:bg-cream/50"
-                  }`}
-                >
-                  {method === "ALL" ? "الكل" : getPaymentMethodLabel(method)}
-                </button>
-              );
-            })}
-          </div>
         </CardContent>
       </Card>
 

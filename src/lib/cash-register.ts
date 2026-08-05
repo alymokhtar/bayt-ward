@@ -5,11 +5,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import type { PaymentMethod } from "@prisma/client";
 
-export async function getCashRegisterReview(
-  from?: string,
-  to?: string,
-  paymentMethod?: PaymentMethod | "ALL"
-) {
+export async function getCashRegisterReview(from?: string, to?: string) {
   const fromKey = from || getEgyptBusinessDateKey();
   const toKey = to || fromKey;
   const { start, end } = getBusinessDayBoundsFromDateKeys(fromKey, toKey);
@@ -17,24 +13,15 @@ export async function getCashRegisterReview(
   const saleWhere = {
     status: { in: ["COMPLETED" as const, "PARTIALLY_REFUNDED" as const, "REFUNDED" as const] },
     createdAt: { gte: start, lt: end },
-    ...(paymentMethod && paymentMethod !== "ALL"
-      ? { paymentMethod }
-      : {}),
   };
 
   const returnWhere = {
     status: "APPROVED" as const,
     createdAt: { gte: start, lt: end },
-    ...(paymentMethod && paymentMethod !== "ALL"
-      ? { refundMethod: paymentMethod }
-      : {}),
   };
 
   const expensesWhere = {
     expenseDate: { gte: start, lt: end },
-    ...(paymentMethod && paymentMethod !== "ALL"
-      ? { paymentMethod }
-      : {}),
   };
 
   const [salesAgg, returnsAgg, expensesAgg, paymentAgg, salesByMethod, returnsByMethod, expensesByMethod] = await Promise.all([
@@ -129,10 +116,7 @@ export async function getCashRegisterReview(
     count: group._count,
   }));
 
-  const refundBreakdown =
-    paymentMethod && paymentMethod !== "ALL"
-      ? refundBreakdownRaw.filter((r) => r.method === paymentMethod)
-      : refundBreakdownRaw;
+  const refundBreakdown = refundBreakdownRaw;
 
   return {
     from: fromKey,
