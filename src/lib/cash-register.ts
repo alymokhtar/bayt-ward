@@ -37,7 +37,7 @@ export async function getCashRegisterReview(
       : {}),
   };
 
-  const [salesAgg, returnsAgg, expensesAgg, paymentAgg, salesByMethod, returnsByMethod, expensesByMethod, salesList] = await Promise.all([
+  const [salesAgg, returnsAgg, expensesAgg, paymentAgg, salesByMethod, returnsByMethod, expensesByMethod] = await Promise.all([
     prisma.sale.aggregate({
       where: saleWhere,
       _sum: { totalAmount: true },
@@ -93,20 +93,6 @@ export async function getCashRegisterReview(
       _sum: { amount: true },
       _count: true,
     }),
-    prisma.sale.findMany({
-      where: saleWhere,
-      select: {
-        id: true,
-        invoiceNumber: true,
-        totalAmount: true,
-        paymentMethod: true,
-        status: true,
-        createdAt: true,
-        customer: { select: { name: true } },
-        user: { select: { name: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    }),
   ]);
 
   const totalRevenue = paymentAgg._sum.amount ?? 0;
@@ -160,6 +146,5 @@ export async function getCashRegisterReview(
     expensesCount: expensesAgg._count,
     paymentBreakdown,
     refundBreakdown,
-    salesList,
   };
 }
