@@ -75,13 +75,26 @@ export default function StoreHeaderControls({
     const whatsappNumber = settings.store_whatsapp || settings.store_phone || "";
     if (!whatsappNumber || cartItems.length === 0) return;
 
-    const lines = cartItems.map(
-      (item) =>
-        `- ${item.name} (الكمية: ${item.quantity}) - ${formatCurrency(
-          item.unitPrice * item.quantity,
-          item.currencySymbol
-        )}`
-    );
+    const origin =
+      typeof window !== "undefined" && window.location?.origin
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_SITE_URL || "";
+
+    const lines = cartItems.map((item) => {
+      const productUrl = item.productId
+        ? `${origin}/store/product/${item.productId}`.replace(/([^:]\/)\/+/g, "$1")
+        : item.href;
+
+      const details = [item.color, item.size].filter(Boolean).join(" / ");
+
+      return [
+        `- المنتج: ${item.name}`,
+        `  المواصفات: ${details || "بدون مواصفات"} | الكمية: ${item.quantity}`,
+        `  السعر: ${formatCurrency(item.unitPrice * item.quantity, item.currencySymbol)}`,
+        `  الرابط: ${productUrl}`,
+      ].join("\n");
+    });
+
     const message = [
       "مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذه المنتجات:",
       ...lines,
