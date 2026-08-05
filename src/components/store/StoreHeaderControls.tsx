@@ -103,6 +103,8 @@ export default function StoreHeaderControls({
 
     const whatsappUrl = getWhatsAppUrl(whatsappNumber, message);
 
+    clearCart();
+    setCartOpen(false);
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   }
 
