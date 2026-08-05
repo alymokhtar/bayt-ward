@@ -1,4 +1,4 @@
-import { formatCurrency, formatDateTime, getPaymentDisplayLabel, getPaymentMethodLabel, getSaleStatusLabel } from "@/lib/utils";
+import { formatCurrency, formatDateTime, getPaymentDisplayLabel, getSaleStatusLabel } from "@/lib/utils";
 import Badge from "@/components/ui/Badge";
 import LowStockReportPanel from "@/app/(dashboard)/reports/LowStockReportPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -95,52 +95,6 @@ export default async function ReportsContentSection({
                     </TableCell>
                     <TableCell className="text-sm text-muted">
                       {formatDateTime(sale.createdAt)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>ملخص حسب طريقة الدفع</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>الطريقة</TableHead>
-                  <TableHead>العدد</TableHead>
-                  <TableHead>الإجمالي</TableHead>
-                  <TableHead>يخصم</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>الصافي</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {salesReport.byPaymentMethod.map((item) => (
-                  <TableRow key={item.method}>
-                    <TableCell>{getPaymentMethodLabel(item.method)}</TableCell>
-                    <TableCell>{item.count}</TableCell>
-                    <TableCell className="font-medium text-gold">
-                      {formatCurrency(item.total)}
-                    </TableCell>
-                    <TableCell className="text-danger">
-                      {item.deductions > 0 ? `- ${formatCurrency(item.deductions)}` : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`text-xs font-medium ${
-                        item.status === "مسترد + مصروف" ? "text-orange-600" :
-                        item.status === "مسترد" ? "text-red-600" :
-                        item.status === "مصروف" ? "text-orange-600" :
-                        "text-muted"
-                      }`}>
-                        {item.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className={`font-bold ${item.net >= 0 ? "text-green-700" : "text-red-700"}`}>
-                      {formatCurrency(item.net)}
                     </TableCell>
                   </TableRow>
                 ))}

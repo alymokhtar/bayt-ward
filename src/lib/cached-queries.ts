@@ -4,7 +4,6 @@ import {
   BUSINESS_TIME_ZONE,
   getBusinessDayBoundsForDateKey,
   getBusinessDayBoundsFromDateKeys,
-  getEgyptBusinessDateKey,
   getEgyptBusinessDayBounds,
   getOffsetBusinessDateKey,
   getReportPeriodRange,
@@ -801,7 +800,7 @@ export const getCachedSalesReport = unstable_cache(
     };
     const { start, end } = getReportDateRange(from, to);
 
-    const [sales, returns, byPaymentMethod, expenses, salesList, returnsByMethod, expensesByMethod] = await Promise.all([
+    const [sales, returns, expenses, salesList] = await Promise.all([
       prisma.sale.aggregate({
         where: {
           createdAt: { gte: start, lt: end },
@@ -821,14 +820,6 @@ export const getCachedSalesReport = unstable_cache(
           createdAt: { gte: start, lt: end },
         },
         _sum: { refundAmount: true, totalAmount: true },
-        _count: true,
-      }),
-      prisma.sale.groupBy({
-        by: ["paymentMethod"],
-        where: {
-          createdAt: { gte: start, lt: end },
-        },
-        _sum: { totalAmount: true },
         _count: true,
       }),
       prisma.expense.aggregate({
@@ -856,71 +847,11 @@ export const getCachedSalesReport = unstable_cache(
         },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.return.groupBy({
-        by: ["refundMethod"],
-        where: {
-          status: "APPROVED",
-          createdAt: { gte: start, lt: end },
-        },
-        _sum: { refundAmount: true },
-        _count: true,
-      }),
-      prisma.expense.groupBy({
-        by: ["paymentMethod"],
-        where: {
-          createdAt: { gte: start, lt: end },
-        },
-        _sum: { amount: true },
-        _count: true,
-      }),
     ]);
 
     const grossSales = sales._sum.totalAmount ?? 0;
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
-
-    // Build lookup maps
-    const returnsMap = new Map<string, number>(
-      returnsByMethod
-        .filter((r) => r.refundMethod)
-        .map((r) => [String(r.refundMethod), r._sum.refundAmount ?? 0])
-    );
-    const expensesMap = new Map<string, number>(
-      expensesByMethod
-        .filter((e) => e.paymentMethod)
-        .map((e) => [String(e.paymentMethod), e._sum.amount ?? 0])
-    );
-    // Merge all methods (sales + returns + expenses)
-    const allMethods = new Set<string>([
-      ...byPaymentMethod.map((s) => s.paymentMethod).filter(Boolean) as string[],
-      ...returnsByMethod.map((r) => r.refundMethod).filter(Boolean) as string[],
-      ...expensesByMethod.map((e) => e.paymentMethod).filter(Boolean) as string[],
-    ]);
-
-    const mergedByPaymentMethod = Array.from(allMethods).map((method) => {
-      const salesItem = byPaymentMethod.find((s) => s.paymentMethod === method);
-      const returnsAmount = returnsMap.get(method) ?? 0;
-      const expensesAmount = expensesMap.get(method) ?? 0;
-      const total = (salesItem?._sum.totalAmount ?? 0);
-      const deductions = returnsAmount + expensesAmount;
-      const net = total - deductions;
-
-      let status = "—";
-      if (returnsAmount > 0 && expensesAmount > 0) status = "مسترد + مصروف";
-      else if (returnsAmount > 0) status = "مسترد";
-      else if (expensesAmount > 0) status = "مصروف";
-
-      return {
-        method,
-        total,
-        count: salesItem?._count ?? 0,
-        returns: returnsAmount,
-        expenses: expensesAmount,
-        deductions,
-        net,
-        status,
-      };
-    });
 
     return {
       period: { from: start, to: end },
@@ -933,7 +864,6 @@ export const getCachedSalesReport = unstable_cache(
       returnsCount: returns._count,
       totalReturns,
       totalExpenses,
-      byPaymentMethod: mergedByPaymentMethod,
       salesList: salesList.map((sale) => ({
         id: sale.id,
         invoiceNumber: sale.invoiceNumber,
