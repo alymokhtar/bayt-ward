@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/utils";
 
 type Props = {
@@ -87,14 +88,9 @@ export default function StoreHeaderControls({
       `الإجمالي: ${formatCurrency(cartItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0), currencySymbol)}`,
     ].join("\n");
 
-    const existingWhatsAppNumber = whatsappNumber.replace(/[^0-9+]/g, "");
-    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = getWhatsAppUrl(whatsappNumber, message);
 
-    window.open(
-      `https://wa.me/${existingWhatsAppNumber}?text=${encodedMessage}`,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   }
 
   const actions = (

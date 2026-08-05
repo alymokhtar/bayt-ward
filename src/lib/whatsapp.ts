@@ -19,14 +19,23 @@ export interface WhatsAppMessageParams {
 }
 
 export function formatPhoneForWhatsApp(phone: string): string {
-  let cleaned = phone.replace(/\D/g, "");
+  const trimmedPhone = phone?.trim() || "";
+  if (!trimmedPhone) return "";
+
+  let cleaned = trimmedPhone.replace(/\D/g, "");
+  if (!cleaned) return "";
+
+  if (cleaned.startsWith("00")) {
+    cleaned = cleaned.slice(2);
+  }
+
   if (cleaned.startsWith("0")) {
     cleaned = `20${cleaned.slice(1)}`;
-  }
-  if (!cleaned.startsWith("20") && cleaned.length <= 11) {
+  } else if (!cleaned.startsWith("20") && cleaned.length <= 11) {
     cleaned = `20${cleaned}`;
   }
-  return cleaned;
+
+  return `+${cleaned}`;
 }
 
 export function buildWhatsAppMessage(
