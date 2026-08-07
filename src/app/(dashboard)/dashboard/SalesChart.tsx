@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { formatEgyptChartDateLabel } from "@/lib/business-day";
+import { THEME_ACCENT_CHANGED_EVENT } from "@/lib/theme-client";
 import { formatNumber } from "@/lib/utils";
 
 import {
@@ -17,11 +19,37 @@ interface SalesChartProps {
   data: { date: string; total: number; count: number }[];
 }
 
+function getChartAccentColor() {
+  if (typeof window === "undefined") return "var(--color-gold)";
+
+  const root = document.querySelector<HTMLElement>(".system-layout") ?? document.documentElement;
+  const computed = getComputedStyle(root).getPropertyValue("--color-gold").trim();
+  return computed || "var(--color-gold)";
+}
+
 export default function SalesChart({ data }: SalesChartProps) {
+  const [barFill, setBarFill] = useState(() => getChartAccentColor());
   const chartData = data.map((d) => ({
     ...d,
     label: formatEgyptChartDateLabel(d.date),
   }));
+
+  useEffect(() => {
+    const syncBarFill = () => setBarFill(getChartAccentColor());
+
+    syncBarFill();
+
+    window.addEventListener(THEME_ACCENT_CHANGED_EVENT, syncBarFill);
+
+    const root = document.querySelector<HTMLElement>(".system-layout") ?? document.documentElement;
+    const observer = new MutationObserver(syncBarFill);
+    observer.observe(root, { attributes: true, attributeFilter: ["style"] });
+
+    return () => {
+      window.removeEventListener(THEME_ACCENT_CHANGED_EVENT, syncBarFill);
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <ResponsiveContainer width="100%" height={280}>
@@ -57,7 +85,7 @@ export default function SalesChart({ data }: SalesChartProps) {
           }}
           labelFormatter={(label) => label}
         />
-        <Bar dataKey="total" fill="var(--color-gold)" radius={[6, 6, 0, 0]} name="total" />
+        <Bar dataKey="total" fill={barFill} radius={[6, 6, 0, 0]} name="total" />
       </BarChart>
     </ResponsiveContainer>
   );

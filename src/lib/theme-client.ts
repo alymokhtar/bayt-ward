@@ -5,6 +5,7 @@ import {
 } from "@/lib/theme";
 
 export const THEME_ACCENT_STORAGE_PREFIX = "bayt-ward-theme-accent";
+export const THEME_ACCENT_CHANGED_EVENT = "bayt-ward-theme-accent-changed";
 
 export function getThemeAccentStorageKey(userId: string) {
   return `${THEME_ACCENT_STORAGE_PREFIX}:${userId}`;
@@ -29,6 +30,8 @@ export function applyThemeAccentToDocument(accent: string) {
   if (themeMeta) {
     themeMeta.setAttribute("content", normalizedAccent);
   }
+
+  window.dispatchEvent(new CustomEvent(THEME_ACCENT_CHANGED_EVENT));
 }
 
 export function readStoredThemeAccent(userId: string) {
