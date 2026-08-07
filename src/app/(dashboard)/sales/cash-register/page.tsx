@@ -10,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
-import { getCashRegisterReview } from "@/lib/actions/sales";
+import { getCashRegisterReview, sendVaultReconciliationTelegram } from "@/lib/actions/sales";
 import { formatEgyptChartDateLabel } from "@/lib/business-day";
 import { formatCurrency, getPaymentMethodLabel } from "@/lib/utils";
 import type { PaymentMethod } from "@prisma/client";
@@ -65,6 +65,11 @@ export default function CashRegisterPage() {
   const [review, setReview] = useState<ReviewData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState<
+    | { type: "success" | "error"; message: string }
+    | null
+  >(null);
   const [isPending, startTransition] = useTransition();
 
 
@@ -94,6 +99,33 @@ export default function CashRegisterPage() {
   }, [from, to]);
 
   const todayKey = review && review.from === review.to ? review.from : undefined;
+
+  async function handleSendVaultReview() {
+    if (!review) return;
+
+    setSendStatus(null);
+    setIsSending(true);
+
+    try {
+      await sendVaultReconciliationTelegram({
+        paymentBreakdown: review.paymentBreakdown,
+        from: review.from,
+        to: review.to,
+      });
+      setSendStatus({
+        type: "success",
+        message: "تم إرسال إشعار مراجعة الخزنة إلى تليجرام بنجاح.",
+      });
+    } catch (error) {
+      console.error("Vault reconciliation Telegram failed", error);
+      setSendStatus({
+        type: "error",
+        message: "فشل إرسال الإشعار. يرجى المحاولة مرة أخرى.",
+      });
+    } finally {
+      setIsSending(false);
+    }
+  }
 
   function updateFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -292,6 +324,22 @@ export default function CashRegisterPage() {
                   })}
                 </TableBody>
               </Table>
+
+              <div className="mt-4 border-t border-border pt-4">
+                <Button loading={isSending} onClick={handleSendVaultReview}>
+                  تم مراجعة الخزنة والرصيد متطابق
+                </Button>
+                {sendStatus?.type === "success" && (
+                  <div className="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+                    {sendStatus.message}
+                  </div>
+                )}
+                {sendStatus?.type === "error" && (
+                  <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-danger">
+                    {sendStatus.message}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 

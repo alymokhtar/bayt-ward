@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { generateInvoiceNumber, formatCurrency, formatDateTime } from "@/lib/utils";
+import { generateInvoiceNumber, formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
 import { getCachedSalesPage } from "@/lib/cached-queries";
 import { getCashRegisterReview as fetchCashRegisterReview } from "@/lib/cash-register";
 import { invalidateSalesData, revalidateInventoryCache } from "@/lib/revalidate-tags";
@@ -66,6 +66,30 @@ function formatSaleTelegramMessage(sale: {
     `اسم المستخدم: ${sale.user?.name || "—"}`,
     `التاريخ والوقت: ${dateTime}`,
   ].join("\n");
+}
+
+export async function sendVaultReconciliationTelegram(data: {
+  paymentBreakdown: Array<{
+    method: PaymentMethod;
+    net: number;
+  }>;
+  from: string;
+  to: string;
+}) {
+  const lines = data.paymentBreakdown.map((item) =>
+    `- ${getPaymentMethodLabel(item.method)}: ${formatCurrency(item.net)}`
+  );
+
+  const message = [
+    "✅ تم مراجعة الخزنة والرصيد متطابق.",
+    "",
+    `الفترة: ${data.from} — ${data.to}`,
+    "",
+    "تفاصيل الأرصدة:",
+    ...lines,
+  ].join("\n");
+
+  await sendTelegramMessage(message);
 }
 
 export async function getSales(options?: {
