@@ -83,7 +83,7 @@ export function formatDate(date: Date | string): string {
   });
 }
 
-export function formatDateTime(date: Date | string): string {
+export function formatCairoDateTime(date: Date | string): string {
   return new Date(date).toLocaleString(DISPLAY_LOCALE, {
     timeZone: BUSINESS_TIME_ZONE,
     year: "numeric",
@@ -92,6 +92,10 @@ export function formatDateTime(date: Date | string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+export function formatDateTime(date: Date | string): string {
+  return formatCairoDateTime(date);
 }
 
 export function generateInvoiceNumber(prefix: string): string {

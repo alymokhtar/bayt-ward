@@ -1,4 +1,4 @@
-import { formatCurrency, formatDateTime, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
+import { formatCairoDateTime, formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
 export type ReceiptPayment = {
   method: string;
@@ -35,7 +35,7 @@ export type ReceiptData = {
 };
 
 function formatReceiptDateTime(date: Date) {
-  return formatDateTime(date);
+  return formatCairoDateTime(date);
 }
 
 function DashedLine() {

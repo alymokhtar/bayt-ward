@@ -1,5 +1,5 @@
 import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
-import { formatCurrency, formatDateTime, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
+import { formatCairoDateTime, formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
 function escapeHtml(value: string) {
   return value
@@ -10,7 +10,7 @@ function escapeHtml(value: string) {
 }
 
 function formatReceiptDateTime(date: Date) {
-  return formatDateTime(date);
+  return formatCairoDateTime(date);
 }
 
 function dashedLine() {
