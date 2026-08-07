@@ -114,16 +114,20 @@ export function getAvailableSizesForColor(
 }
 
 export function getPrimaryImageUrl(product: ProductWithOptionalImages): string | null {
-  // 1. البحث أولاً عن صورة رئيسية محددة (isPrimary: true) في جميع المتغيرات دون استثناء
-  for (const variant of product.variants ?? []) {
+  const inStockVariants = (product.variants ?? []).filter(
+    (variant) => variant.stockQuantity > 0
+  );
+
+  // 1. البحث أولاً عن صورة رئيسية محددة (isPrimary: true) في المتغيرات المتاحة فقط
+  for (const variant of inStockVariants) {
     const primaryVariantImage = (variant.images ?? []).find(
       (item) => item.isPrimary && item.isActive !== false
     );
     if (primaryVariantImage?.url) return primaryVariantImage.url;
   }
 
-  // 2. إذا لم تُوجد أي صورة رئيسية محددة، نلتقط أول صورة نشطة من المتغيرات كخيار ثانٍ
-  for (const variant of product.variants ?? []) {
+  // 2. إذا لم تُوجد أي صورة رئيسية محددة، نلتقط أول صورة نشطة من المتغيرات المتاحة
+  for (const variant of inStockVariants) {
     const firstVariantImage = (variant.images ?? []).find((item) => item.isActive !== false);
     if (firstVariantImage?.url) return firstVariantImage.url;
   }
@@ -158,6 +162,18 @@ export function getProductImages(
       id: item.id,
       url: item.url,
       altText: item.altText,
+    }));
+}
+
+export function getAvailableColors(product: StoreProduct): Array<{
+  name: string;
+  hex?: string | null;
+}> {
+  return (product.colors ?? [])
+    .filter((color) => getVariantStockForColor(product, color.color) > 0)
+    .map((color) => ({
+      name: color.color,
+      hex: color.colorHex,
     }));
 }
 

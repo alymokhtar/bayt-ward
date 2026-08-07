@@ -8,12 +8,12 @@ import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import WhatsAppOrderButton from "@/components/store/WhatsAppOrderButton";
 import { optimizeCloudinaryUrl, STORE_IMAGE_SIZES } from "@/lib/store/images";
 import {
+  getAvailableColors,
   getAvailableSizesForColor,
   getColorMedia,
   getDefaultColor,
   getProductImages,
   getProductDisplayName,
-  getVariantStockForColor,
 } from "@/lib/store/product-utils";
 import type { StoreProduct } from "@/lib/store/types";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -32,7 +32,14 @@ export default function ProductDetailClient({
   currencySymbol,
 }: ProductDetailClientProps) {
   const defaultColor = getDefaultColor(product);
-  const [selectedColor, setSelectedColor] = useState(defaultColor ?? "");
+  const availableColors = useMemo(() => getAvailableColors(product), [product]);
+  const [selectedColor, setSelectedColor] = useState(() => {
+    if (defaultColor && availableColors.some((color) => color.name === defaultColor)) {
+      return defaultColor;
+    }
+
+    return availableColors[0]?.name ?? "";
+  });
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
@@ -40,43 +47,29 @@ export default function ProductDetailClient({
   const { addToCart } = useStorefrontState();
 
   const displayName = getProductDisplayName(product);
-
-  const colorOptions = useMemo(
-    () =>
-      product.colors.map((color) => ({
-        name: color.color,
-        hex: color.colorHex,
-      })),
-    [product.colors]
-  );
+  const activeColor = availableColors.some((color) => color.name === selectedColor)
+    ? selectedColor
+    : availableColors[0]?.name ?? "";
 
   const galleryVariants = useMemo(
     () =>
-      product.colors.map((color) => {
-        const colorMedia = getColorMedia(product, color.color);
-        const sizesForColor = getAvailableSizesForColor(product, color.color);
+      availableColors.map((color) => {
+        const colorMedia = getColorMedia(product, color.name);
+        const sizesForColor = getAvailableSizesForColor(product, color.name);
         const images = colorMedia.length > 0 ? colorMedia : sizesForColor[0]?.images ?? [];
 
         return {
-          name: color.color,
-          hex: color.colorHex || "#d4cfc7",
+          name: color.name,
+          hex: color.hex || "#d4cfc7",
           images,
         };
       }),
-    [product]
-  );
-
-  const unavailableColors = useMemo(
-    () =>
-      colorOptions
-        .map((color) => color.name)
-        .filter((name) => getVariantStockForColor(product, name) <= 0),
-    [colorOptions, product]
+    [availableColors, product]
   );
 
   const sizes = useMemo(
-    () => (selectedColor ? getAvailableSizesForColor(product, selectedColor) : []),
-    [product, selectedColor]
+    () => (activeColor ? getAvailableSizesForColor(product, activeColor) : []),
+    [product, activeColor]
   );
 
   const selectedVariant = sizes.find((item) => item.size === selectedSize) ?? sizes[0];
@@ -85,17 +78,17 @@ export default function ProductDetailClient({
       return selectedVariant.images;
     }
 
-    const productImages = getProductImages(product);
-    if (productImages.length > 0) {
-      return productImages;
+    const colorImages = activeColor
+      ? getColorMedia(product, activeColor)
+      : availableColors.flatMap((color) => getColorMedia(product, color.name));
+
+    if (colorImages.length > 0) {
+      return colorImages;
     }
 
-    const colorImages = selectedColor
-      ? getColorMedia(product, selectedColor)
-      : product.colors.flatMap((color) => getColorMedia(product, color.color));
-
-    return colorImages.length > 0 ? colorImages : [];
-  }, [product, selectedColor, selectedVariant, displayName]);
+    const productImages = getProductImages(product);
+    return productImages.length > 0 ? productImages : [];
+  }, [activeColor, availableColors, product, selectedVariant]);
   const price = selectedVariant?.price ?? product.variants[0]?.sellingPrice ?? 0;
   const inStock = selectedVariant ? selectedVariant.inStock : product.variants.some((v) => v.stockQuantity > 0);
 
@@ -144,7 +137,7 @@ export default function ProductDetailClient({
       name: displayName,
       href: productUrl,
       imageUrl: cartImageUrl ?? null,
-      color: selectedColor || undefined,
+      color: activeColor || undefined,
       size: selectedSize || selectedVariant.size,
       unitPrice: price,
       currencySymbol,
@@ -160,7 +153,7 @@ export default function ProductDetailClient({
           productName={displayName}
           priceLabel={formatCurrency(price, currencySymbol)}
           colorVariants={galleryVariants}
-          selectedColor={selectedColor}
+          selectedColor={activeColor}
           activeImageIndex={activeImageIndex}
           onSelectColor={handleColorChange}
           onSelectImage={setActiveImageIndex}
@@ -246,7 +239,7 @@ export default function ProductDetailClient({
             productUrl={productUrl}
             productId={product.id}
             whatsappNumber={whatsappNumber}
-            color={selectedColor || undefined}
+            color={activeColor || undefined}
             size={selectedSize || selectedVariant?.size}
             disabled={!inStock}
             className="min-w-[12rem] flex-1"
