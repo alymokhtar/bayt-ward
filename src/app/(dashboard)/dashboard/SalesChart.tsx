@@ -19,41 +19,69 @@ interface SalesChartProps {
   data: { date: string; total: number; count: number }[];
 }
 
-function getChartAccentColor() {
-  if (typeof window === "undefined") return "var(--color-gold)";
+function getComputedThemeAccent(): string {
+  if (typeof window === "undefined") return "#b8860b";
 
-  const root = document.querySelector<HTMLElement>(".system-layout") ?? document.documentElement;
-  const computed = getComputedStyle(root).getPropertyValue("--color-gold").trim();
-  return computed || "var(--color-gold)";
+  try {
+    const systemLayout = document.querySelector<HTMLElement>(".system-layout");
+    const root = systemLayout || document.documentElement;
+    
+    const accentValue = root.style.getPropertyValue("--theme-accent").trim();
+    
+    if (accentValue && accentValue !== "" && accentValue !== "undefined") {
+      return accentValue;
+    }
+
+    const computed = window.getComputedStyle(root);
+    const computedValue = computed.getPropertyValue("--theme-accent").trim();
+    
+    if (computedValue && computedValue !== "" && computedValue !== "undefined") {
+      return computedValue;
+    }
+  } catch {
+    // Fall back to default if there's any error
+  }
+
+  return "#b8860b";
 }
 
 export default function SalesChart({ data }: SalesChartProps) {
-  const [barFill, setBarFill] = useState(() => getChartAccentColor());
+  const [barFill, setBarFill] = useState("#b8860b");
+  const [themeKey, setThemeKey] = useState(0);
+
   const chartData = data.map((d) => ({
     ...d,
     label: formatEgyptChartDateLabel(d.date),
   }));
 
   useEffect(() => {
-    const syncBarFill = () => setBarFill(getChartAccentColor());
+    const updateTheme = () => {
+      const newColor = getComputedThemeAccent();
+      setBarFill(newColor);
+      setThemeKey((prev) => prev + 1);
+    };
 
-    syncBarFill();
+    updateTheme();
 
-    window.addEventListener(THEME_ACCENT_CHANGED_EVENT, syncBarFill);
+    const handleThemeChange = () => {
+      requestAnimationFrame(updateTheme);
+    };
 
-    const root = document.querySelector<HTMLElement>(".system-layout") ?? document.documentElement;
-    const observer = new MutationObserver(syncBarFill);
-    observer.observe(root, { attributes: true, attributeFilter: ["style"] });
+    window.addEventListener(THEME_ACCENT_CHANGED_EVENT, handleThemeChange);
+
+    const systemLayout = document.querySelector<HTMLElement>(".system-layout") || document.documentElement;
+    const observer = new MutationObserver(handleThemeChange);
+    observer.observe(systemLayout, { attributes: true, attributeFilter: ["style"] });
 
     return () => {
-      window.removeEventListener(THEME_ACCENT_CHANGED_EVENT, syncBarFill);
+      window.removeEventListener(THEME_ACCENT_CHANGED_EVENT, handleThemeChange);
       observer.disconnect();
     };
   }, []);
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+    <ResponsiveContainer width="100%" height={280} style={{ color: "var(--color-gold)" }}>
+      <BarChart key={themeKey} data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e8dcc8" />
         <XAxis
           dataKey="label"
