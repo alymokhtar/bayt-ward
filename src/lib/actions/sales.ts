@@ -76,6 +76,7 @@ export async function sendVaultReconciliationTelegram(data: {
   from: string;
   to: string;
 }) {
+  const user = await requireAuth();
   const lines = data.paymentBreakdown.map((item) =>
     `- ${getPaymentMethodLabel(item.method)}: ${formatCurrency(item.net)}`
   );
@@ -87,6 +88,8 @@ export async function sendVaultReconciliationTelegram(data: {
     "",
     "تفاصيل الأرصدة:",
     ...lines,
+    "",
+    `👤 تمت المراجعة بواسطة: ${user.name}`,
   ].join("\n");
 
   await sendTelegramMessage(message);
