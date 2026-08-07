@@ -347,10 +347,11 @@ export default function POSClient({
       const invoiceNumber = result.data.invoiceNumber;
       const saleTotal = totalAmount;
       const soldItems = [...cart];
+      const receiptTimestamp = new Date();
 
       const receiptData: ReceiptData = {
         invoiceNumber,
-        createdAt: new Date(),
+        createdAt: receiptTimestamp,
         storeNameAr,
         storePhone,
         currencySymbol,

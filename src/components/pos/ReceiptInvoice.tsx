@@ -49,6 +49,7 @@ function DashedLine() {
 
 export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
   const fmt = (amount: number) => formatCurrency(amount, data.currencySymbol);
+  const cairoTime = formatReceiptDateTime(data.createdAt);
 
   return (
     <div className="pos-receipt-print mx-auto w-full max-w-[80mm] bg-white px-3 py-4 text-black font-mono text-[11px] leading-relaxed">
@@ -66,7 +67,7 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
       <div className="space-y-0.5 text-center">
         <p className="font-bold">فاتورة بيع</p>
         <p dir="ltr">{data.invoiceNumber}</p>
-        <p>{formatReceiptDateTime(data.createdAt)}</p>
+        <p>{cairoTime}</p>
       </div>
 
       <DashedLine />

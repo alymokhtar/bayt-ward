@@ -75,57 +75,23 @@ export function formatCurrency(amount: number, symbol = "ج.م"): string {
 }
 
 function normalizeDateInput(date: Date | string): Date {
-  const parsed = date instanceof Date ? date : new Date(date);
-
-  return new Date(parsed.getTime());
+  return date instanceof Date ? new Date(date.getTime()) : new Date(date);
 }
 
-function getCairoOffsetMinutes(date: Date): number {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: BUSINESS_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, Number(part.value)])
-  );
-
-  const cairoUtcTimestamp = Date.UTC(
-    values.year,
-    values.month - 1,
-    values.day,
-    values.hour,
-    values.minute,
-    values.second
-  );
-
-  return (cairoUtcTimestamp - date.getTime()) / 60000;
-}
-
-function formatDateWithForcedCairoOffset(
+function formatDateWithCairoTimeZone(
   date: Date | string,
   options: Intl.DateTimeFormatOptions
 ): string {
   const parsedDate = normalizeDateInput(date);
-  const cairoOffsetMinutes = getCairoOffsetMinutes(parsedDate);
-  const cairoDate = new Date(parsedDate.getTime() + cairoOffsetMinutes * 60000);
 
   return new Intl.DateTimeFormat(DISPLAY_LOCALE, {
     ...options,
-    timeZone: "UTC",
-  }).format(cairoDate);
+    timeZone: BUSINESS_TIME_ZONE,
+  }).format(parsedDate);
 }
 
 export function formatDate(date: Date | string): string {
-  return formatDateWithForcedCairoOffset(date, {
+  return formatDateWithCairoTimeZone(date, {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -133,7 +99,7 @@ export function formatDate(date: Date | string): string {
 }
 
 export function formatCairoDateTime(date: Date | string): string {
-  return formatDateWithForcedCairoOffset(date, {
+  return formatDateWithCairoTimeZone(date, {
     year: "numeric",
     month: "short",
     day: "numeric",

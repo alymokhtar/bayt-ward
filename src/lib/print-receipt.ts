@@ -24,6 +24,7 @@ function row(label: string, value: string, bold = false) {
 export function buildReceiptPrintHtml(data: ReceiptData) {
   const fmt = (amount: number) =>
     escapeHtml(formatCurrency(amount, data.currencySymbol));
+  const cairoTime = escapeHtml(formatReceiptDateTime(data.createdAt));
 
   const itemsHtml = data.items
     .map((item) => {
@@ -124,7 +125,7 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
   <div class="center-text">
     <div style="font-weight:700">فاتورة بيع</div>
     <div class="num">${escapeHtml(data.invoiceNumber)}</div>
-    <div>${escapeHtml(formatReceiptDateTime(data.createdAt))}</div>
+    <div>${cairoTime}</div>
   </div>
 
   ${dashedLine()}
