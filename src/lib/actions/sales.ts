@@ -218,6 +218,11 @@ export async function createSale(data: {
       paymentMethod: data.paymentMethod,
     });
 
+    const salePaymentMethod =
+      normalizedPayments.length > 1
+        ? "MIXED"
+        : normalizedPayments[0]?.method ?? (data.paymentMethod ?? "CASH");
+
     const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
     if (normalizedPayments.length > 1) {
@@ -282,7 +287,7 @@ export async function createSale(data: {
           totalAmount: data.totalAmount,
           paidAmount: data.payments?.length ? data.totalAmount : effectivePaidAmount,
           changeAmount: data.payments?.length ? 0 : (data.changeAmount ?? Math.max(0, effectivePaidAmount - data.totalAmount)),
-          paymentMethod: data.payments?.length ? "MIXED" : (data.paymentMethod ?? "CASH"),
+          paymentMethod: salePaymentMethod,
           status: "COMPLETED",
           notes: data.notes,
           items: {
