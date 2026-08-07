@@ -27,8 +27,8 @@ export const metadata: Metadata = {
     title: "بيت ورد",
   },
   icons: {
-    icon: "/images/logo-light.png",
-    apple: "/images/logo-light.png",
+    icon: "/logo-light.png",
+    apple: "/logo-light.png",
   },
 };
 
