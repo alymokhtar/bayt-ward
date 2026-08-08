@@ -9,8 +9,6 @@ import type { Viewport } from "next";
 import { redirect } from "next/navigation";
 import { type ReactNode } from "react";
 
-export const dynamic = "force-dynamic";
-
 export async function generateViewport(): Promise<Viewport> {
   const themeAccent = await getAppThemeAccent();
 
