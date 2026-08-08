@@ -43,6 +43,9 @@ function formatReceiptDateTime(date: Date | string) {
       : date;
   const dateObj = date instanceof Date ? date : new Date(source);
 
+  const adjustedDate = new Date(dateObj);
+  adjustedDate.setHours(adjustedDate.getHours() + 7);
+
   return new Intl.DateTimeFormat("ar-EG", {
     year: "numeric",
     month: "long",
@@ -52,7 +55,7 @@ function formatReceiptDateTime(date: Date | string) {
     hour12: true,
     timeZone: "Africa/Cairo",
     numberingSystem: "latn",
-  }).format(dateObj);
+  }).format(adjustedDate);
 }
 
 function DashedLine() {
