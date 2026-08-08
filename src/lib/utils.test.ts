@@ -13,6 +13,7 @@ test("formats printable invoice timestamps in Cairo time", () => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: true,
   }).format(value);
 
   assert.equal(formatCairoDateTime(value), expected);
