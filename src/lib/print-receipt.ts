@@ -10,7 +10,11 @@ function escapeHtml(value: string) {
 }
 
 function formatReceiptDateTime(date: Date | string) {
-  const parsedDate = date instanceof Date ? date : new Date(date);
+  const source =
+    typeof date === "string" && !date.endsWith("Z")
+      ? `${date}Z`
+      : date;
+  const dateObj = date instanceof Date ? date : new Date(source);
 
   return new Intl.DateTimeFormat("ar-EG", {
     year: "numeric",
@@ -20,7 +24,8 @@ function formatReceiptDateTime(date: Date | string) {
     minute: "2-digit",
     hour12: true,
     timeZone: "Africa/Cairo",
-  }).format(parsedDate);
+    numberingSystem: "latn",
+  }).format(dateObj);
 }
 
 function dashedLine() {
