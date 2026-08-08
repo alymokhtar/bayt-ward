@@ -1,4 +1,6 @@
-import { formatCairoDateTime, formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
+"use client";
+
+import { formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
 export type ReceiptPayment = {
   method: string;
@@ -34,8 +36,18 @@ export type ReceiptData = {
   notes?: string;
 };
 
-function formatReceiptDateTime(date: Date) {
-  return formatCairoDateTime(date);
+function formatReceiptDateTime(date: Date | string) {
+  const parsedDate = date instanceof Date ? date : new Date(date);
+
+  return new Intl.DateTimeFormat("ar-EG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Africa/Cairo",
+  }).format(parsedDate);
 }
 
 function DashedLine() {

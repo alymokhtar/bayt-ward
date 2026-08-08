@@ -1,5 +1,5 @@
 import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
-import { formatCairoDateTime, formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
+import { formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
 function escapeHtml(value: string) {
   return value
@@ -9,8 +9,18 @@ function escapeHtml(value: string) {
     .replace(/"/g, "&quot;");
 }
 
-function formatReceiptDateTime(date: Date) {
-  return formatCairoDateTime(date);
+function formatReceiptDateTime(date: Date | string) {
+  const parsedDate = date instanceof Date ? date : new Date(date);
+
+  return new Intl.DateTimeFormat("ar-EG", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Africa/Cairo",
+  }).format(parsedDate);
 }
 
 function dashedLine() {
