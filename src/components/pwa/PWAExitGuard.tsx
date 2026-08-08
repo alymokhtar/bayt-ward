@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-const EXIT_WARNING_MESSAGE = "هل تريد تسجيل الخروج";
-const LOGOUT_BACKUP_URL = "/settings?logoutBackup=1#manual-backup";
+const EXIT_WARNING_MESSAGE = "هل تريد تسجيل الخروج؟ يجب مراجعة الخزنة وتنزيل نسخة احتياطية قبل إغلاق الجلسة.";
+const LOGOUT_BACKUP_URL = "/sales/cash-register";
 
 function isStandalonePWA() {
   return (

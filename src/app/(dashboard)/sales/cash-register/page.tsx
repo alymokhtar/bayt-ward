@@ -116,6 +116,7 @@ export default function CashRegisterPage() {
         type: "success",
         message: "تم إرسال إشعار مراجعة الخزنة إلى تليجرام بنجاح.",
       });
+      router.push("/settings?logoutBackup=1#manual-backup");
     } catch (error) {
       console.error("Vault reconciliation Telegram failed", error);
       setSendStatus({

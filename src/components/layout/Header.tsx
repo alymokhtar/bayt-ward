@@ -30,13 +30,13 @@ export default function Header({ user }: HeaderProps) {
     }
 
     const confirmed = window.confirm(
-      "هل تريد تسجيل الخروج؟ يجب تنزيل نسخة احتياطية قبل إغلاق الجلسة."
+      "هل تريد تسجيل الخروج؟ يجب مراجعة الخزنة وتنزيل نسخة احتياطية قبل إغلاق الجلسة."
     );
 
     if (!confirmed) return;
 
     setLoading(true);
-    router.push("/settings?logoutBackup=1#manual-backup");
+    router.push("/sales/cash-register");
   }
 
   return (
