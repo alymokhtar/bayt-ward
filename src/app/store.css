@@ -74,8 +74,10 @@
 }
 
 .store-hero-slide {
-  animation: store-hero-fade 15s infinite;
+  animation: store-hero-fade 15s infinite both;
+  animation-fill-mode: both;
   opacity: 0;
+  transition: opacity 0.7s ease-in-out;
 }
 
 .store-hero-slide:nth-child(1) {
@@ -91,16 +93,20 @@
 }
 
 @keyframes store-hero-fade {
-  0%,
-  30% {
+  0% {
+    opacity: 0;
+  }
+  5% {
     opacity: 1;
   }
-  36%,
-  94% {
+  33% {
+    opacity: 1;
+  }
+  38% {
     opacity: 0;
   }
   100% {
-    opacity: 1;
+    opacity: 0;
   }
 }
 
