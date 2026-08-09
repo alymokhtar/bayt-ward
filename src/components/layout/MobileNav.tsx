@@ -32,6 +32,28 @@ export default function MobileNav({ role }: MobileNavProps) {
 
   const allItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
 
+  // دالة مساعدة للتحقق من تطابق المسار بدقة
+  const isPathActive = (itemHref: string, currentPath: string): boolean => {
+    // معالجة الـ Trailing Slashes
+    const normalize = (path: string): string => {
+      return path.endsWith("/") && path !== "/" ? path.slice(0, -1) : path;
+    };
+
+    const normalizedHref = normalize(itemHref);
+    const normalizedPath = normalize(currentPath);
+
+    // للمسار الجذري فقط: تطابق تام
+    if (normalizedHref === "/dashboard") {
+      return normalizedPath === "/dashboard";
+    }
+
+    // لأي مسار آخر: تطابق تام أو بداية مسار
+    return (
+      normalizedPath === normalizedHref ||
+      normalizedPath.startsWith(`${normalizedHref}/`)
+    );
+  };
+
   return (
     <>
       <nav
@@ -46,8 +68,7 @@ export default function MobileNav({ role }: MobileNavProps) {
             allItems.some((item) => item.href === tab.href)
           ).map((tab) => {
             const Icon = tab.icon;
-            const isActive =
-              pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+            const isActive = isPathActive(tab.href, pathname);
 
             return (
               <Link
@@ -98,10 +119,7 @@ export default function MobileNav({ role }: MobileNavProps) {
             <ul className="p-3 grid grid-cols-3 gap-2">
               {allItems.map((item) => {
                 const Icon = item.icon;
-                const isActive =
-                  item.href === "/dashboard" 
-                    ? pathname === "/dashboard"
-                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const isActive = isPathActive(item.href, pathname);
 
                 return (
                   <li key={item.href}>

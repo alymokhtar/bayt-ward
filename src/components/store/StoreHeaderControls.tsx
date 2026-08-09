@@ -47,12 +47,27 @@ export default function StoreHeaderControls({
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
 
-  // دالة مساعدة لمقارنة المسارات مع تجاهل الـ Trailing Slashes
-  const normalizePathname = (path: string): string => {
-    return path.endsWith("/") && path !== "/" ? path.slice(0, -1) : path;
-  };
+  // دالة مساعدة للتحقق من تطابق المسار بدقة
+  const isPathActive = (linkHref: string, currentPath: string): boolean => {
+    // معالجة الـ Trailing Slashes
+    const normalize = (path: string): string => {
+      return path.endsWith("/") && path !== "/" ? path.slice(0, -1) : path;
+    };
 
-  const normalizedPathname = normalizePathname(pathname);
+    const normalizedHref = normalize(linkHref);
+    const normalizedPath = normalize(currentPath);
+
+    // للمسار الجذري فقط: تطابق تام
+    if (normalizedHref === "/store") {
+      return normalizedPath === "/store";
+    }
+
+    // لأي مسار آخر: تطابق تام أو بداية مسار
+    return (
+      normalizedPath === normalizedHref ||
+      normalizedPath.startsWith(`${normalizedHref}/`)
+    );
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -194,26 +209,7 @@ export default function StoreHeaderControls({
         <nav className="border-t border-[var(--store-border)] bg-[var(--store-surface)] px-4 py-4 md:hidden" aria-label="قائمة الجوال">
           <ul className="space-y-1">
             {navLinks.map((link) => {
-              const normalizedHref = normalizePathname(link.href);
-              
-              // تشخيص كامل للمسارات
-              const exactMatch = normalizedPathname === normalizedHref;
-              const nestedMatch = 
-                normalizedHref !== "/store" && 
-                normalizedPathname.startsWith(`${normalizedHref}/`);
-              const isActive = exactMatch || nestedMatch;
-              
-              // طباعة تشخيصية في الـ console
-              console.log({
-                label: link.label,
-                linkHref: link.href,
-                normalizedHref,
-                currentPathname: pathname,
-                normalizedPathname,
-                exactMatch,
-                nestedMatch,
-                isActive,
-              });
+              const isActive = isPathActive(link.href, pathname);
               
               return (
                 <li key={`${link.href}-${link.label}`}>
