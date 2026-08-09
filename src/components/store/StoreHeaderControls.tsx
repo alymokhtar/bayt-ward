@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Heart,
   Menu,
@@ -37,6 +37,7 @@ export default function StoreHeaderControls({
   badgeClass,
 }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const { cartItems, cartCount, favoritesCount, updateCartQuantity, removeFromCart, clearCart } =
     useStorefrontState();
 
@@ -185,13 +186,24 @@ export default function StoreHeaderControls({
       {menuOpen && (
         <nav className="border-t border-[var(--store-border)] bg-[var(--store-surface)] px-4 py-4 md:hidden" aria-label="قائمة الجوال">
           <ul className="space-y-1">
-            {navLinks.map((link) => (
-              <li key={`${link.href}-${link.label}`}>
-                <Link href={link.href} className="block rounded-lg px-3 py-2.5 text-sm font-medium text-[var(--store-text)] transition hover:bg-[var(--store-gold-soft)]" onClick={() => setMenuOpen(false)}>
-                  {link.label}
-                </Link>
-              </li>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
+              return (
+                <li key={`${link.href}-${link.label}`}>
+                  <Link 
+                    href={link.href} 
+                    className={`block rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                      isActive
+                        ? "bg-amber-50 text-amber-700 font-bold"
+                        : "text-[var(--store-text)] hover:bg-[var(--store-gold-soft)]"
+                    }`}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              );
+            })}
             <li>
               <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="mt-2 block rounded-lg bg-[var(--store-gold)] px-3 py-2.5 text-sm font-bold text-white">
                 تواصل عبر واتساب
