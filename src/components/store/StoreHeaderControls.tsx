@@ -47,6 +47,13 @@ export default function StoreHeaderControls({
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
 
+  // دالة مساعدة لمقارنة المسارات مع تجاهل الـ Trailing Slashes
+  const normalizePathname = (path: string): string => {
+    return path.endsWith("/") && path !== "/" ? path.slice(0, -1) : path;
+  };
+
+  const normalizedPathname = normalizePathname(pathname);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -187,9 +194,27 @@ export default function StoreHeaderControls({
         <nav className="border-t border-[var(--store-border)] bg-[var(--store-surface)] px-4 py-4 md:hidden" aria-label="قائمة الجوال">
           <ul className="space-y-1">
             {navLinks.map((link) => {
-              const isActive = link.href === '/' 
-                ? pathname === '/'
-                : pathname === link.href || pathname.startsWith(`${link.href}/`);
+              const normalizedHref = normalizePathname(link.href);
+              
+              // تشخيص كامل للمسارات
+              const exactMatch = normalizedPathname === normalizedHref;
+              const nestedMatch = 
+                normalizedHref !== "/store" && 
+                normalizedPathname.startsWith(`${normalizedHref}/`);
+              const isActive = exactMatch || nestedMatch;
+              
+              // طباعة تشخيصية في الـ console
+              console.log({
+                label: link.label,
+                linkHref: link.href,
+                normalizedHref,
+                currentPathname: pathname,
+                normalizedPathname,
+                exactMatch,
+                nestedMatch,
+                isActive,
+              });
+              
               return (
                 <li key={`${link.href}-${link.label}`}>
                   <Link 

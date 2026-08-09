@@ -103,7 +103,7 @@ export function WhatsAppCta({ whatsappNumber, storeName }: WhatsAppCtaProps) {
 
   const href = getWhatsAppUrl(
     whatsappNumber,
-    `السلام عليكم، أرغب في الاستفسار عن تشكيلات ${storeName}.`
+    `مرحباً بيت ورد، أرغب في الاستفسار عن تشكيلات ${storeName}.`
   );
 
   return (
