@@ -29,3 +29,16 @@ test("includes a full product link in the direct order WhatsApp message", () => 
   assert.match(message, /الرابط:/);
   assert.match(message, /\/store\/product\/prod-123/);
 });
+
+test("adds color and size query params to the product link", () => {
+  const message = buildStoreOrderMessage({
+    productName: "فستان",
+    color: "أبيض",
+    size: "M",
+    productId: "prod-123",
+  });
+
+  assert.match(message, /\/store\/product\/prod-123\?/);
+  assert.match(message, /color=/);
+  assert.match(message, /size=M/);
+});

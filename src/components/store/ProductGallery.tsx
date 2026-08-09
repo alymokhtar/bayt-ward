@@ -53,7 +53,7 @@ export default function ProductGallery({
   }
 
   return (
-    <section className="mx-auto w-full max-w-md pb-6">
+    <section key={selectedColor} className="mx-auto w-full max-w-md pb-6">
       <div className="overflow-hidden rounded-[2rem] bg-[#fff6ed] p-3 shadow-sm shadow-[rgba(111,80,47,0.12)]">
         <button
           type="button"

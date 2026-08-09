@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { Check, ShoppingBag, Share2 } from "lucide-react";
 import ProductGallery from "@/components/store/ProductGallery";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
@@ -31,6 +32,7 @@ export default function ProductDetailClient({
   whatsappNumber,
   currencySymbol,
 }: ProductDetailClientProps) {
+  const searchParams = useSearchParams();
   const defaultColor = getDefaultColor(product);
   const availableColors = useMemo(() => getAvailableColors(product), [product]);
   const [selectedColor, setSelectedColor] = useState(() => {
@@ -45,6 +47,24 @@ export default function ProductDetailClient({
   const [zoomOpen, setZoomOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const { addToCart } = useStorefrontState();
+
+  useEffect(() => {
+    const requestedColor = searchParams.get("color") || searchParams.get("variant");
+    const requestedSize = searchParams.get("size");
+
+    if (requestedColor) {
+      const normalizedColor = availableColors.find((color) => color.name === requestedColor)?.name;
+      if (normalizedColor) {
+        setSelectedColor(normalizedColor);
+      }
+    }
+
+    if (requestedSize) {
+      setSelectedSize(requestedSize);
+    }
+
+    setActiveImageIndex(0);
+  }, [availableColors, searchParams]);
 
   const displayName = getProductDisplayName(product);
   const activeColor = availableColors.some((color) => color.name === selectedColor)

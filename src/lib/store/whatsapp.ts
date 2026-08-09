@@ -29,6 +29,25 @@ function getStoreProductLink(productUrl?: string, productId?: string): string {
   return "";
 }
 
+function appendProductQueryParams(productLink: string, color?: string, size?: string): string {
+  if (!productLink) return "";
+
+  const [basePath, existingQuery = ""] = productLink.split("?");
+  const params = new URLSearchParams(existingQuery);
+
+  if (color) {
+    params.set("color", color);
+    params.set("variant", color);
+  }
+
+  if (size) {
+    params.set("size", size);
+  }
+
+  const queryString = params.toString();
+  return queryString ? `${basePath}?${queryString}` : basePath;
+}
+
 export function buildStoreOrderMessage({
   productName,
   color,
@@ -47,7 +66,7 @@ export function buildStoreOrderMessage({
 
   const productLink = getStoreProductLink(productUrl, productId);
   if (productLink) {
-    lines.push(`الرابط: ${productLink}`);
+    lines.push(`الرابط: ${appendProductQueryParams(productLink, color, size)}`);
   }
 
   return lines.join("\n");
