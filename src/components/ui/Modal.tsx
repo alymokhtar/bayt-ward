@@ -44,7 +44,7 @@ function normalizeFooterNode(node: ReactNode): ReactNode {
 
       const currentClassName = childProps.className;
 
-      return cloneElement(child, {
+      return cloneElement(child as React.ReactElement<any>, {
         variant: "primary",
         size: childProps.size ?? "md",
         className: cn(
@@ -57,7 +57,7 @@ function normalizeFooterNode(node: ReactNode): ReactNode {
 
     const childChildren = (child.props as { children?: ReactNode })?.children;
     if (childChildren) {
-      return cloneElement(child, {
+      return cloneElement(child as any, {
         children: normalizeFooterNode(childChildren),
       });
     }
