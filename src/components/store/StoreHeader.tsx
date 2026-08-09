@@ -66,17 +66,9 @@ export default function StoreHeader({ settings, categories }: StoreHeaderProps) 
     >
       <div className="store-container flex w-full flex-row items-center justify-between py-2 sm:py-3">
         <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            id="store-menu-button"
-            type="button"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)] shadow-sm md:hidden"
-            aria-label="فتح القائمة"
-            aria-expanded={false}
-          >
-            <span className="h-5 w-5" aria-hidden />
-          </button>
+          <div id="store-menu-button" className="inline-flex h-11 w-11 md:hidden" aria-hidden="true" />
 
-      <Link
+          <Link
             href={STORE_BASE_PATH}
             className="flex items-center gap-2.5 sm:gap-3"
             aria-label={storeName}

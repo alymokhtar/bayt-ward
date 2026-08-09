@@ -150,7 +150,7 @@ export default function StoreHeaderControls({
         ? createPortal(
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-amber-50 text-[var(--store-text)] shadow-sm transition hover:bg-amber-100 md:hidden"
+              className="flex items-center justify-center w-11 h-11 rounded-full bg-[#fdfbf6] border border-gray-200 text-[var(--store-text)] transition hover:bg-[#f6efe4] md:hidden"
               aria-label={menuOpen ? "إغلاق القائمة" : "فتح القائمة"}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((open) => !open)}
