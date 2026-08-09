@@ -187,7 +187,9 @@ export default function StoreHeaderControls({
         <nav className="border-t border-[var(--store-border)] bg-[var(--store-surface)] px-4 py-4 md:hidden" aria-label="قائمة الجوال">
           <ul className="space-y-1">
             {navLinks.map((link) => {
-              const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
+              const isActive = link.href === '/' 
+                ? pathname === '/'
+                : pathname === link.href || pathname.startsWith(`${link.href}/`);
               return (
                 <li key={`${link.href}-${link.label}`}>
                   <Link 

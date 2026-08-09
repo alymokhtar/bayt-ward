@@ -99,9 +99,9 @@ export default function MobileNav({ role }: MobileNavProps) {
               {allItems.map((item) => {
                 const Icon = item.icon;
                 const isActive =
-                  pathname === item.href ||
-                  (item.href !== "/dashboard" &&
-                    pathname.startsWith(item.href));
+                  item.href === "/dashboard" 
+                    ? pathname === "/dashboard"
+                    : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
                 return (
                   <li key={item.href}>
