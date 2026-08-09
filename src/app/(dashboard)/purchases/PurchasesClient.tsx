@@ -288,8 +288,27 @@ export default function PurchasesClient({
         title="أمر شراء جديد"
         description="ابحث بالباركود أو اسم المنتج — يُضاف المخزون مباشرة عند الحفظ"
         size="xl"
+        footer={
+          <div className="flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setModalOpen(false)}
+            >
+              إلغاء
+            </Button>
+            <Button
+              type="submit"
+              form="purchase-order-form"
+              loading={loading}
+              disabled={items.length === 0}
+            >
+              حفظ وإضافة للمخزون
+            </Button>
+          </div>
+        }
       >
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form id="purchase-order-form" onSubmit={handleCreate} className="flex-1 overflow-y-auto space-y-4">
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger">
               {error}
@@ -450,19 +469,6 @@ export default function PurchasesClient({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-
-          <div className="flex gap-2 justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setModalOpen(false)}
-            >
-              إلغاء
-            </Button>
-            <Button type="submit" loading={loading} disabled={items.length === 0}>
-              حفظ وإضافة للمخزون
-            </Button>
-          </div>
         </form>
       </Modal>
 

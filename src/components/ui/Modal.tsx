@@ -11,6 +11,7 @@ export interface ModalProps {
   title?: string;
   description?: string;
   children: ReactNode;
+  footer?: ReactNode;
   size?: "sm" | "md" | "lg" | "xl";
   showClose?: boolean;
 }
@@ -28,6 +29,7 @@ export default function Modal({
   title,
   description,
   children,
+  footer,
   size = "md",
   showClose = true,
 }: ModalProps) {
@@ -61,7 +63,7 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
         className={cn(
-          "relative z-10 w-full max-h-[90vh] overflow-y-auto rounded-xl border border-border bg-white shadow-2xl",
+          "relative z-10 w-full max-h-[90vh] overflow-hidden rounded-xl border border-border bg-white shadow-2xl",
           sizeClasses[size]
         )}
       >
@@ -93,7 +95,16 @@ export default function Modal({
             )}
           </div>
         )}
-        <div className="px-6 py-4">{children}</div>
+        <div className="flex min-h-0 flex-col max-h-[calc(90vh-8rem)]">
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+            {children}
+          </div>
+          {footer && (
+            <div className="shrink-0 border-t border-border px-6 py-4">
+              {footer}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
