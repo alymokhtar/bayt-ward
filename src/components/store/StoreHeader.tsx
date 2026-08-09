@@ -66,7 +66,7 @@ export default function StoreHeader({ settings, categories }: StoreHeaderProps) 
     >
       <div className="store-container flex w-full flex-row items-center justify-between py-2 sm:py-3">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div id="store-menu-button" className="inline-flex h-11 w-11 md:hidden" aria-hidden="true" />
+          <div id="store-menu-button" className="inline-flex h-11 w-11 md:hidden" />
 
           <Link
             href={STORE_BASE_PATH}
