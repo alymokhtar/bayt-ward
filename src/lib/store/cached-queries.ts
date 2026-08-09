@@ -174,6 +174,43 @@ export const getCachedStoreCategories = unstable_cache(
   }
 );
 
+export const getCachedStoreCategoryCovers = unstable_cache(
+  async (categoryIds: string[]) => {
+    const ids = (categoryIds ?? []).filter(Boolean);
+
+    if (ids.length === 0) {
+      return [];
+    }
+
+    return prisma.product.findMany({
+      where: {
+        categoryId: { in: ids },
+        ...PUBLISHED_PRODUCT_WHERE,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        categoryId: true,
+        images: {
+          where: { isActive: true, productVariantId: null },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: {
+            id: true,
+            url: true,
+            isPrimary: true,
+            sortOrder: true,
+          },
+          take: 1,
+        },
+      },
+    });
+  },
+  ["storefront-category-covers"],
+  {
+    tags: [CACHE_TAG.products, CACHE_TAG.storefront],
+    revalidate: STORE_REVALIDATE_SECONDS,
+  }
+);
+
 export const getCachedStoreCategory = unstable_cache(
   async (categoryId: string) =>
     prisma.category.findFirst({

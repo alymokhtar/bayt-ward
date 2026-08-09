@@ -30,7 +30,6 @@ export default function ProductGrid({
           <ProductCard
             product={product}
             currencySymbol={currencySymbol}
-            priority={index < 4}
           />
         </div>
       ))}

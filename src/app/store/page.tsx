@@ -1,22 +1,20 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
 import SectionHeading from "@/components/store/SectionHeading";
 import CategoryCard, { TrustSignals, WhatsAppCta } from "@/components/store/StoreSections";
 import { STORE_NAME_AR } from "@/lib/constants";
-import { prisma } from "@/lib/prisma";
 import {
   getCachedFeaturedProducts,
-  getCachedGalleryImages,
   getCachedNewestProducts,
   getCachedPublishedProducts,
   getCachedStoreCategories,
+  getCachedStoreCategoryCovers,
   getCachedStoreSettingsPublic,
 } from "@/lib/store/cached-queries";
-import { PUBLISHED_PRODUCT_WHERE } from "@/lib/store/constants";
-import { getPrimaryImageUrl } from "@/lib/store/product-utils";
 
 export const revalidate = 60;
 
@@ -46,16 +44,148 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+function SectionSkeleton({ className = "h-40" }: { className?: string }) {
+  return (
+    <div className="store-container store-section">
+      <div className="animate-pulse rounded-2xl border border-[var(--store-border)] bg-[var(--store-surface)] p-6">
+        <div className="h-5 w-40 rounded bg-[var(--store-gold-soft)]" />
+        <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="h-48 rounded-xl bg-[var(--store-cream)]" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+async function StoreCategorySection({
+  categoriesWithCovers,
+}: {
+  categoriesWithCovers: Array<{
+    category: { id: string; name: string; nameAr: string | null; description: string | null; imageUrl?: string | null; _count?: { products: number } };
+    cover: string | null;
+  }>;
+}) {
+  return (
+    <>
+      {categoriesWithCovers.length > 0 && (
+        <section className="store-container store-section">
+          <SectionHeading title="الأقسام" />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {categoriesWithCovers.map(({ category, cover }) => (
+              <CategoryCard key={category.id} category={category} coverImage={cover} />
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+async function StoreProductsSection({
+  title,
+  products,
+  currencySymbol,
+  showNewBadge = false,
+}: {
+  title: string;
+  products: any[];
+  currencySymbol: string;
+  showNewBadge?: boolean;
+}) {
+  if (products.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="store-container store-section pt-0">
+      <SectionHeading title={title} />
+      <div className="relative">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {products.map((product, index) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              currencySymbol={currencySymbol}
+              showNewBadge={showNewBadge && index < 6}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="mt-8 text-center">
+        <Link
+          href="/store/products"
+          className="inline-flex min-h-11 min-w-64 items-center justify-center rounded border border-[var(--store-gold)] bg-white px-8 text-sm font-bold text-[var(--store-gold)] transition hover:bg-[var(--store-gold)] hover:text-white"
+        >
+          عرض جميع المنتجات
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+async function StoreArrivalSection({
+  arrivals,
+  currencySymbol,
+}: {
+  arrivals: any[];
+  currencySymbol: string;
+}) {
+  if (arrivals.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="store-container store-section pt-0">
+      <SectionHeading title="وصل حديثاً" />
+      <div className="relative">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {arrivals.map((product, index) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              currencySymbol={currencySymbol}
+              showNewBadge
+            />
+          ))}
+        </div>
+        <button
+          type="button"
+          className="absolute -left-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[var(--store-text)] shadow-[0_8px_24px_rgba(75,54,37,0.12)] lg:inline-flex"
+          aria-label="منتجات سابقة"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          className="absolute -right-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[var(--store-text)] shadow-[0_8px_24px_rgba(75,54,37,0.12)] lg:inline-flex"
+          aria-label="منتجات تالية"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      </div>
+      <div className="mt-8 text-center">
+        <Link
+          href="/store/products"
+          className="inline-flex min-h-11 min-w-64 items-center justify-center rounded border border-[var(--store-gold)] bg-white px-8 text-sm font-bold text-[var(--store-gold)] transition hover:bg-[var(--store-gold)] hover:text-white"
+        >
+          عرض جميع المنتجات
+        </Link>
+      </div>
+    </section>
+  );
+}
+
 export default async function StoreHomePage() {
   const settings = await getCachedStoreSettingsPublic();
   const storeName = settings.store_name_ar || STORE_NAME_AR;
   const currencySymbol = settings.currency_symbol || "MRU";
 
-  const [featured, newest, categories, , productsPage] = await Promise.all([
+  const [featured, newest, categories, productsPage] = await Promise.all([
     getCachedFeaturedProducts(8),
     getCachedNewestProducts(8),
     getCachedStoreCategories(6),
-    getCachedGalleryImages(8),
     getCachedPublishedProducts(JSON.stringify({ page: 1, pageSize: 8 })),
   ]);
 
@@ -65,30 +195,7 @@ export default async function StoreHomePage() {
   const hasProducts = productsPage.total > 0;
 
   const categoryIds = categories.slice(0, 5).map((category) => category.id);
-
-  const coverProducts = categoryIds.length
-    ? await prisma.product.findMany({
-        where: {
-          categoryId: { in: categoryIds },
-          ...PUBLISHED_PRODUCT_WHERE,
-        },
-        orderBy: { createdAt: "desc" },
-        select: {
-          categoryId: true,
-          images: {
-            where: { isActive: true, productVariantId: null },
-            orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-            select: {
-              id: true,
-              url: true,
-              isPrimary: true,
-              sortOrder: true,
-            },
-            take: 1,
-          },
-        },
-      })
-    : [];
+  const coverProducts = categoryIds.length ? await getCachedStoreCategoryCovers(categoryIds) : [];
 
   const coverByCategory = new Map<string, string | null>();
   for (const product of coverProducts) {
@@ -164,83 +271,22 @@ export default async function StoreHomePage() {
         </div>
       </section>
 
-      {categoriesWithCovers.length > 0 && (
-        <section className="store-container store-section">
-          <SectionHeading title="الأقسام" />
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            {categoriesWithCovers.map(({ category, cover }) => (
-              <CategoryCard key={category.id} category={category} coverImage={cover} />
-            ))}
-          </div>
-        </section>
-      )}
+      <Suspense fallback={<SectionSkeleton className="h-52" />}>
+        <StoreCategorySection categoriesWithCovers={categoriesWithCovers} />
+      </Suspense>
 
-      {hasProducts && homeProducts.length > 0 && (
-        <section className="store-container store-section pt-0">
-          <SectionHeading title="المنتجات" />
-          <div className="relative">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-              {homeProducts.map((product, index) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  currencySymbol={currencySymbol}
-                  priority={index < 6}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="mt-8 text-center">
-            <Link
-              href="/store/products"
-              className="inline-flex min-h-11 min-w-64 items-center justify-center rounded border border-[var(--store-gold)] bg-white px-8 text-sm font-bold text-[var(--store-gold)] transition hover:bg-[var(--store-gold)] hover:text-white"
-            >
-              عرض جميع المنتجات
-            </Link>
-          </div>
-        </section>
-      )}
+      <Suspense fallback={<SectionSkeleton className="h-48" />}>
+        <StoreProductsSection
+          title="المنتجات"
+          products={hasProducts ? homeProducts : []}
+          currencySymbol={currencySymbol}
+          showNewBadge={false}
+        />
+      </Suspense>
 
-      {hasProducts && arrivalProducts.length > 0 && (
-        <section className="store-container store-section pt-0">
-          <SectionHeading title="وصل حديثاً" />
-          <div className="relative">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-              {arrivalProducts.map((product, index) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  currencySymbol={currencySymbol}
-                  priority={index < 6}
-                  showNewBadge
-                />
-              ))}
-            </div>
-            <button
-              type="button"
-              className="absolute -left-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[var(--store-text)] shadow-[0_8px_24px_rgba(75,54,37,0.12)] lg:inline-flex"
-              aria-label="منتجات سابقة"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="absolute -right-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[var(--store-text)] shadow-[0_8px_24px_rgba(75,54,37,0.12)] lg:inline-flex"
-              aria-label="منتجات تالية"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="mt-8 text-center">
-            <Link
-              href="/store/products"
-              className="inline-flex min-h-11 min-w-64 items-center justify-center rounded border border-[var(--store-gold)] bg-white px-8 text-sm font-bold text-[var(--store-gold)] transition hover:bg-[var(--store-gold)] hover:text-white"
-            >
-              عرض جميع المنتجات
-            </Link>
-          </div>
-        </section>
-      )}
+      <Suspense fallback={<SectionSkeleton className="h-48" />}>
+        <StoreArrivalSection arrivals={hasProducts ? arrivalProducts : []} currencySymbol={currencySymbol} />
+      </Suspense>
 
       <TrustSignals />
       <WhatsAppCta

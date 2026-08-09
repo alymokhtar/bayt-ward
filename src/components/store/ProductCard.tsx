@@ -16,7 +16,6 @@ import { formatCurrency } from "@/lib/utils";
 type ProductCardProps = {
   product: StoreProductListItem;
   currencySymbol?: string;
-  priority?: boolean;
   /** Set true only when rendering inside the admin dashboard */
   isDashboard?: boolean;
   showNewBadge?: boolean;
@@ -25,7 +24,6 @@ type ProductCardProps = {
 export default function ProductCard({
   product,
   currencySymbol = "MRU",
-  priority = false,
   isDashboard = false,
   showNewBadge = false,
 }: ProductCardProps) {
@@ -58,9 +56,8 @@ export default function ProductCard({
               src={optimizedUrl}
               alt={displayName}
               fill
-              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
               className="store-image-zoom object-cover"
-              priority={priority}
             />
           ) : (
             <div className="flex h-full items-center justify-center px-3 text-center text-sm text-[var(--store-muted)]">

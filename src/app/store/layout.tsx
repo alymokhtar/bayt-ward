@@ -1,5 +1,4 @@
 import type { Viewport } from "next";
-import { connection } from "next/server";
 import { Suspense } from "react";
 import StoreFooter from "@/components/store/StoreFooter";
 import StoreHeader from "@/components/store/StoreHeader";
@@ -24,7 +23,6 @@ export default async function StoreLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await connection();
   const [settings, categories] = await Promise.all([
     getCachedStoreSettingsPublic(),
     getCachedStoreCategories(6),
