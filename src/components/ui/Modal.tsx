@@ -3,7 +3,13 @@
 import Button from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
-import { useEffect, type ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  type ReactNode,
+} from "react";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -22,6 +28,43 @@ const sizeClasses = {
   lg: "max-w-lg",
   xl: "max-w-2xl",
 };
+
+function normalizeFooterNode(node: ReactNode): ReactNode {
+  return Children.map(node, (child) => {
+    if (!isValidElement(child)) {
+      return child;
+    }
+
+    if (child.type === Button) {
+      const childProps = child.props as {
+        variant?: string;
+        className?: string;
+        size?: string;
+      };
+
+      const currentClassName = childProps.className;
+
+      return cloneElement(child, {
+        variant: "primary",
+        size: childProps.size ?? "md",
+        className: cn(
+          "rounded-md px-4 py-2",
+          "bg-[#8c5c2a] text-white border border-[#8c5c2a] shadow-sm",
+          currentClassName
+        ),
+      });
+    }
+
+    const childChildren = (child.props as { children?: ReactNode })?.children;
+    if (childChildren) {
+      return cloneElement(child, {
+        children: normalizeFooterNode(childChildren),
+      });
+    }
+
+    return child;
+  });
+}
 
 export default function Modal({
   isOpen,
@@ -50,6 +93,8 @@ export default function Modal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const normalizedFooter = normalizeFooterNode(footer);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -101,7 +146,9 @@ export default function Modal({
           </div>
           {footer && (
             <div className="shrink-0 sticky bottom-0 z-10 border-t border-border bg-white px-6 py-4">
-              {footer}
+              <div className="flex items-center justify-end gap-2">
+                {normalizedFooter}
+              </div>
             </div>
           )}
         </div>
