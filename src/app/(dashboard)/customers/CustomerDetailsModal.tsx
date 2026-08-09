@@ -74,6 +74,13 @@ export default function CustomerDetailsModal({
       title={data?.name || "تفاصيل العميل"}
       description={data ? "بيانات العميل وسجل المشتريات" : undefined}
       size="xl"
+      footer={
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            إغلاق
+          </Button>
+        </div>
+      }
     >
       {loading && (
         <div className="space-y-3 animate-pulse">
@@ -238,11 +245,6 @@ export default function CustomerDetailsModal({
             )}
           </div>
 
-          <div className="flex justify-end">
-            <Button variant="secondary" onClick={onClose}>
-              إغلاق
-            </Button>
-          </div>
         </div>
       )}
     </Modal>

@@ -63,12 +63,12 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={title ? "modal-title" : undefined}
         className={cn(
-          "relative z-10 w-full max-h-[90vh] overflow-hidden rounded-xl border border-border bg-white shadow-2xl",
+          "relative z-10 flex w-full max-h-[90vh] flex-col overflow-hidden rounded-xl border border-border bg-white shadow-2xl",
           sizeClasses[size]
         )}
       >
         {(title || showClose) && (
-          <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+          <div className="shrink-0 sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-border bg-white px-6 py-4">
             <div>
               {title && (
                 <h2
@@ -95,12 +95,12 @@ export default function Modal({
             )}
           </div>
         )}
-        <div className="flex min-h-0 flex-col max-h-[calc(90vh-8rem)]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
             {children}
           </div>
           {footer && (
-            <div className="shrink-0 border-t border-border px-6 py-4">
+            <div className="shrink-0 sticky bottom-0 z-10 border-t border-border bg-white px-6 py-4">
               {footer}
             </div>
           )}

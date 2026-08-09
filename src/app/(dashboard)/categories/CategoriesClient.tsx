@@ -236,8 +236,18 @@ export default function CategoriesClient({
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editing ? "تعديل التصنيف" : "تصنيف جديد"}
+        footer={
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+              إلغاء
+            </Button>
+            <Button type="submit" form="modal-form-category" loading={loading}>
+              {editing ? "حفظ" : "إنشاء"}
+            </Button>
+          </div>
+        }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="modal-form-category" onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger">
               {error}
@@ -324,14 +334,6 @@ export default function CategoriesClient({
               rows={2}
               className="w-full rounded-lg border border-border px-4 py-2 text-sm"
             />
-          </div>
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
-              إلغاء
-            </Button>
-            <Button type="submit" loading={loading}>
-              {editing ? "حفظ" : "إنشاء"}
-            </Button>
           </div>
         </form>
       </Modal>

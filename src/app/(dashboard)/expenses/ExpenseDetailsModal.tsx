@@ -70,6 +70,13 @@ export default function ExpenseDetailsModal({
       title={data?.title || "تفاصيل المصروف"}
       description={data ? formatDate(data.expenseDate) : undefined}
       size="lg"
+      footer={
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            إغلاق
+          </Button>
+        </div>
+      }
     >
       {loading && (
         <div className="space-y-3 animate-pulse">
@@ -190,11 +197,6 @@ export default function ExpenseDetailsModal({
             </div>
           )}
 
-          <div className="flex justify-end">
-            <Button variant="secondary" onClick={onClose}>
-              إغلاق
-            </Button>
-          </div>
         </div>
       )}
     </Modal>

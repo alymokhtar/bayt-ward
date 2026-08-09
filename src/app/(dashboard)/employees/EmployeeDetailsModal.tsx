@@ -70,6 +70,13 @@ export default function EmployeeDetailsModal({
           : undefined
       }
       size="xl"
+      footer={
+        <div className="flex justify-end">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            إغلاق
+          </Button>
+        </div>
+      }
     >
       {loading && (
         <div className="space-y-3 animate-pulse">
@@ -236,11 +243,6 @@ export default function EmployeeDetailsModal({
             </section>
           )}
 
-          <div className="flex justify-end">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              إغلاق
-            </Button>
-          </div>
         </div>
       )}
     </Modal>

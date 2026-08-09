@@ -64,8 +64,18 @@ export default function EmployeeAdjustmentModal({
       onClose={onClose}
       title="إضافة استقطاع"
       description={employee ? `الموظف: ${employee.name}` : undefined}
+      footer={
+        <div className="flex gap-2 justify-end">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            إلغاء
+          </Button>
+          <Button type="submit" form="modal-form-employee-adjustment" loading={loading}>
+            حفظ
+          </Button>
+        </div>
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form id="modal-form-employee-adjustment" onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger">
             {error}
@@ -112,14 +122,6 @@ export default function EmployeeAdjustmentModal({
           onChange={(e) => setNotes(e.target.value)}
         />
 
-        <div className="flex gap-2 justify-end">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            إلغاء
-          </Button>
-          <Button type="submit" loading={loading}>
-            حفظ
-          </Button>
-        </div>
       </form>
     </Modal>
   );

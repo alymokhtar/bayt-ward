@@ -30,22 +30,12 @@ export default function ConfirmDeleteDialog({
   children,
 }: ConfirmDeleteDialogProps) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="md">
-      <div className="space-y-4">
-        <div className="rounded-lg border border-danger/20 bg-red-50/80 p-3">
-          <p className="text-sm leading-6 text-brown">
-            {description}
-            {itemName ? (
-              <>
-                {" "}
-                <span className="font-semibold text-danger">{itemName}</span>
-              </>
-            ) : null}
-          </p>
-        </div>
-
-        {children}
-
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      size="md"
+      footer={
         <div className="flex justify-end gap-2">
           <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
             {cancelLabel}
@@ -62,6 +52,22 @@ export default function ConfirmDeleteDialog({
             {confirmLabel}
           </Button>
         </div>
+      }
+    >
+      <div className="space-y-4">
+        <div className="rounded-lg border border-danger/20 bg-red-50/80 p-3">
+          <p className="text-sm leading-6 text-brown">
+            {description}
+            {itemName ? (
+              <>
+                {" "}
+                <span className="font-semibold text-danger">{itemName}</span>
+              </>
+            ) : null}
+          </p>
+        </div>
+
+        {children}
       </div>
     </Modal>
   );

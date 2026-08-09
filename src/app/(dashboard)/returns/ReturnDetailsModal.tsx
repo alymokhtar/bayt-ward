@@ -74,6 +74,13 @@ export default function ReturnDetailsModal({
         data ? formatDateTime(data.createdAt) : undefined
       }
       size="xl"
+      footer={
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            إغلاق
+          </Button>
+        </div>
+      }
     >
       {loading && (
         <div className="space-y-3 animate-pulse">
@@ -184,11 +191,6 @@ export default function ReturnDetailsModal({
             </Table>
           </div>
 
-          <div className="flex justify-end">
-            <Button variant="secondary" onClick={onClose}>
-              إغلاق
-            </Button>
-          </div>
         </div>
       )}
     </Modal>

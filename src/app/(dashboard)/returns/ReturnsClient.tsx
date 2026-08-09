@@ -216,8 +216,18 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
         onClose={() => setModalOpen(false)}
         title="معالجة مرتجع"
         size="xl"
+        footer={
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+              إلغاء
+            </Button>
+            <Button type="submit" form="modal-form-return" loading={loading} disabled={!sale}>
+              تأكيد المرتجع
+            </Button>
+          </div>
+        }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="modal-form-return" onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger">
               {error}
@@ -321,14 +331,6 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
             onChange={(e) => setNotes(e.target.value)}
           />
 
-          <div className="flex gap-2 justify-end">
-            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
-              إلغاء
-            </Button>
-            <Button type="submit" loading={loading} disabled={!sale}>
-              تأكيد المرتجع
-            </Button>
-          </div>
         </form>
       </Modal>
 

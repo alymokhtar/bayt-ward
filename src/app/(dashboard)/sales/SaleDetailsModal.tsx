@@ -167,7 +167,19 @@ export default function SaleDetailsModal({
       .reduce((sum, r) => sum + r.refundAmount, 0) ?? 0;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`فاتورة ${sale?.invoiceNumber || ""}`} size="xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`فاتورة ${sale?.invoiceNumber || ""}`}
+      size="xl"
+      footer={
+        <div className="flex justify-end">
+          <Button variant="ghost" onClick={onClose}>
+            إغلاق
+          </Button>
+        </div>
+      }
+    >
       {loading && (
         <div className="space-y-3 animate-pulse">
           <div className="h-4 rounded bg-brown/5" />
@@ -404,11 +416,6 @@ export default function SaleDetailsModal({
                 </p>
               )}
 
-              <div className="mt-6 flex justify-end print:hidden">
-                <Button variant="ghost" onClick={onClose}>
-                  إغلاق
-                </Button>
-              </div>
             </CardContent>
           </Card>
         </div>

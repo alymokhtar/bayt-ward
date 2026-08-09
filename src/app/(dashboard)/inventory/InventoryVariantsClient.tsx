@@ -161,8 +161,18 @@ export default function InventoryVariantsClient({
             ? `${selectedVariant.product.nameAr || selectedVariant.product.name} — الكمية الحالية: ${selectedVariant.stockQuantity}`
             : undefined
         }
+        footer={
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="ghost" onClick={() => setAdjustModal(false)}>
+              إلغاء
+            </Button>
+            <Button type="submit" form="modal-form-inventory-variant-adjust" loading={loading}>
+              حفظ
+            </Button>
+          </div>
+        }
       >
-        <form onSubmit={handleAdjust} className="space-y-4">
+        <form id="modal-form-inventory-variant-adjust" onSubmit={handleAdjust} className="space-y-4">
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger">
               {error}
@@ -191,18 +201,6 @@ export default function InventoryVariantsClient({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
-          <div className="flex gap-2 justify-end">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setAdjustModal(false)}
-            >
-              إلغاء
-            </Button>
-            <Button type="submit" loading={loading}>
-              حفظ
-            </Button>
-          </div>
         </form>
       </Modal>
 

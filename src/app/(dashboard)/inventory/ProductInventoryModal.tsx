@@ -78,6 +78,20 @@ export default function ProductInventoryModal({
           : undefined
       }
       size="xl"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            إغلاق
+          </Button>
+          {data && (
+            <Link href={getAdminProductPath(data.id)}>
+              <Button type="button" variant="outline">
+                فتح صفحة المنتج
+              </Button>
+            </Link>
+          )}
+        </div>
+      }
     >
       {loading && (
         <div className="space-y-3 animate-pulse">
@@ -166,16 +180,6 @@ export default function ProductInventoryModal({
             </Table>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={onClose}>
-              إغلاق
-            </Button>
-            <Link href={getAdminProductPath(data.id)}>
-              <Button type="button" variant="outline">
-                فتح صفحة المنتج
-              </Button>
-            </Link>
-          </div>
         </div>
       )}
     </Modal>
