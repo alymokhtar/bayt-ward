@@ -63,7 +63,7 @@ async function StoreCategorySection({
   categoriesWithCovers,
 }: {
   categoriesWithCovers: Array<{
-    category: { id: string; name: string; nameAr: string | null; description: string | null; imageUrl?: string | null; _count?: { products: number } };
+    category: { id: string; name: string; nameAr: string | null; description: string | null; imageUrl?: string | null; _count: { products: number } };
     cover: string | null;
   }>;
 }) {
