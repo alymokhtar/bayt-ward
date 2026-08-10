@@ -102,13 +102,26 @@ export default async function ContactPage() {
               </p>
               <div className="mt-4">
                 {settings.google_maps_embed_url.includes("iframe") ? (
+                  // Direct HTML embed code
                   <div
                     dangerouslySetInnerHTML={{ __html: settings.google_maps_embed_url }}
                     className="rounded-lg overflow-hidden"
                   />
-                ) : (
+                ) : settings.google_maps_embed_url.startsWith("http") ? (
+                  // Share link - convert to embed URL
                   <iframe
-                    src={`https://maps.google.com/maps?q=${encodeURIComponent(settings.store_address || "")}&output=embed`}
+                    src={settings.google_maps_embed_url.replace(/\/maps\//gi, "/maps/embed/")}
+                    width="100%"
+                    height="400"
+                    style={{ border: 0, borderRadius: "0.5rem" }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                ) : (
+                  // Fallback: search by address
+                  <iframe
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(settings.store_address || settings.google_maps_embed_url)}&output=embed`}
                     width="100%"
                     height="400"
                     style={{ border: 0, borderRadius: "0.5rem" }}

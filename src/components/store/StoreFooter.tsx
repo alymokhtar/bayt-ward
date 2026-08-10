@@ -113,8 +113,8 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
             <div className="mb-3 pb-3 border-b border-[var(--store-border)]">
               <a
                 href={
-                  settings.google_maps_embed_url && !settings.google_maps_embed_url.includes("iframe")
-                    ? `https://maps.google.com/maps?q=${encodeURIComponent(settings.store_address)}`
+                  settings.google_maps_embed_url && settings.google_maps_embed_url.startsWith("http")
+                    ? settings.google_maps_embed_url
                     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.store_address)}`
                 }
                 target="_blank"

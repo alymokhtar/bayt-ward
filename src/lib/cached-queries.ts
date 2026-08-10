@@ -233,6 +233,8 @@ const STORE_SETTING_KEYS = [
   "store_name_ar",
   "store_phone",
   "store_whatsapp",
+  "store_address",
+  "store_email",
   "currency_symbol",
   "whatsapp_promotion_default",
   "daily_discount_percent",
@@ -245,6 +247,8 @@ const STORE_SETTING_KEYS = [
   "social_youtube_url",
   "social_snapchat_url",
   "social_x_url",
+  // Google Maps
+  "google_maps_embed_url",
 ];
 
 export const getCachedStoreSettings = unstable_cache(
