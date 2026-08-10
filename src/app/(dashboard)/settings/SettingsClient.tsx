@@ -3,7 +3,7 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { updateSettings } from "@/lib/actions/settings";
-import { Save, Globe2, Camera, Music2, PlayCircle, Bird } from "lucide-react";
+import { Save, Globe2, Camera, Music2, PlayCircle, Bird, MapPin } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -21,6 +21,7 @@ const fields = [
   { key: "tax_rate", label: "نسبة الضريبة (%)", type: "number" },
   { key: "currency", label: "العملة", dir: "ltr" as const },
   { key: "currency_symbol", label: "رمز العملة" },
+  { key: "google_maps_embed_url", label: "رابط خرائط جوجل (Embed URL أو رابط المشاركة)", dir: "ltr" as const },
   { key: "whatsapp_promotion_default", label: "نص العرض الافتراضي (واتساب)" },
 ];
 
@@ -37,6 +38,7 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
     social_youtube_url: "",
     social_snapchat_url: "",
     social_x_url: "",
+    google_maps_embed_url: "",
     ...settings,
   });
   const [loading, setLoading] = useState(false);
@@ -183,6 +185,25 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
               dir="ltr"
             />
           </div>
+        </div>
+      </div>
+
+      <div className="border-t border-border pt-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-muted/80" />
+          <h3 className="font-semibold text-brown">خرائط جوجل</h3>
+        </div>
+        <div className="grid gap-4">
+          <Input
+            label="رابط خرائط جوجل"
+            value={values.google_maps_embed_url || ""}
+            onChange={(e) => updateField("google_maps_embed_url", e.target.value)}
+            dir="ltr"
+            placeholder="https://maps.app.goo.gl/... أو كود Embed من جوجل ماب"
+          />
+          <p className="text-xs text-muted">
+            يمكنك الحصول على رابط المشاركة من جوجل ماب بالضغط على "المشاركة" أو نسخ كود الـ Embed.
+          </p>
         </div>
       </div>
 

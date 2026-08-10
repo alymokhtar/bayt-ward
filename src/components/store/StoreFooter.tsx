@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Camera, MessageCircle, Music2 } from "lucide-react";
+import { Camera, MessageCircle, Music2, MapPin } from "lucide-react";
 import { SiFacebook, SiInstagram, SiTiktok, SiYoutube, SiSnapchat, SiX } from "react-icons/si";
 import { STORE_NAME, STORE_NAME_AR } from "@/lib/constants";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
@@ -109,6 +109,24 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
         </Link>
 
         <div className="space-y-3 text-center text-xs text-[var(--store-muted)] md:text-end">
+          {settings.store_address && (
+            <div className="mb-3 pb-3 border-b border-[var(--store-border)]">
+              <a
+                href={
+                  settings.google_maps_embed_url && !settings.google_maps_embed_url.includes("iframe")
+                    ? `https://maps.google.com/maps?q=${encodeURIComponent(settings.store_address)}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.store_address)}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[var(--store-text)] hover:text-[var(--store-gold)] transition-colors"
+                title="افتح الموقع في خرائط جوجل"
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="line-clamp-2">{settings.store_address}</span>
+              </a>
+            </div>
+          )}
           <nav className="flex flex-wrap justify-center gap-x-5 gap-y-2 md:justify-end" aria-label="روابط سريعة">
             {QUICK_LINKS.map((link) => (
               <Link key={link.label} href={link.href} className="transition hover:text-[var(--store-gold)]">

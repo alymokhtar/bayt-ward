@@ -95,6 +95,31 @@ export default async function ContactPage() {
               </a>
             </div>
           )}
+          {settings.google_maps_embed_url && (
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4 overflow-hidden">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+                الموقع على الخريطة
+              </p>
+              <div className="mt-4">
+                {settings.google_maps_embed_url.includes("iframe") ? (
+                  <div
+                    dangerouslySetInnerHTML={{ __html: settings.google_maps_embed_url }}
+                    className="rounded-lg overflow-hidden"
+                  />
+                ) : (
+                  <iframe
+                    src={`https://maps.google.com/maps?q=${encodeURIComponent(settings.store_address || "")}&output=embed`}
+                    width="100%"
+                    height="400"
+                    style={{ border: 0, borderRadius: "0.5rem" }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                )}
+              </div>
+            </div>
+          )}
           {/* Social links */}
           {(settings.social_facebook_url || settings.social_instagram_url || settings.social_tiktok_url || settings.social_youtube_url || settings.social_snapchat_url || settings.social_x_url) && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
