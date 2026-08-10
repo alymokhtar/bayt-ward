@@ -4,6 +4,7 @@ import { Camera, MessageCircle, Music2, MapPin } from "lucide-react";
 import { SiFacebook, SiInstagram, SiTiktok, SiYoutube, SiSnapchat, SiX } from "react-icons/si";
 import { STORE_NAME, STORE_NAME_AR } from "@/lib/constants";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { getShareUrl, isSafeGoogleMapsUrl } from "@/lib/maps-utils";
 
 type StoreFooterProps = {
   settings: Record<string, string>;
@@ -26,6 +27,11 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
   const whatsappHref = whatsappNumber
     ? getWhatsAppUrl(whatsappNumber, "السلام عليكم، أرغب في التواصل مع بيت ورد.")
     : `${STORE_BASE_PATH}/contact`;
+
+  // Get maps URL if it's a share URL
+  const mapsShareUrl = isSafeGoogleMapsUrl(settings.google_maps_embed_url)
+    ? getShareUrl(settings.google_maps_embed_url)
+    : null;
 
   return (
     <footer className="border-t border-[var(--store-border)] bg-[#f1eadf] text-[var(--store-text)]">
@@ -113,9 +119,8 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
             <div className="mb-3 pb-3 border-b border-[var(--store-border)]">
               <a
                 href={
-                  settings.google_maps_embed_url && settings.google_maps_embed_url.startsWith("http")
-                    ? settings.google_maps_embed_url
-                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.store_address)}`
+                  mapsShareUrl ||
+                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.store_address)}`
                 }
                 target="_blank"
                 rel="noopener noreferrer"

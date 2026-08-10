@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { StorePageHero } from "@/components/store/StoreSections";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
+import { processGoogleMapsUrl } from "@/lib/maps-utils";
 import { STORE_NAME_AR } from "@/lib/constants";
-import { MessageCircle, Phone, Mail, MapPin } from "lucide-react";
+import { MessageCircle, Phone, Mail, MapPin, ExternalLink } from "lucide-react";
 import { SiFacebook, SiInstagram, SiTiktok, SiYoutube, SiSnapchat, SiX } from "react-icons/si";
 
 export const revalidate = 60;
@@ -21,6 +22,9 @@ export default async function ContactPage() {
   const whatsappHref = whatsappNumber
     ? getWhatsAppUrl(whatsappNumber, `السلام عليكم، أرغب في التواصل مع ${storeName}.`)
     : null;
+
+  // Process Google Maps URL
+  const mapsData = processGoogleMapsUrl(settings.google_maps_embed_url);
 
   return (
     <>
@@ -95,41 +99,46 @@ export default async function ContactPage() {
               </a>
             </div>
           )}
-          {settings.google_maps_embed_url && (
+          {/* Google Maps Section */}
+          {mapsData.isValid && mapsData.type === 'embed' && mapsData.embedUrl && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4 overflow-hidden">
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
                 الموقع على الخريطة
               </p>
               <div className="mt-4">
-                {settings.google_maps_embed_url.includes("iframe") ? (
-                  // Direct HTML embed code
-                  <div
-                    dangerouslySetInnerHTML={{ __html: settings.google_maps_embed_url }}
-                    className="rounded-lg overflow-hidden"
-                  />
-                ) : settings.google_maps_embed_url.startsWith("http") ? (
-                  // Share link - convert to embed URL
-                  <iframe
-                    src={settings.google_maps_embed_url.replace(/\/maps\//gi, "/maps/embed/")}
-                    width="100%"
-                    height="400"
-                    style={{ border: 0, borderRadius: "0.5rem" }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                ) : (
-                  // Fallback: search by address
-                  <iframe
-                    src={`https://maps.google.com/maps?q=${encodeURIComponent(settings.store_address || settings.google_maps_embed_url)}&output=embed`}
-                    width="100%"
-                    height="400"
-                    style={{ border: 0, borderRadius: "0.5rem" }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                )}
+                <iframe
+                  src={mapsData.embedUrl}
+                  width="100%"
+                  height="400"
+                  style={{ border: 0, borderRadius: "0.5rem" }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+              </div>
+            </div>
+          )}
+          {mapsData.isValid && mapsData.type === 'card' && mapsData.shareUrl && (
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+                الموقع على الخريطة
+              </p>
+              <div className="mt-4 flex flex-col gap-3 items-center text-center">
+                <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-[var(--store-gold)]/10">
+                  <MapPin className="h-8 w-8 text-[var(--store-gold)]" />
+                </div>
+                <p className="text-sm text-[var(--store-text)]">
+                  شاهد فرعنا على خرائط جوجل
+                </p>
+                <a
+                  href={mapsData.shareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--store-gold)] text-white font-medium hover:bg-[var(--store-gold)]/90 transition-colors text-sm"
+                >
+                  <span>عرض الموقع</span>
+                  <ExternalLink className="h-4 w-4" />
+                </a>
               </div>
             </div>
           )}
