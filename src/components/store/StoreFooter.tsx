@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Camera, MessageCircle, Music2, Globe2, Camera as CameraIcon, PlayCircle, Bird } from "lucide-react";
+import { Camera, MessageCircle, Music2 } from "lucide-react";
+import { SiFacebook, SiInstagram, SiTiktok, SiYoutube, SiSnapchat, SiX } from "react-icons/si";
 import { STORE_NAME, STORE_NAME_AR } from "@/lib/constants";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 
@@ -49,32 +50,32 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
               <>
                 {settings.social_facebook_url && (
                   <IconWrap href={settings.social_facebook_url} label="Facebook" title="فيسبوك" hoverClasses="hover:bg-[#1877F2] hover:text-white">
-                    <Globe2 className="h-5 w-5" />
+                    <SiFacebook className="h-5 w-5" />
                   </IconWrap>
                 )}
                 {settings.social_instagram_url && (
                   <IconWrap href={settings.social_instagram_url} label="Instagram" title="انستغرام" hoverClasses="hover:bg-gradient-to-r hover:from-[#E4405F] hover:to-[#833AB4] hover:text-white">
-                    <CameraIcon className="h-5 w-5" />
+                    <SiInstagram className="h-5 w-5" />
                   </IconWrap>
                 )}
                 {settings.social_tiktok_url && (
                   <IconWrap href={settings.social_tiktok_url} label="TikTok" title="تيك توك" hoverClasses="hover:bg-[#000000] hover:text-white">
-                    <Music2 className="h-5 w-5" />
+                    <SiTiktok className="h-5 w-5" />
                   </IconWrap>
                 )}
                 {settings.social_youtube_url && (
                   <IconWrap href={settings.social_youtube_url} label="YouTube" title="يوتيوب" hoverClasses="hover:bg-[#FF0000] hover:text-white">
-                    <PlayCircle className="h-5 w-5" />
+                    <SiYoutube className="h-5 w-5" />
                   </IconWrap>
                 )}
                 {settings.social_snapchat_url && (
                   <IconWrap href={settings.social_snapchat_url} label="Snapchat" title="سناب شات" hoverClasses="hover:bg-[#FFFC00] hover:text-black">
-                    <CameraIcon className="h-5 w-5" />
+                    <SiSnapchat className="h-5 w-5" />
                   </IconWrap>
                 )}
                 {settings.social_x_url && (
                   <IconWrap href={settings.social_x_url} label="X" title="إكس" hoverClasses="hover:bg-[#000000] hover:text-white">
-                    <Bird className="h-5 w-5" />
+                    <SiX className="h-5 w-5" />
                   </IconWrap>
                 )}
                 {!settings.social_facebook_url && !settings.social_instagram_url && !settings.social_tiktok_url && !settings.social_youtube_url && !settings.social_snapchat_url && !settings.social_x_url && (
