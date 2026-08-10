@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { StorePageHero } from "@/components/store/StoreSections";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
-import { processGoogleMapsUrl } from "@/lib/maps-utils";
+import { getShareUrl, processGoogleMapsUrl } from "@/lib/maps-utils";
 import { STORE_NAME_AR } from "@/lib/constants";
 import { MessageCircle, Phone, Mail, MapPin, ExternalLink } from "lucide-react";
 import { SiFacebook, SiInstagram, SiTiktok, SiYoutube, SiSnapchat, SiX } from "react-icons/si";
@@ -25,6 +25,10 @@ export default async function ContactPage() {
 
   // Process Google Maps URL
   const mapsData = processGoogleMapsUrl(settings.google_maps_embed_url);
+  const mapShareUrl = getShareUrl(settings.google_maps_embed_url) ||
+    (settings.store_address
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.store_address)}`
+      : null);
 
   return (
     <>
@@ -34,6 +38,21 @@ export default async function ContactPage() {
       />
       <section className="store-container max-w-xl pb-20">
         <div className="store-shell space-y-4 p-8 md:p-10">
+          {settings.store_phone && (
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+                الهاتف
+              </p>
+              <a
+                href={`tel:${settings.store_phone}`}
+                className="mt-2 inline-flex items-center gap-3 text-lg font-medium text-[var(--store-text)] hover:text-[var(--store-gold)]"
+                dir="ltr"
+              >
+                <Phone className="h-5 w-5 text-[var(--store-gold)]" />
+                <span>{settings.store_phone}</span>
+              </a>
+            </div>
+          )}
           {whatsappNumber && whatsappHref && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
@@ -51,39 +70,6 @@ export default async function ContactPage() {
               </a>
             </div>
           )}
-          {settings.store_phone && (
-            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
-                الهاتف
-              </p>
-              <a
-                href={`tel:${settings.store_phone}`}
-                className="mt-2 inline-flex items-center gap-3 text-lg font-medium text-[var(--store-text)] hover:text-[var(--store-gold)]"
-                dir="ltr"
-              >
-                <Phone className="h-5 w-5 text-[var(--store-gold)]" />
-                <span>{settings.store_phone}</span>
-              </a>
-            </div>
-          )}
-          {settings.store_address && (
-            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
-                العنوان
-              </p>
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  settings.store_address
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 inline-flex items-start gap-3 text-sm leading-7 text-[var(--store-muted)] hover:text-[var(--store-gold)]"
-              >
-                <MapPin className="h-5 w-5 text-[var(--store-gold)] mt-1" />
-                <span>{settings.store_address}</span>
-              </a>
-            </div>
-          )}
           {settings.store_email && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
               <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
@@ -96,6 +82,22 @@ export default async function ContactPage() {
               >
                 <Mail className="h-5 w-5 text-[var(--store-gold)]" />
                 <span>{settings.store_email}</span>
+              </a>
+            </div>
+          )}
+          {settings.store_address && mapShareUrl && (
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4 transition-all shadow-sm hover:border-amber-700/40 cursor-pointer">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+                العنوان
+              </p>
+              <a
+                href={mapShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-start gap-3 text-sm leading-7 text-[var(--store-muted)] hover:text-[var(--store-gold)]"
+              >
+                <MapPin className="h-5 w-5 text-[var(--store-gold)] mt-1" />
+                <span>{settings.store_address}</span>
               </a>
             </div>
           )}
