@@ -3,7 +3,7 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { updateSettings } from "@/lib/actions/settings";
-import { Save } from "lucide-react";
+import { Save, Facebook, Instagram, Youtube, Twitter, Link as LinkIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -31,6 +31,12 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
     store_whatsapp: "",
     daily_discount_percent: "0",
     daily_discount_active: "0",
+    social_facebook_url: "",
+    social_instagram_url: "",
+    social_tiktok_url: "",
+    social_youtube_url: "",
+    social_snapchat_url: "",
+    social_x_url: "",
     ...settings,
   });
   const [loading, setLoading] = useState(false);
@@ -113,6 +119,71 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
         <p className="text-xs text-muted">
           عند التفعيل سيظهر هذا الخصم تلقائياً في نقطة البيع ويُلغى تلقائياً في نهاية يوم العمل.
         </p>
+      </div>
+
+      <div className="border-t border-border pt-4 space-y-4">
+        <h3 className="font-semibold text-brown">وسائل التواصل الاجتماعي</h3>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex items-center gap-3">
+            <Facebook className="h-5 w-5 text-muted/80" />
+            <Input
+              label="فيسبوك"
+              value={values.social_facebook_url || ""}
+              onChange={(e) => updateField("social_facebook_url", e.target.value)}
+              dir="ltr"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Instagram className="h-5 w-5 text-muted/80" />
+            <Input
+              label="انستجرام"
+              value={values.social_instagram_url || ""}
+              onChange={(e) => updateField("social_instagram_url", e.target.value)}
+              dir="ltr"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <LinkIcon className="h-5 w-5 text-muted/80" />
+            <Input
+              label="تيك توك"
+              value={values.social_tiktok_url || ""}
+              onChange={(e) => updateField("social_tiktok_url", e.target.value)}
+              dir="ltr"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Youtube className="h-5 w-5 text-muted/80" />
+            <Input
+              label="يوتيوب"
+              value={values.social_youtube_url || ""}
+              onChange={(e) => updateField("social_youtube_url", e.target.value)}
+              dir="ltr"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <LinkIcon className="h-5 w-5 text-muted/80" />
+            <Input
+              label="سناب شات"
+              value={values.social_snapchat_url || ""}
+              onChange={(e) => updateField("social_snapchat_url", e.target.value)}
+              dir="ltr"
+            />
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Twitter className="h-5 w-5 text-muted/80" />
+            <Input
+              label="إكس (تويتر)"
+              value={values.social_x_url || ""}
+              onChange={(e) => updateField("social_x_url", e.target.value)}
+              dir="ltr"
+            />
+          </div>
+        </div>
       </div>
 
       <Button type="submit" loading={loading}>

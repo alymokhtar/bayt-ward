@@ -238,6 +238,13 @@ const STORE_SETTING_KEYS = [
   "daily_discount_percent",
   "daily_discount_active",
   "daily_discount_date",
+  // Social links
+  "social_facebook_url",
+  "social_instagram_url",
+  "social_tiktok_url",
+  "social_youtube_url",
+  "social_snapchat_url",
+  "social_x_url",
 ];
 
 export const getCachedStoreSettings = unstable_cache(

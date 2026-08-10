@@ -3,7 +3,7 @@ import { StorePageHero } from "@/components/store/StoreSections";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { STORE_NAME_AR } from "@/lib/constants";
-import { MessageCircle, Phone, Mail, MapPin } from "lucide-react";
+import { MessageCircle, Phone, Mail, MapPin, Facebook, Instagram, Youtube, Twitter, Link as LinkIcon } from "lucide-react";
 
 export const revalidate = 60;
 
@@ -92,6 +92,46 @@ export default async function ContactPage() {
                 <Mail className="h-5 w-5 text-[var(--store-gold)]" />
                 <span>{settings.store_email}</span>
               </a>
+            </div>
+          )}
+          {/* Social links */}
+          {(settings.social_facebook_url || settings.social_instagram_url || settings.social_tiktok_url || settings.social_youtube_url || settings.social_snapchat_url || settings.social_x_url) && (
+            <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
+              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+                حساباتنا على مواقع التواصل الاجتماعي
+              </p>
+              <div className="mt-2 flex items-center gap-4">
+                {settings.social_facebook_url && (
+                  <a href={settings.social_facebook_url} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                    <Facebook className="h-6 w-6 text-[var(--store-gold)]" />
+                  </a>
+                )}
+                {settings.social_instagram_url && (
+                  <a href={settings.social_instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                    <Instagram className="h-6 w-6 text-[var(--store-gold)]" />
+                  </a>
+                )}
+                {settings.social_tiktok_url && (
+                  <a href={settings.social_tiktok_url} target="_blank" rel="noopener noreferrer" aria-label="TikTok">
+                    <LinkIcon className="h-6 w-6 text-[var(--store-gold)]" />
+                  </a>
+                )}
+                {settings.social_youtube_url && (
+                  <a href={settings.social_youtube_url} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
+                    <Youtube className="h-6 w-6 text-[var(--store-gold)]" />
+                  </a>
+                )}
+                {settings.social_snapchat_url && (
+                  <a href={settings.social_snapchat_url} target="_blank" rel="noopener noreferrer" aria-label="Snapchat">
+                    <LinkIcon className="h-6 w-6 text-[var(--store-gold)]" />
+                  </a>
+                )}
+                {settings.social_x_url && (
+                  <a href={settings.social_x_url} target="_blank" rel="noopener noreferrer" aria-label="X">
+                    <Twitter className="h-6 w-6 text-[var(--store-gold)]" />
+                  </a>
+                )}
+              </div>
             </div>
           )}
         </div>
