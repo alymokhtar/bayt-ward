@@ -3,7 +3,7 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { updateSettings } from "@/lib/actions/settings";
-import { Save, Facebook, Instagram, Youtube, Twitter, Link as LinkIcon } from "lucide-react";
+import { Save, Globe2, Camera, Music2, PlayCircle, Bird } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -125,7 +125,7 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
         <h3 className="font-semibold text-brown">وسائل التواصل الاجتماعي</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex items-center gap-3">
-            <Facebook className="h-5 w-5 text-muted/80" />
+            <Globe2 className="h-5 w-5 text-muted/80" />
             <Input
               label="فيسبوك"
               value={values.social_facebook_url || ""}
@@ -135,7 +135,7 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <Instagram className="h-5 w-5 text-muted/80" />
+            <Camera className="h-5 w-5 text-muted/80" />
             <Input
               label="انستجرام"
               value={values.social_instagram_url || ""}
@@ -145,7 +145,7 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <LinkIcon className="h-5 w-5 text-muted/80" />
+            <Music2 className="h-5 w-5 text-muted/80" />
             <Input
               label="تيك توك"
               value={values.social_tiktok_url || ""}
@@ -155,7 +155,7 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <Youtube className="h-5 w-5 text-muted/80" />
+            <PlayCircle className="h-5 w-5 text-muted/80" />
             <Input
               label="يوتيوب"
               value={values.social_youtube_url || ""}
@@ -165,7 +165,7 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <LinkIcon className="h-5 w-5 text-muted/80" />
+            <Camera className="h-5 w-5 text-muted/80" />
             <Input
               label="سناب شات"
               value={values.social_snapchat_url || ""}
@@ -175,7 +175,7 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            <Twitter className="h-5 w-5 text-muted/80" />
+            <Bird className="h-5 w-5 text-muted/80" />
             <Input
               label="إكس (تويتر)"
               value={values.social_x_url || ""}

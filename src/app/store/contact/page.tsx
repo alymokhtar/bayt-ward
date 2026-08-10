@@ -3,7 +3,7 @@ import { StorePageHero } from "@/components/store/StoreSections";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { STORE_NAME_AR } from "@/lib/constants";
-import { MessageCircle, Phone, Mail, MapPin, Facebook, Instagram, Youtube, Twitter, Link as LinkIcon } from "lucide-react";
+import { MessageCircle, Phone, Mail, MapPin, Globe2, Camera as CameraIcon, Music2, PlayCircle, Bird } from "lucide-react";
 
 export const revalidate = 60;
 
@@ -103,32 +103,32 @@ export default async function ContactPage() {
               <div className="mt-2 flex items-center gap-4">
                 {settings.social_facebook_url && (
                   <a href={settings.social_facebook_url} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                    <Facebook className="h-6 w-6 text-[var(--store-gold)]" />
+                    <Globe2 className="h-6 w-6 text-[var(--store-gold)]" />
                   </a>
                 )}
                 {settings.social_instagram_url && (
                   <a href={settings.social_instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                    <Instagram className="h-6 w-6 text-[var(--store-gold)]" />
+                    <CameraIcon className="h-6 w-6 text-[var(--store-gold)]" />
                   </a>
                 )}
                 {settings.social_tiktok_url && (
                   <a href={settings.social_tiktok_url} target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-                    <LinkIcon className="h-6 w-6 text-[var(--store-gold)]" />
+                    <Music2 className="h-6 w-6 text-[var(--store-gold)]" />
                   </a>
                 )}
                 {settings.social_youtube_url && (
                   <a href={settings.social_youtube_url} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-                    <Youtube className="h-6 w-6 text-[var(--store-gold)]" />
+                    <PlayCircle className="h-6 w-6 text-[var(--store-gold)]" />
                   </a>
                 )}
                 {settings.social_snapchat_url && (
                   <a href={settings.social_snapchat_url} target="_blank" rel="noopener noreferrer" aria-label="Snapchat">
-                    <LinkIcon className="h-6 w-6 text-[var(--store-gold)]" />
+                    <CameraIcon className="h-6 w-6 text-[var(--store-gold)]" />
                   </a>
                 )}
                 {settings.social_x_url && (
                   <a href={settings.social_x_url} target="_blank" rel="noopener noreferrer" aria-label="X">
-                    <Twitter className="h-6 w-6 text-[var(--store-gold)]" />
+                    <Bird className="h-6 w-6 text-[var(--store-gold)]" />
                   </a>
                 )}
               </div>

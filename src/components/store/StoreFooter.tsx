@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Camera, MessageCircle, Music2, Facebook, Instagram, Youtube, Twitter, Link as LinkIcon } from "lucide-react";
+import { Camera, MessageCircle, Music2, Globe2, Camera as CameraIcon, PlayCircle, Bird } from "lucide-react";
 import { STORE_NAME, STORE_NAME_AR } from "@/lib/constants";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 
@@ -32,32 +32,32 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
         <div className="flex items-center justify-center gap-4 text-[var(--store-muted)] md:justify-start">
           {settings.social_facebook_url ? (
             <a href={settings.social_facebook_url} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-              <Facebook className="h-5 w-5" />
+              <Globe2 className="h-5 w-5" />
             </a>
           ) : null}
           {settings.social_instagram_url ? (
             <a href={settings.social_instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-              <Instagram className="h-5 w-5" />
+              <CameraIcon className="h-5 w-5" />
             </a>
           ) : null}
           {settings.social_tiktok_url ? (
             <a href={settings.social_tiktok_url} target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-              <LinkIcon className="h-5 w-5" />
+              <Music2 className="h-5 w-5" />
             </a>
           ) : null}
           {settings.social_youtube_url ? (
             <a href={settings.social_youtube_url} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-              <Youtube className="h-5 w-5" />
+              <PlayCircle className="h-5 w-5" />
             </a>
           ) : null}
           {settings.social_snapchat_url ? (
             <a href={settings.social_snapchat_url} target="_blank" rel="noopener noreferrer" aria-label="Snapchat">
-              <LinkIcon className="h-5 w-5" />
+              <CameraIcon className="h-5 w-5" />
             </a>
           ) : null}
           {settings.social_x_url ? (
             <a href={settings.social_x_url} target="_blank" rel="noopener noreferrer" aria-label="X">
-              <Twitter className="h-5 w-5" />
+              <Bird className="h-5 w-5" />
             </a>
           ) : null}
           {!settings.social_facebook_url && !settings.social_instagram_url && !settings.social_tiktok_url && !settings.social_youtube_url && !settings.social_snapchat_url && !settings.social_x_url && (
