@@ -60,6 +60,44 @@ function isValidShareUrl(url: string): boolean {
   }
 }
 
+function extractCoordinatesFromPb(pb: string) {
+  const latMatch = pb.match(/!3d(-?\d+(?:\.\d+)?)/);
+  const lngMatch = pb.match(/!2d(-?\d+(?:\.\d+)?)/);
+  const placeMatch = pb.match(/!2s([^!]+)/);
+
+  return {
+    lat: latMatch ? latMatch[1] : null,
+    lng: lngMatch ? lngMatch[1] : null,
+    placeName: placeMatch ? placeMatch[1] : null,
+  };
+}
+
+function buildShareUrlFromEmbedUrl(embeddedUrl: string): string | null {
+  try {
+    const urlObj = new URL(embeddedUrl);
+    const pb = urlObj.searchParams.get('pb');
+
+    if (!pb) {
+      return null;
+    }
+
+    const { lat, lng, placeName } = extractCoordinatesFromPb(pb);
+
+    if (lat && lng) {
+      return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+    }
+
+    if (placeName) {
+      const decodedPlaceName = decodeURIComponent(placeName);
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(decodedPlaceName)}`;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Process a Google Maps URL/embed code and determine how to display it
  * 
@@ -81,9 +119,11 @@ export function processGoogleMapsUrl(input: string | null | undefined): GoogleMa
   if (trimmed.toLowerCase().includes('<iframe')) {
     const srcUrl = extractSrcFromIframe(trimmed);
     if (srcUrl && isEmbedUrl(srcUrl)) {
+      const shareUrlFromEmbed = buildShareUrlFromEmbedUrl(srcUrl);
       return {
         type: 'embed',
         embedUrl: srcUrl,
+        shareUrl: shareUrlFromEmbed ?? undefined,
         isValid: true,
       };
     }
@@ -96,9 +136,12 @@ export function processGoogleMapsUrl(input: string | null | undefined): GoogleMa
 
   // Check if it's already an embed URL
   if (isEmbedUrl(trimmed)) {
+    const shareUrlFromEmbed = buildShareUrlFromEmbedUrl(trimmed);
+
     return {
       type: 'embed',
       embedUrl: trimmed,
+      shareUrl: shareUrlFromEmbed ?? undefined,
       isValid: true,
     };
   }
@@ -165,5 +208,5 @@ export function getEmbedUrl(input: string | null | undefined): string | null {
  */
 export function getShareUrl(input: string | null | undefined): string | null {
   const processed = processGoogleMapsUrl(input);
-  return processed.type === 'card' ? processed.shareUrl ?? null : null;
+  return processed.shareUrl ?? null;
 }

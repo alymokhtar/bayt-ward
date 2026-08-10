@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:maps": "node --test src/lib/maps-utils.test.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:bootstrap": "tsx prisma/bootstrap.ts",
     "db:backfill-colors": "tsx prisma/backfill-product-colors.ts",
