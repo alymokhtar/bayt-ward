@@ -30,43 +30,69 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
     <footer className="border-t border-[var(--store-border)] bg-[#f1eadf] text-[var(--store-text)]">
       <div className="store-container grid items-center gap-6 py-7 md:grid-cols-3">
         <div className="flex items-center justify-center gap-4 text-[var(--store-muted)] md:justify-start">
-          {settings.social_facebook_url ? (
-            <a href={settings.social_facebook_url} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-              <Globe2 className="h-5 w-5" />
-            </a>
-          ) : null}
-          {settings.social_instagram_url ? (
-            <a href={settings.social_instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-              <CameraIcon className="h-5 w-5" />
-            </a>
-          ) : null}
-          {settings.social_tiktok_url ? (
-            <a href={settings.social_tiktok_url} target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-              <Music2 className="h-5 w-5" />
-            </a>
-          ) : null}
-          {settings.social_youtube_url ? (
-            <a href={settings.social_youtube_url} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-              <PlayCircle className="h-5 w-5" />
-            </a>
-          ) : null}
-          {settings.social_snapchat_url ? (
-            <a href={settings.social_snapchat_url} target="_blank" rel="noopener noreferrer" aria-label="Snapchat">
-              <CameraIcon className="h-5 w-5" />
-            </a>
-          ) : null}
-          {settings.social_x_url ? (
-            <a href={settings.social_x_url} target="_blank" rel="noopener noreferrer" aria-label="X">
-              <Bird className="h-5 w-5" />
-            </a>
-          ) : null}
-          {!settings.social_facebook_url && !settings.social_instagram_url && !settings.social_tiktok_url && !settings.social_youtube_url && !settings.social_snapchat_url && !settings.social_x_url && (
-            <>
-              <Camera className="h-5 w-5" aria-hidden="true" />
-              <MessageCircle className="h-5 w-5" aria-hidden="true" />
-              <Music2 className="h-5 w-5" aria-hidden="true" />
-            </>
-          )}
+          {/** Helper: Social icon wrapper that implements hybrid hover interaction */}
+          {(() => {
+            const IconWrap = ({ href, label, title, children, hoverClasses = "" }: any) => (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                title={title}
+                className={`inline-flex items-center justify-center h-9 w-9 rounded-full bg-[#f7efe6] text-[var(--store-text)] transition-transform duration-200 transform hover:scale-110 ${hoverClasses}`}
+              >
+                {children}
+              </a>
+            );
+
+            return (
+              <>
+                {settings.social_facebook_url && (
+                  <IconWrap href={settings.social_facebook_url} label="Facebook" title="فيسبوك" hoverClasses="hover:bg-[#1877F2] hover:text-white">
+                    <Globe2 className="h-5 w-5" />
+                  </IconWrap>
+                )}
+                {settings.social_instagram_url && (
+                  <IconWrap href={settings.social_instagram_url} label="Instagram" title="انستغرام" hoverClasses="hover:bg-gradient-to-r hover:from-[#E4405F] hover:to-[#833AB4] hover:text-white">
+                    <CameraIcon className="h-5 w-5" />
+                  </IconWrap>
+                )}
+                {settings.social_tiktok_url && (
+                  <IconWrap href={settings.social_tiktok_url} label="TikTok" title="تيك توك" hoverClasses="hover:bg-[#000000] hover:text-white">
+                    <Music2 className="h-5 w-5" />
+                  </IconWrap>
+                )}
+                {settings.social_youtube_url && (
+                  <IconWrap href={settings.social_youtube_url} label="YouTube" title="يوتيوب" hoverClasses="hover:bg-[#FF0000] hover:text-white">
+                    <PlayCircle className="h-5 w-5" />
+                  </IconWrap>
+                )}
+                {settings.social_snapchat_url && (
+                  <IconWrap href={settings.social_snapchat_url} label="Snapchat" title="سناب شات" hoverClasses="hover:bg-[#FFFC00] hover:text-black">
+                    <CameraIcon className="h-5 w-5" />
+                  </IconWrap>
+                )}
+                {settings.social_x_url && (
+                  <IconWrap href={settings.social_x_url} label="X" title="إكس" hoverClasses="hover:bg-[#000000] hover:text-white">
+                    <Bird className="h-5 w-5" />
+                  </IconWrap>
+                )}
+                {!settings.social_facebook_url && !settings.social_instagram_url && !settings.social_tiktok_url && !settings.social_youtube_url && !settings.social_snapchat_url && !settings.social_x_url && (
+                  <>
+                    <span className="inline-flex items-center justify-center h-9 w-9 rounded-full bg-[#f7efe6] text-[var(--store-text)]">
+                      <Camera className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="inline-flex items-center justify-center h-9 w-9 rounded-full bg-[#f7efe6] text-[var(--store-text)]">
+                      <MessageCircle className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="inline-flex items-center justify-center h-9 w-9 rounded-full bg-[#f7efe6] text-[var(--store-text)]">
+                      <Music2 className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <Link href={STORE_BASE_PATH} className="mx-auto flex flex-col items-center" aria-label={storeName}>

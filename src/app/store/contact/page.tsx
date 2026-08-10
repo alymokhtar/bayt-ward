@@ -101,36 +101,55 @@ export default async function ContactPage() {
                 حساباتنا على مواقع التواصل الاجتماعي
               </p>
               <div className="mt-2 flex items-center gap-4">
-                {settings.social_facebook_url && (
-                  <a href={settings.social_facebook_url} target="_blank" rel="noopener noreferrer" aria-label="Facebook">
-                    <Globe2 className="h-6 w-6 text-[var(--store-gold)]" />
-                  </a>
-                )}
-                {settings.social_instagram_url && (
-                  <a href={settings.social_instagram_url} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-                    <CameraIcon className="h-6 w-6 text-[var(--store-gold)]" />
-                  </a>
-                )}
-                {settings.social_tiktok_url && (
-                  <a href={settings.social_tiktok_url} target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-                    <Music2 className="h-6 w-6 text-[var(--store-gold)]" />
-                  </a>
-                )}
-                {settings.social_youtube_url && (
-                  <a href={settings.social_youtube_url} target="_blank" rel="noopener noreferrer" aria-label="YouTube">
-                    <PlayCircle className="h-6 w-6 text-[var(--store-gold)]" />
-                  </a>
-                )}
-                {settings.social_snapchat_url && (
-                  <a href={settings.social_snapchat_url} target="_blank" rel="noopener noreferrer" aria-label="Snapchat">
-                    <CameraIcon className="h-6 w-6 text-[var(--store-gold)]" />
-                  </a>
-                )}
-                {settings.social_x_url && (
-                  <a href={settings.social_x_url} target="_blank" rel="noopener noreferrer" aria-label="X">
-                    <Bird className="h-6 w-6 text-[var(--store-gold)]" />
-                  </a>
-                )}
+                {(() => {
+                  const IconWrap = ({ href, label, title, children, hoverClasses = "" }: any) => (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      title={title}
+                      className={`inline-flex items-center justify-center h-9 w-9 rounded-full bg-[#f7efe6] text-[var(--store-text)] transition-transform duration-200 transform hover:scale-110 ${hoverClasses}`}
+                    >
+                      {children}
+                    </a>
+                  );
+
+                  return (
+                    <>
+                      {settings.social_facebook_url && (
+                        <IconWrap href={settings.social_facebook_url} label="Facebook" title="فيسبوك" hoverClasses="hover:bg-[#1877F2] hover:text-white">
+                          <Globe2 className="h-5 w-5" />
+                        </IconWrap>
+                      )}
+                      {settings.social_instagram_url && (
+                        <IconWrap href={settings.social_instagram_url} label="Instagram" title="انستغرام" hoverClasses="hover:bg-gradient-to-r hover:from-[#E4405F] hover:to-[#833AB4] hover:text-white">
+                          <CameraIcon className="h-5 w-5" />
+                        </IconWrap>
+                      )}
+                      {settings.social_tiktok_url && (
+                        <IconWrap href={settings.social_tiktok_url} label="TikTok" title="تيك توك" hoverClasses="hover:bg-[#000000] hover:text-white">
+                          <Music2 className="h-5 w-5" />
+                        </IconWrap>
+                      )}
+                      {settings.social_youtube_url && (
+                        <IconWrap href={settings.social_youtube_url} label="YouTube" title="يوتيوب" hoverClasses="hover:bg-[#FF0000] hover:text-white">
+                          <PlayCircle className="h-5 w-5" />
+                        </IconWrap>
+                      )}
+                      {settings.social_snapchat_url && (
+                        <IconWrap href={settings.social_snapchat_url} label="Snapchat" title="سناب شات" hoverClasses="hover:bg-[#FFFC00] hover:text-black">
+                          <CameraIcon className="h-5 w-5" />
+                        </IconWrap>
+                      )}
+                      {settings.social_x_url && (
+                        <IconWrap href={settings.social_x_url} label="X" title="إكس" hoverClasses="hover:bg-[#000000] hover:text-white">
+                          <Bird className="h-5 w-5" />
+                        </IconWrap>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
