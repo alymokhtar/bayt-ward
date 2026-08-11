@@ -83,8 +83,8 @@ export default function StoreHeader({ settings, categories }: StoreHeaderProps) 
                 priority
               />
             </span>
-            <span className="font-[Cairo,serif] text-base font-semibold leading-none tracking-[0.12em] text-[var(--store-text)] sm:text-lg md:text-xl" style={{ fontWeight: "bold" }}>
-               يبت ورد
+            <span className="font-[Cairo,serif] text-base font-semibold leading-none text-[var(--store-text)] sm:text-lg md:text-xl" style={{ fontWeight: "bold" }} dir="rtl">
+               بيت ورد
             </span>
           </Link>
         </div>

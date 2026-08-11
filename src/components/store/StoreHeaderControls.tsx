@@ -244,7 +244,7 @@ export default function StoreHeaderControls({
             <aside className="fixed top-0 left-0 h-screen w-full max-w-sm bg-white shadow-2xl z-[100] flex flex-col" role="dialog" aria-modal="true" aria-label="سلة التسوق">
               <div className="flex items-center justify-between border-b border-[var(--store-border)] px-5 py-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--store-gold)]">Bayt Ward</p>
+                  <p className="text-xs font-semibold text-[var(--store-gold)]" dir="rtl">بيت ورد</p>
                   <h2 className="store-serif text-xl font-semibold text-[var(--store-text)]">سلة التسوق</h2>
                 </div>
                 <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--store-border)] bg-white text-[var(--store-text)]" onClick={() => setCartOpen(false)} aria-label="إغلاق السلة">

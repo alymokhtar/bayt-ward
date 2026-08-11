@@ -186,8 +186,7 @@ export default function ProductDetailClient({
 
       <div className="min-w-0 space-y-6">
         <div className="space-y-2">
-          <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] uppercase tracking-[0.35em] text-[var(--store-gold)]">
-            {product.category.nameAr || product.category.name}
+            <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] text-[var(--store-gold)]" dir="rtl">
           </p>
           {product.brand && (
             <p className="text-sm text-[var(--store-muted)]">{product.brand}</p>
@@ -237,8 +236,8 @@ export default function ProductDetailClient({
 
         {product.description && (
           <div className="space-y-2 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.2em]">الوصف</h2>
-            <p className="text-sm leading-7 text-[var(--store-muted)] whitespace-pre-line">
+            <h2 className="text-sm font-semibold">الوصف</h2>
+            <p className="text-sm leading-7 text-[var(--store-muted)] whitespace-pre-line" dir="rtl">
               {product.description}
             </p>
           </div>
