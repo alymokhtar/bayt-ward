@@ -186,7 +186,8 @@ export default function ProductDetailClient({
 
       <div className="min-w-0 space-y-6">
         <div className="space-y-2">
-            <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] text-[var(--store-gold)]" dir="rtl">
+          <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] text-[var(--store-gold)]" dir="rtl">
+            {product.category.nameAr?.trim() || product.category.name?.trim() || "القسم"}
           </p>
           {product.brand && (
             <p className="text-sm text-[var(--store-muted)]">{product.brand}</p>
