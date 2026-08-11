@@ -40,7 +40,7 @@ export default async function ContactPage() {
         <div className="store-shell space-y-4 p-8 md:p-10">
           {settings.store_phone && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+              <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
                 الهاتف
               </p>
               <a
@@ -55,7 +55,7 @@ export default async function ContactPage() {
           )}
           {whatsappNumber && whatsappHref && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+              <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
                 واتساب
               </p>
               <a
@@ -72,7 +72,7 @@ export default async function ContactPage() {
           )}
           {(settings.social_facebook_url || settings.social_instagram_url || settings.social_tiktok_url || settings.social_youtube_url || settings.social_snapchat_url || settings.social_x_url) && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+              <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
                 حساباتنا على مواقع التواصل الاجتماعي
               </p>
               <div className="mt-2 flex items-center gap-4">
@@ -130,7 +130,7 @@ export default async function ContactPage() {
           )}
           {settings.store_email && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+              <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
                 البريد
               </p>
               <a
@@ -145,7 +145,7 @@ export default async function ContactPage() {
           )}
           {settings.store_address && mapShareUrl && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4 transition-all shadow-sm hover:border-amber-700/40 cursor-pointer">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+              <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
                 العنوان
               </p>
               <a
@@ -162,7 +162,7 @@ export default async function ContactPage() {
           {/* Google Maps Section */}
           {mapsData.isValid && mapsData.type === 'embed' && mapsData.embedUrl && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4 overflow-hidden">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+              <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
                 الموقع على الخريطة
               </p>
               <div className="mt-4">
@@ -180,7 +180,7 @@ export default async function ContactPage() {
           )}
           {mapsData.isValid && mapsData.type === 'card' && mapsData.shareUrl && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
-              <p className="text-[11px] uppercase tracking-[0.25em] text-[var(--store-gold)]">
+              <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
                 الموقع على الخريطة
               </p>
               <div className="mt-4 flex flex-col gap-3 items-center text-center">
