@@ -37,7 +37,7 @@ export default async function ContactPage() {
         description="نسعد بخدمتكِ — تواصلي معنا في أي وقت"
       />
       <section className="store-container max-w-xl pb-20">
-        <div className="store-shell space-y-4 p-8 md:p-10">
+        <div className="store-shell space-y-4 p-4 md:p-10">
           {settings.store_phone && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
               <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
