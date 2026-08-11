@@ -25,7 +25,7 @@ export default function StoreFooter({ settings }: StoreFooterProps) {
   const year = new Date().getFullYear();
 
   const whatsappHref = whatsappNumber
-    ? getWhatsAppUrl(whatsappNumber, "السلام عليكم، أرغب في التواصل مع بيت ورد.")
+    ? getWhatsAppUrl(whatsappNumber, "مرحباً، أرغب في التواصل مع بيت ورد.")
     : `${STORE_BASE_PATH}/contact`;
 
   // Get maps URL if it's a share URL
