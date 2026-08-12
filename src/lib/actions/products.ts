@@ -637,42 +637,84 @@ function isNumericQuery(value: string) {
   return trimmed.length > 0 && /^[0-9]+$/.test(trimmed);
 }
 
+export function flattenProductSearchResults(
+  products: Array<{
+    id: string;
+    name: string;
+    nameAr: string | null;
+    variants: Array<{
+      id: string;
+      sku: string;
+      barcode: string | null;
+      size: string;
+      color: string;
+      costPrice: number;
+      sellingPrice: number;
+      stockQuantity: number;
+      isActive?: boolean;
+    }>;
+  }>
+) {
+  return products.flatMap((product) =>
+    product.variants.map((variant) => ({
+      ...variant,
+      product: {
+        id: product.id,
+        name: product.name,
+        nameAr: product.nameAr,
+      },
+    }))
+  );
+}
+
 export async function searchVariants(query: string) {
   await requireAuth();
 
   const q = query?.trim();
   if (!q) return [];
 
-  if (isNumericQuery(q)) {
-    const exactMatch = await prisma.productVariant.findFirst({
-      where: {
-        isActive: true,
-        product: { isActive: true },
-        OR: [{ barcode: q }, { sku: q }],
+  const products = await prisma.product.findMany({
+    where: {
+      isActive: true,
+      OR: [
+        { name: { contains: q } },
+        { nameAr: { contains: q } },
+        {
+          variants: {
+            some: {
+              isActive: true,
+              OR: [
+                { sku: isNumericQuery(q) ? q : { contains: q } },
+                { barcode: isNumericQuery(q) ? q : { contains: q } },
+              ],
+            },
+          },
+        },
+      ],
+    },
+    take: 20,
+    orderBy: [{ name: "asc" }, { nameAr: "asc" }],
+    include: {
+      variants: {
+        where: { isActive: true },
+        orderBy: [{ size: "asc" }, { color: "asc" }, { sku: "asc" }],
       },
-      select: variantSearchSelect,
-    });
+    },
+  });
+
+  const results = flattenProductSearchResults(products);
+
+  if (isNumericQuery(q) && results.length > 0) {
+    const exactMatch = results.find(
+      (variant) => variant.barcode === q || variant.sku === q
+    );
 
     if (exactMatch) {
       return [exactMatch];
     }
   }
 
-  return prisma.productVariant.findMany({
-    where: {
-      isActive: true,
-      product: { isActive: true },
-      OR: [
-        { sku: { contains: q } },
-        { barcode: { contains: q } },
-        { product: { name: { contains: q } } },
-        { product: { nameAr: { contains: q } } },
-      ],
-    },
-    take: 20,
-    select: variantSearchSelect,
-    orderBy: { sku: "asc" },
-  });
+  return results;
 }
 
 const variantSearchSelect = {
