@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { flattenProductSearchResults } from "@/lib/product-search";
+import {
+  flattenProductSearchResults,
+  isLikelyVariantCodeQuery,
+} from "@/lib/product-search";
 
 test("keeps all variants for a matched product when the name matches", () => {
   const products = [
@@ -42,4 +45,12 @@ test("keeps all variants for a matched product when the name matches", () => {
     ["v1", "v2"].sort()
   );
   assert.equal(results[0].product.nameAr, "تي شيرت");
+});
+
+test("treats barcode and SKU values as direct variant lookups, not product-name searches", () => {
+  assert.equal(isLikelyVariantCodeQuery("BC-00001"), true);
+  assert.equal(isLikelyVariantCodeQuery("BW-00012"), true);
+  assert.equal(isLikelyVariantCodeQuery("12345"), true);
+  assert.equal(isLikelyVariantCodeQuery("تي شيرت"), false);
+  assert.equal(isLikelyVariantCodeQuery("Classic Tee"), false);
 });

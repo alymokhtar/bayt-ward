@@ -10,7 +10,10 @@ import {
 import { invalidateProductsData } from "@/lib/revalidate-tags";
 import { syncProductColors } from "@/lib/product-color-sync";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
-import { flattenProductSearchResults } from "@/lib/product-search";
+import {
+  flattenProductSearchResults,
+  isLikelyVariantCodeQuery,
+} from "@/lib/product-search";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -643,6 +646,30 @@ export async function searchVariants(query: string) {
 
   const q = query?.trim();
   if (!q) return [];
+
+  if (isLikelyVariantCodeQuery(q)) {
+    const variants = await prisma.productVariant.findMany({
+      where: {
+        isActive: true,
+        product: { isActive: true },
+        OR: [{ barcode: q }, { sku: q }],
+      },
+      select: {
+        ...variantSearchSelect,
+      },
+      take: 20,
+      orderBy: [{ sku: "asc" }, { barcode: "asc" }],
+    });
+
+    return variants.map((variant) => ({
+      ...variant,
+      product: {
+        id: variant.product.id,
+        name: variant.product.name,
+        nameAr: variant.product.nameAr,
+      },
+    }));
+  }
 
   const products = await prisma.product.findMany({
     where: {
