@@ -140,10 +140,6 @@ export default function POSClient({
     setShowNewCustomer(true);
   }
 
-  const isBarcodeQuery = (value: string) => {
-    const trimmed = value.trim();
-    return trimmed.length > 0 && /^[0-9]+$/.test(trimmed);
-  };
 
   const doSearch = useCallback(async (q: string) => {
     if (!q.trim()) {
