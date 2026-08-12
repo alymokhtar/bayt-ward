@@ -184,14 +184,10 @@ export default function POSClient({
 
     setQuery(nextValue);
 
-    if (!isBarcodeQuery(nextValue)) {
-      console.log("Non-numeric search path triggered.");
-      const data = await searchVariants(nextValue);
-      setResults(data);
-      setError("");
-      return;
-    }
-
+    // Always treat the submitted value as an exact scan/code (SKU/Variant code)
+    // and attempt to resolve it directly. This bypasses the previous
+    // numeric-only gating which caused alphanumeric codes (eg. "BW-00008")
+    // to fall back to a general text search.
     await resolveScanAndAdd(nextValue);
   }
 
