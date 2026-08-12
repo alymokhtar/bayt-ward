@@ -59,6 +59,7 @@ export default function PurchasesClient({
 }: PurchasesClientProps) {
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
+  const quantityRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [modalOpen, setModalOpen] = useState(false);
   const [supplierId, setSupplierId] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([]);
@@ -127,7 +128,19 @@ export default function PurchasesClient({
     setQuery("");
     setResults([]);
     setError("");
-    focusBarcodeInput();
+    // After adding, focus the quantity input for the newly added variant (keyboard-first)
+    setTimeout(() => {
+      const el = quantityRefs.current[variant.id];
+      if (el) {
+        el.focus();
+        try {
+          el.select();
+        } catch {}
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+      } else {
+        focusBarcodeInput();
+      }
+    }, 50);
   }
 
   async function resolveAndAdd(queryText: string) {
@@ -319,40 +332,38 @@ export default function PurchasesClient({
             </div>
           )}
 
-          <Select
-            label="المورد"
-            options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
-            value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
-            placeholder="اختر المورد"
-            required
-          />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <label className="text-sm font-medium text-brown">
-                إضافة منتج
-              </label>
-              {items.length > 0 && (
-                <span className="text-xs text-muted">
-                  {items.length} منتج في الأمر
-                </span>
-              )}
-            </div>
-            <div className="relative">
-              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-              <input
-                ref={searchRef}
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setError("");
-                }}
-                onKeyDown={handleSearchKeyDown}
-              placeholder="امسح الباركود أو ابحث بالـ SKU أو اسم المنتج ثم Enter..."
-              className="w-full h-11 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
-              autoComplete="off"
+          <div className="sticky top-0 z-40 bg-white/95 pt-2 pb-3 -mx-4 px-4">
+            <div className="space-y-2">
+              <Select
+                label="المورد"
+                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                value={supplierId}
+                onChange={(e) => setSupplierId(e.target.value)}
+                placeholder="اختر المورد"
+                required
               />
+
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium text-brown">إضافة منتج</label>
+                {items.length > 0 && (
+                  <span className="text-xs text-muted">{items.length} منتج في الأمر</span>
+                )}
+              </div>
+              <div className="relative">
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+                <input
+                  ref={searchRef}
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setError("");
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="امسح الباركود أو ابحث بالـ SKU أو اسم المنتج ثم Enter..."
+                  className="w-full h-11 rounded-lg border border-border bg-white ps-10 pe-4 text-sm focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
+                  autoComplete="off"
+                />
+              </div>
             </div>
           </div>
 
@@ -418,10 +429,22 @@ export default function PurchasesClient({
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     <Input
+                      ref={(el) => (quantityRefs.current[item.variant.id] = el)}
                       label="الكمية"
                       type="number"
                       min={1}
                       value={item.quantity}
+                      onFocus={(e) => {
+                        try {
+                          (e.target as HTMLInputElement).select();
+                        } catch {}
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          focusAddProduct();
+                        }
+                      }}
                       onChange={(e) =>
                         updateItem(
                           item.variant.id,
