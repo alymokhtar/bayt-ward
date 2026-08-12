@@ -338,14 +338,14 @@ export default function PurchasesClient({
           </div>
         }
       >
-        <form id="purchase-order-form" onSubmit={handleCreate} className="flex-1 overflow-y-auto space-y-4">
+        <form id="purchase-order-form" onSubmit={handleCreate} className="flex-1 overflow-y-auto overflow-x-hidden space-y-4">
           {error && (
             <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger">
               {error}
             </div>
           )}
 
-          <div className="sticky top-0 z-40 bg-white/95 pt-2 pb-3 -mx-4 px-4">
+          <div className="sticky top-0 z-40 bg-white/95 pt-2 pb-3 px-4">
             <div className="space-y-2">
               <Select
                 label="المورد"
@@ -354,6 +354,7 @@ export default function PurchasesClient({
                 onChange={(e) => setSupplierId(e.target.value)}
                 placeholder="اختر المورد"
                 required
+                className="w-full max-w-full"
               />
 
               <div className="flex items-center justify-between gap-2">
@@ -513,6 +514,7 @@ export default function PurchasesClient({
             label="ملاحظات"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            className="w-full max-w-full"
           />
         </form>
       </Modal>
