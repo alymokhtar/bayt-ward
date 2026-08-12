@@ -113,7 +113,7 @@ export default function ProductGallery({
         )}
 
         <div className="mt-3 rounded-[1.75rem] bg-white/95 px-3 py-3 shadow-sm shadow-[rgba(111,80,47,0.08)]">
-          <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar py-1 flex-nowrap md:flex-wrap md:max-h-28">
+          <div className="flex flex-wrap items-center gap-1.5 py-1">
             {colorVariants.map((variant) => {
               const isActive = variant.name === selectedColor;
               return (
@@ -123,7 +123,7 @@ export default function ProductGallery({
                   onClick={() => handleColorChange(variant.name)}
                   aria-label={variant.name}
                   aria-pressed={isActive}
-                  className={`flex h-11 w-11 min-w-[2.75rem] min-h-[2.75rem] flex-none items-center justify-center rounded-full transition duration-150 ease-out active:scale-90 ${
+                  className={`flex h-6 w-6 min-w-[1.5rem] min-h-[1.5rem] flex-none items-center justify-center rounded-full transition duration-150 ease-out active:scale-90 ${
                     isActive
                       ? "ring-2 ring-[rgba(255,190,135,0.95)]"
                       : "ring-1 ring-white hover:ring-[rgba(249,166,75,0.35)]"
