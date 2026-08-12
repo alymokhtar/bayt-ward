@@ -429,7 +429,9 @@ export default function PurchasesClient({
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     <Input
-                      ref={(el) => (quantityRefs.current[item.variant.id] = el)}
+                      ref={(el) => {
+                        quantityRefs.current[item.variant.id] = el;
+                      }}
                       label="الكمية"
                       type="number"
                       min={1}
