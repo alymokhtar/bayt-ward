@@ -330,7 +330,7 @@ export async function createProduct(data: {
           .map((variant) => ({
             variantId: variant.id,
             userId: user.id,
-            type: "ADJUSTMENT",
+            type: "ADJUSTMENT" as const,
             quantity: variant.stockQuantity,
             previousQty: 0,
             newQty: variant.stockQuantity,
