@@ -162,7 +162,7 @@ export default function POSClient({
   }, [query, doSearch]);
 
   async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
+    if (e.key !== "Enter" && e.key !== "Tab") return;
     e.preventDefault();
     if (!isBarcodeQuery(query)) return;
     await resolveScanAndAdd(query);

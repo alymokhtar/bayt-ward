@@ -150,7 +150,7 @@ export default function PurchasesClient({
   }
 
   async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter") return;
+    if (e.key !== "Enter" && e.key !== "Tab") return;
     e.preventDefault();
     setError("");
     await resolveAndAdd(query);
