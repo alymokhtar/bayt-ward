@@ -7,6 +7,7 @@ import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
 import { createSale } from "@/lib/actions/sales";
 import { createCustomer, searchCustomers } from "@/lib/actions/customers";
 import { searchVariants } from "@/lib/actions/products";
+import { useBarcodeScanner } from "@/lib/barcode-scanner";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency } from "@/lib/utils";
 import type { PaymentMethod } from "@prisma/client";
@@ -161,11 +162,20 @@ export default function POSClient({
     return () => clearTimeout(timer);
   }, [query, doSearch]);
 
+  const { handleKeyDown: handleBarcodeKeyDown, focusInput: focusBarcodeInput } =
+    useBarcodeScanner(async (value) => {
+      if (!isBarcodeQuery(value)) {
+        const data = await searchVariants(value);
+        setResults(data);
+        setError("");
+        return;
+      }
+
+      await resolveScanAndAdd(value);
+    }, searchRef);
+
   async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter" && e.key !== "Tab") return;
-    e.preventDefault();
-    if (!isBarcodeQuery(query)) return;
-    await resolveScanAndAdd(query);
+    await handleBarcodeKeyDown(e);
   }
 
   useEffect(() => {
@@ -181,8 +191,8 @@ export default function POSClient({
   }, [customerQuery]);
 
   useEffect(() => {
-    searchRef.current?.focus();
-  }, []);
+    focusBarcodeInput();
+  }, [focusBarcodeInput]);
 
   function addToCart(variant: VariantResult) {
     setCart((prev) => {
@@ -203,7 +213,7 @@ export default function POSClient({
     setQuery("");
     setResults([]);
     setError("");
-    searchRef.current?.focus();
+    focusBarcodeInput();
   }
 
   async function resolveScanAndAdd(code: string) {

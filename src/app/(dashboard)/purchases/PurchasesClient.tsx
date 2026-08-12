@@ -16,6 +16,7 @@ import {
 import { createPurchase, receivePurchase } from "@/lib/actions/purchases";
 import PurchaseDetailsModal from "@/app/(dashboard)/purchases/PurchaseDetailsModal";
 import { searchVariants } from "@/lib/actions/products";
+import { useBarcodeScanner } from "@/lib/barcode-scanner";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { PackageCheck, Plus, Search, Trash2 } from "lucide-react";
@@ -89,17 +90,23 @@ export default function PurchasesClient({
     return () => clearTimeout(t);
   }, [query, doSearch]);
 
+  const { handleKeyDown: handleBarcodeKeyDown, focusInput: focusBarcodeInput } =
+    useBarcodeScanner(async (value) => {
+      setError("");
+      await resolveAndAdd(value);
+    }, searchRef);
+
   useEffect(() => {
     if (modalOpen) {
-      setTimeout(() => searchRef.current?.focus(), 100);
+      setTimeout(() => focusBarcodeInput(), 100);
     }
-  }, [modalOpen]);
+  }, [modalOpen, focusBarcodeInput]);
 
   function focusAddProduct() {
     setQuery("");
     setResults([]);
     setError("");
-    setTimeout(() => searchRef.current?.focus(), 0);
+    focusBarcodeInput();
   }
 
   function addItem(variant: VariantResult) {
@@ -120,7 +127,7 @@ export default function PurchasesClient({
     setQuery("");
     setResults([]);
     setError("");
-    searchRef.current?.focus();
+    focusBarcodeInput();
   }
 
   async function resolveAndAdd(queryText: string) {
@@ -150,10 +157,7 @@ export default function PurchasesClient({
   }
 
   async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== "Enter" && e.key !== "Tab") return;
-    e.preventDefault();
-    setError("");
-    await resolveAndAdd(query);
+    await handleBarcodeKeyDown(e);
   }
 
   function updateItem(
