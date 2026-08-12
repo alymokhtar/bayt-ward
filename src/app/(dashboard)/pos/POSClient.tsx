@@ -168,26 +168,21 @@ export default function POSClient({
 
   async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     const inputValue = e.currentTarget.value ?? "";
-    console.log("Key down detected:", e.key, "Query:", query, "Input value:", inputValue);
 
     if (e.key !== "Enter" && e.key !== "Tab") return;
 
     e.preventDefault();
 
     const nextValue = inputValue.trim();
-    console.log("Barcode submit value:", nextValue);
 
     if (!nextValue) {
-      console.log("Barcode submit aborted: empty value.");
       return;
     }
 
     setQuery(nextValue);
 
     // Always treat the submitted value as an exact scan/code (SKU/Variant code)
-    // and attempt to resolve it directly. This bypasses the previous
-    // numeric-only gating which caused alphanumeric codes (eg. "BW-00008")
-    // to fall back to a general text search.
+    // and attempt to resolve it directly.
     await resolveScanAndAdd(nextValue);
   }
 
