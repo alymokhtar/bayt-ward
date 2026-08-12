@@ -70,6 +70,8 @@ export default function PurchasesClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+  const [focusVariantId, setFocusVariantId] = useState<string | null>(null);
+  const [flashVariantId, setFlashVariantId] = useState<string | null>(null);
 
   const subtotal = items.reduce(
     (sum, i) => sum + i.unitCost * i.quantity,
@@ -99,7 +101,9 @@ export default function PurchasesClient({
 
   useEffect(() => {
     if (modalOpen) {
-      setTimeout(() => focusBarcodeInput(), 100);
+      // Use RAF to focus the barcode input when the modal is opened
+      // This avoids arbitrary timeouts and waits for the browser to paint the modal
+      requestAnimationFrame(() => focusBarcodeInput());
     }
   }, [modalOpen, focusBarcodeInput]);
 
@@ -128,20 +132,29 @@ export default function PurchasesClient({
     setQuery("");
     setResults([]);
     setError("");
-    // After adding, focus the quantity input for the newly added variant (keyboard-first)
-    setTimeout(() => {
-      const el = quantityRefs.current[variant.id];
-      if (el) {
-        el.focus();
-        try {
-          el.select();
-        } catch {}
-        el.scrollIntoView({ block: "center", behavior: "smooth" });
-      } else {
-        focusBarcodeInput();
-      }
-    }, 50);
+    // Request focusing the quantity input for this variant after items update
+    setFocusVariantId(variant.id);
   }
+
+  // When items change and a focus target is set, focus the corresponding quantity input
+  useEffect(() => {
+    if (!focusVariantId) return;
+    const el = quantityRefs.current[focusVariantId];
+    if (el) {
+      try {
+        el.focus();
+        el.select();
+      } catch {}
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      // optional visual flash to indicate existing row got focus
+      setFlashVariantId(focusVariantId);
+      setTimeout(() => setFlashVariantId(null), 700);
+    } else {
+      // fallback: focus barcode input if quantity input not available
+      requestAnimationFrame(() => focusBarcodeInput());
+    }
+    setFocusVariantId(null);
+  }, [items, focusVariantId, focusBarcodeInput]);
 
   async function resolveAndAdd(queryText: string) {
     const result = await scanVariantCode(queryText);
@@ -407,7 +420,10 @@ export default function PurchasesClient({
               {items.map((item) => (
                 <div
                   key={item.variant.id}
-                  className="rounded-lg border border-border p-3 space-y-2"
+                  className={
+                    "rounded-lg border border-border p-3 space-y-2" +
+                    (flashVariantId === item.variant.id ? " ring-2 ring-gold/40 bg-gold/5" : "")
+                  }
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
