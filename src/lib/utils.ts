@@ -9,6 +9,10 @@ export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
 }
 
+export function isValidImageUrl(url?: string | null): url is string {
+  return typeof url === "string" && url.trim().length > 0;
+}
+
 export const DEFAULT_PAGE_SIZE = 50;
 export const MAX_PAGE_SIZE = 200;
 

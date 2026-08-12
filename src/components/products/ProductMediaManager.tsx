@@ -7,6 +7,7 @@ import type { ProductColorWithMedia, ProductMediaItem } from "@/lib/types/produc
 import { Check, Eye, EyeOff, ImagePlus, Trash2, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import { isValidImageUrl } from "@/lib/utils";
 
 type ProductMediaManagerProps = {
   productId: string;
@@ -216,7 +217,13 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
                   </div>
                 </div>
                 <div className="overflow-hidden rounded-lg border border-border">
-                  <Image src={item.url} alt={item.altText || selectedColor.color} width={640} height={480} className="h-44 w-full object-cover" />
+                  {isValidImageUrl(item.url) ? (
+                    <Image src={item.url} alt={item.altText || selectedColor.color} width={640} height={480} className="h-44 w-full object-cover" />
+                  ) : (
+                    <div className="flex h-44 w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
+                      لا توجد صورة
+                    </div>
+                  )}
                 </div>
                 <div className="mt-3 space-y-2">
                   <input
@@ -258,7 +265,13 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
             <button type="button" className="absolute right-2 top-2 rounded-full bg-black/60 p-2 text-white" onClick={() => setActivePreview(null)}>
               <X className="h-5 w-5" />
             </button>
-            <Image src={activePreview.url} alt={activePreview.altText || "image preview"} width={1280} height={960} className="max-h-[85vh] w-auto max-w-full object-contain" />
+            {isValidImageUrl(activePreview.url) ? (
+              <Image src={activePreview.url} alt={activePreview.altText || "image preview"} width={1280} height={960} className="max-h-[85vh] w-auto max-w-full object-contain" />
+            ) : (
+              <div className="flex h-[85vh] w-full items-center justify-center text-sm text-slate-500">
+                لا توجد صورة للمعاينة
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ import type { ProductImageItem } from "@/lib/types/product-media";
 import { Eye, EyeOff, ImagePlus, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { isValidImageUrl } from "@/lib/utils";
 
 type VariantImageUploaderProps = {
   productId: string;
@@ -121,7 +122,13 @@ export default function VariantImageUploader({
             return (
               <div key={item.id} className="group rounded-2xl border border-border bg-white shadow-sm">
                 <div className="relative overflow-hidden rounded-t-2xl border-b border-border bg-slate-50">
-                  <Image src={item.url} alt={item.altText || label} width={400} height={300} className="h-44 w-full object-cover transition duration-200 group-hover:scale-105" />
+                  {isValidImageUrl(item.url) ? (
+                    <Image src={item.url} alt={item.altText || label} width={400} height={300} className="h-44 w-full object-cover transition duration-200 group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-44 w-full items-center justify-center bg-slate-100 text-sm text-slate-500">
+                      لا توجد صورة
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-black/0 transition duration-200 group-hover:bg-black/20" />
                   <button
                     type="button"

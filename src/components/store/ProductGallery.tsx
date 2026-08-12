@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import { useMemo } from "react";
+import { isValidImageUrl } from "@/lib/utils";
 
 type GalleryImage = {
   id: string;
   url: string;
   alt?: string;
 };
+
 
 type ColorVariant = {
   name: string;
@@ -43,6 +45,7 @@ export default function ProductGallery({
 
   const images = selectedVariant?.images ?? [];
   const activeImage = images[activeImageIndex] ?? images[0];
+  const activeImageUrl = isValidImageUrl(activeImage?.url) ? activeImage.url : null;
 
   function handleColorChange(color: string) {
     onSelectColor(color);
@@ -61,9 +64,9 @@ export default function ProductGallery({
           aria-label="تكبير الصورة"
           className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] bg-[#fff1e0] shadow-sm"
         >
-          {activeImage ? (
+          {activeImageUrl ? (
             <Image
-              src={activeImage.url}
+              src={activeImageUrl}
               alt={activeImage.alt || productName}
               fill
               sizes="100vw"
@@ -90,13 +93,19 @@ export default function ProductGallery({
                 } active:scale-95`}
               >
                 <div className="relative h-20 w-full">
-                  <Image
-                    src={image.url}
-                    alt={image.alt || productName}
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                  />
+                  {isValidImageUrl(image.url) ? (
+                    <Image
+                      src={image.url}
+                      alt={image.alt || productName}
+                      fill
+                      sizes="80px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center rounded-2xl bg-[#fff1e0] text-xs text-[#8f7a68]">
+                      لا توجد صورة
+                    </div>
+                  )}
                 </div>
               </button>
             ))}

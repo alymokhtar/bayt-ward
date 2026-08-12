@@ -17,7 +17,7 @@ import {
   getProductDisplayName,
 } from "@/lib/store/product-utils";
 import type { StoreProduct } from "@/lib/store/types";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency, isValidImageUrl } from "@/lib/utils";
 
 type ProductDetailClientProps = {
   product: StoreProduct;
@@ -140,8 +140,9 @@ export default function ProductDetailClient({
   }
 
   const activeImage = images[activeImageIndex] ?? images[0];
-  const cartImageUrl = activeImage
-    ? optimizeCloudinaryUrl(activeImage.url, {
+  const activeImageUrl = isValidImageUrl(activeImage?.url) ? activeImage.url : null;
+  const cartImageUrl = activeImageUrl
+    ? optimizeCloudinaryUrl(activeImageUrl, {
         width: STORE_IMAGE_SIZES.thumbnail.width,
         height: STORE_IMAGE_SIZES.thumbnail.height,
         crop: "fill",
@@ -275,7 +276,7 @@ export default function ProductDetailClient({
         </div>
       </div>
 
-      {zoomOpen && activeImage && (
+      {zoomOpen && activeImage && activeImageUrl && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
           role="dialog"
@@ -285,7 +286,7 @@ export default function ProductDetailClient({
         >
           <div className="relative h-[80vh] w-full max-w-4xl">
             <Image
-              src={optimizeCloudinaryUrl(activeImage.url, {
+              src={optimizeCloudinaryUrl(activeImageUrl, {
                 width: 1600,
                 quality: 90,
               })}
