@@ -48,11 +48,17 @@ async function applyPurchaseItemsToInventory(
   invoiceNumber: string,
   userId: string
 ) {
-  for (const item of items) {
-    const variant = await tx.productVariant.findUnique({
-      where: { id: item.variantId },
-    });
+  if (items.length === 0) return;
 
+  const variantIds = Array.from(new Set(items.map((item) => item.variantId)));
+  const variants = await tx.productVariant.findMany({
+    where: { id: { in: variantIds } },
+  });
+
+  const variantMap = new Map(variants.map((variant) => [variant.id, variant]));
+
+  const operations = items.map(async (item) => {
+    const variant = variantMap.get(item.variantId);
     if (!variant) {
       throw new Error("أحد المنتجات غير موجود");
     }
@@ -60,7 +66,7 @@ async function applyPurchaseItemsToInventory(
     const previousQty = variant.stockQuantity;
     const newQty = previousQty + item.quantity;
 
-    await tx.productVariant.update({
+    const updatePromise = tx.productVariant.update({
       where: { id: item.variantId },
       data: {
         stockQuantity: newQty,
@@ -68,7 +74,7 @@ async function applyPurchaseItemsToInventory(
       },
     });
 
-    await tx.stockMovement.create({
+    const movementPromise = tx.stockMovement.create({
       data: {
         variantId: item.variantId,
         userId,
@@ -80,7 +86,11 @@ async function applyPurchaseItemsToInventory(
         notes: "شراء من مورد",
       },
     });
-  }
+
+    await Promise.all([updatePromise, movementPromise]);
+  });
+
+  await Promise.all(operations);
 }
 
 export async function getPurchases(options?: {
@@ -157,52 +167,55 @@ export async function createPurchase(data: {
     const invoiceNumber = generateInvoiceNumber("PUR");
     const now = new Date();
 
-    const purchase = await prisma.$transaction(async (tx) => {
-      const created = await tx.purchase.create({
-        data: {
-          invoiceNumber,
-          supplierId: data.supplierId,
-          userId: user.id,
-          subtotal: data.subtotal,
-          taxAmount: data.taxAmount ?? 0,
-          totalAmount: data.totalAmount,
-          status: "RECEIVED",
-          receivedAt: now,
-          notes: data.notes,
-          items: {
-            create: data.items.map((item) => ({
-              variantId: item.variantId,
-              quantity: item.quantity,
-              unitCost: item.unitCost,
-              totalCost: item.totalCost,
-            })),
-          },
-        },
-        include: { items: true },
-      });
-
-      await applyPurchaseItemsToInventory(
-        tx,
-        created.items,
-        invoiceNumber,
-        user.id
-      );
-
-      return tx.purchase.findUniqueOrThrow({
-        where: { id: created.id },
-        include: {
-          supplier: true,
-          items: {
-            include: {
-              variant: {
-                include: { product: true },
-              },
+    const purchase = await prisma.$transaction(
+      async (tx) => {
+        const created = await tx.purchase.create({
+          data: {
+            invoiceNumber,
+            supplierId: data.supplierId,
+            userId: user.id,
+            subtotal: data.subtotal,
+            taxAmount: data.taxAmount ?? 0,
+            totalAmount: data.totalAmount,
+            status: "RECEIVED",
+            receivedAt: now,
+            notes: data.notes,
+            items: {
+              create: data.items.map((item) => ({
+                variantId: item.variantId,
+                quantity: item.quantity,
+                unitCost: item.unitCost,
+                totalCost: item.totalCost,
+              })),
             },
           },
-          user: { select: { id: true, name: true } },
-        },
-      });
-    });
+          include: { items: true },
+        });
+
+        await applyPurchaseItemsToInventory(
+          tx,
+          created.items,
+          invoiceNumber,
+          user.id
+        );
+
+        return tx.purchase.findUniqueOrThrow({
+          where: { id: created.id },
+          include: {
+            supplier: true,
+            items: {
+              include: {
+                variant: {
+                  include: { product: true },
+                },
+              },
+            },
+            user: { select: { id: true, name: true } },
+          },
+        });
+      },
+      { maxWait: 15000, timeout: 30000 }
+    );
 
     revalidatePurchasePaths();
     return { success: true, data: purchase };
