@@ -10,6 +10,7 @@ import {
 import { invalidateProductsData } from "@/lib/revalidate-tags";
 import { syncProductColors } from "@/lib/product-color-sync";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
+import { flattenProductSearchResults } from "@/lib/product-search";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -635,36 +636,6 @@ export async function deleteProduct(id: string) {
 function isNumericQuery(value: string) {
   const trimmed = value.trim();
   return trimmed.length > 0 && /^[0-9]+$/.test(trimmed);
-}
-
-export function flattenProductSearchResults(
-  products: Array<{
-    id: string;
-    name: string;
-    nameAr: string | null;
-    variants: Array<{
-      id: string;
-      sku: string;
-      barcode: string | null;
-      size: string;
-      color: string;
-      costPrice: number;
-      sellingPrice: number;
-      stockQuantity: number;
-      isActive?: boolean;
-    }>;
-  }>
-) {
-  return products.flatMap((product) =>
-    product.variants.map((variant) => ({
-      ...variant,
-      product: {
-        id: product.id,
-        name: product.name,
-        nameAr: product.nameAr,
-      },
-    }))
-  );
 }
 
 export async function searchVariants(query: string) {

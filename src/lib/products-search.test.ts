@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { flattenProductSearchResults } from "@/lib/actions/products";
+import { flattenProductSearchResults } from "@/lib/product-search";
 
 test("keeps all variants for a matched product when the name matches", () => {
   const products = [
