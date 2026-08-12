@@ -87,86 +87,92 @@ export async function syncProductColors(
   variants: VariantColorInput[],
   previousVariants?: PreviousVariant[]
 ): Promise<void> {
-  if (previousVariants?.length) {
-    const renames = collectColorRenames(variants, previousVariants);
-
-    for (const rename of renames) {
-      const source = await tx.productColor.findUnique({
-        where: {
-          productId_color: {
-            productId,
-            color: rename.from,
-          },
-        },
-        select: { id: true, colorHex: true },
-      });
-
-      if (!source) continue;
-
-      const targetExists = await tx.productColor.findUnique({
-        where: {
-          productId_color: {
-            productId,
-            color: rename.to,
-          },
-        },
-        select: { id: true },
-      });
-
-      if (targetExists) continue;
-
-      await tx.productColor.update({
-        where: { id: source.id },
-        data: {
-          color: rename.to,
-          colorHex: rename.colorHex ?? source.colorHex,
-        },
-      });
-    }
-  }
-
-  const distinctColors = buildDistinctColorMap(variants);
-  if (distinctColors.size === 0) return;
-
   const existingColors = await tx.productColor.findMany({
     where: { productId },
     select: { id: true, color: true, colorHex: true, sortOrder: true },
     orderBy: { sortOrder: "asc" },
   });
 
+  const colorsByName = new Map(
+    existingColors.map((color) => [color.color, color])
+  );
+  const colorsById = new Map(existingColors.map((color) => [color.id, color]));
+
+  if (previousVariants?.length) {
+    const renames = collectColorRenames(variants, previousVariants);
+    const renamePromises: Promise<unknown>[] = [];
+
+    for (const rename of renames) {
+      const source = colorsByName.get(rename.from);
+      if (!source) continue;
+      if (colorsByName.has(rename.to)) continue;
+
+      const updatedHex = rename.colorHex ?? source.colorHex;
+      renamePromises.push(
+        tx.productColor.update({
+          where: { id: source.id },
+          data: {
+            color: rename.to,
+            colorHex: updatedHex,
+          },
+        })
+      );
+
+      colorsByName.delete(rename.from);
+      colorsByName.set(rename.to, {
+        ...source,
+        color: rename.to,
+        colorHex: updatedHex,
+      });
+    }
+
+    if (renamePromises.length > 0) {
+      await Promise.all(renamePromises);
+    }
+  }
+
+  const distinctColors = buildDistinctColorMap(variants);
+  if (distinctColors.size === 0) return;
+
   let nextSortOrder =
     existingColors.reduce((max, color) => Math.max(max, color.sortOrder), -1) + 1;
 
-  for (const [color, colorHex] of distinctColors) {
-    const existing = await tx.productColor.findUnique({
-      where: {
-        productId_color: {
-          productId,
-          color,
-        },
-      },
-      select: { id: true, colorHex: true },
-    });
+  const updatePromises: Promise<unknown>[] = [];
+  const createData: Array<{
+    productId: string;
+    color: string;
+    colorHex: string | null;
+    sortOrder: number;
+  }> = [];
 
+  for (const [color, colorHex] of distinctColors) {
+    const existing = colorsByName.get(color);
     if (existing) {
       if (colorHex && existing.colorHex !== colorHex) {
-        await tx.productColor.update({
-          where: { id: existing.id },
-          data: { colorHex },
-        });
+        updatePromises.push(
+          tx.productColor.update({
+            where: { id: existing.id },
+            data: { colorHex },
+          })
+        );
       }
       continue;
     }
 
-    await tx.productColor.create({
-      data: {
-        productId,
-        color,
-        colorHex,
-        sortOrder: nextSortOrder,
-      },
+    createData.push({
+      productId,
+      color,
+      colorHex,
+      sortOrder: nextSortOrder,
     });
-
     nextSortOrder += 1;
+  }
+
+  if (updatePromises.length > 0) {
+    await Promise.all(updatePromises);
+  }
+
+  if (createData.length > 0) {
+    await tx.productColor.createMany({ data: createData });
   }
 }

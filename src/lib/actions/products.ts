@@ -262,94 +262,96 @@ export async function createProduct(data: {
       return { success: false, error: "التصنيف غير موجود" };
     }
 
-    const product = await prisma.$transaction(async (tx) => {
-      const existingRows = await tx.productVariant.findMany({
-        select: { id: true, sku: true, barcode: true },
-      });
-      const preparedVariants = await ensureVariantCodes(
-        data.variants,
-        existingRows
-      );
-
-      const created = await tx.product.create({
-        data: {
-          name: data.name.trim(),
-          nameAr: data.nameAr?.trim() || null,
-          description: data.description?.trim() || null,
-          brand: data.brand?.trim() || null,
-          categoryId: data.categoryId,
-          publishToWebsite: data.publishToWebsite ?? false,
-          featuredProduct: data.featuredProduct ?? false,
-          variants: {
-            create: preparedVariants.map((v) => ({
-              sku: v.sku,
-              barcode: v.barcode,
-              size: String(v.size).trim() || "",
-              color: String(v.color).trim() || "",
-              colorHex: v.colorHex?.trim() || null,
-              globalColorId: v.globalColorId || undefined,
-              costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
-              sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
-              stockQuantity: typeof v.stockQuantity === "number" ? Math.max(0, v.stockQuantity) : parseInt(String(v.stockQuantity) || "0"),
-              minStockLevel: typeof v.minStockLevel === "number" ? Math.max(0, v.minStockLevel) : 5,
-              isActive: true,
-            })),
-          },
-        },
-        include: { variants: true, category: true },
-      });
-
-      const images = data.images ?? [];
-      const firstPrimaryIndex = images.findIndex((image) => image.isPrimary);
-      if (firstPrimaryIndex !== -1) {
-        await tx.image.updateMany({
-          where: {
-            OR: [
-              { productId: created.id },
-              { productVariant: { productId: created.id } },
-            ],
-          },
-          data: { isPrimary: false },
+    const product = await prisma.$transaction(
+      async (tx) => {
+        const existingRows = await tx.productVariant.findMany({
+          select: { id: true, sku: true, barcode: true },
         });
-      }
+        const preparedVariants = await ensureVariantCodes(
+          data.variants,
+          existingRows
+        );
 
-      for (let i = 0; i < images.length; i += 1) {
-        const image = images[i];
-        await tx.image.create({
+        const created = await tx.product.create({
           data: {
-            productId: image.productVariantId ? null : created.id,
-            productVariantId: image.productVariantId || null,
-            url: image.url.trim(),
-            publicId: image.publicId.trim(),
-            altText: image.altText?.trim() || null,
-            sortOrder: image.sortOrder ?? 0,
-            isPrimary: i === firstPrimaryIndex,
-            isActive: image.isActive ?? true,
-          },
-        });
-      }
-
-      await syncProductColors(tx, created.id, preparedVariants, []);
-
-      for (const variant of created.variants) {
-        if (variant.stockQuantity > 0) {
-          await tx.stockMovement.create({
-            data: {
-              variantId: variant.id,
-              userId: user.id,
-              type: "ADJUSTMENT",
-              quantity: variant.stockQuantity,
-              previousQty: 0,
-              newQty: variant.stockQuantity,
-              reference: "INITIAL_STOCK",
-              notes: "رصيد افتتاحي عند إنشاء المنتج",
+            name: data.name.trim(),
+            nameAr: data.nameAr?.trim() || null,
+            description: data.description?.trim() || null,
+            brand: data.brand?.trim() || null,
+            categoryId: data.categoryId,
+            publishToWebsite: data.publishToWebsite ?? false,
+            featuredProduct: data.featuredProduct ?? false,
+            variants: {
+              create: preparedVariants.map((v) => ({
+                sku: v.sku,
+                barcode: v.barcode,
+                size: String(v.size).trim() || "",
+                color: String(v.color).trim() || "",
+                colorHex: v.colorHex?.trim() || null,
+                globalColorId: v.globalColorId || undefined,
+                costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
+                sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
+                stockQuantity: typeof v.stockQuantity === "number" ? Math.max(0, v.stockQuantity) : parseInt(String(v.stockQuantity) || "0"),
+                minStockLevel: typeof v.minStockLevel === "number" ? Math.max(0, v.minStockLevel) : 5,
+                isActive: true,
+              })),
             },
+          },
+          include: { variants: true, category: true },
+        });
+
+        const images = data.images ?? [];
+        const firstPrimaryIndex = images.findIndex((image) => image.isPrimary);
+        if (firstPrimaryIndex !== -1) {
+          await tx.image.updateMany({
+            where: {
+              OR: [
+                { productId: created.id },
+                { productVariant: { productId: created.id } },
+              ],
+            },
+            data: { isPrimary: false },
           });
         }
-      }
 
-      return created;
-    });
+        const imageRows = images.map((image, index) => ({
+          productId: image.productVariantId ? null : created.id,
+          productVariantId: image.productVariantId || null,
+          url: image.url.trim(),
+          publicId: image.publicId.trim(),
+          altText: image.altText?.trim() || null,
+          sortOrder: image.sortOrder ?? 0,
+          isPrimary: index === firstPrimaryIndex,
+          isActive: image.isActive ?? true,
+        }));
+
+        const stockMovementRows = created.variants
+          .filter((variant) => variant.stockQuantity > 0)
+          .map((variant) => ({
+            variantId: variant.id,
+            userId: user.id,
+            type: "ADJUSTMENT",
+            quantity: variant.stockQuantity,
+            previousQty: 0,
+            newQty: variant.stockQuantity,
+            reference: "INITIAL_STOCK",
+            notes: "رصيد افتتاحي عند إنشاء المنتج",
+          }));
+
+        await Promise.all([
+          imageRows.length > 0
+            ? tx.image.createMany({ data: imageRows })
+            : Promise.resolve(),
+          syncProductColors(tx, created.id, preparedVariants, []),
+          stockMovementRows.length > 0
+            ? tx.stockMovement.createMany({ data: stockMovementRows })
+            : Promise.resolve(),
+        ]);
+
+        return created;
+      },
+      { maxWait: 10000, timeout: 20000 }
+    );
 
     revalidateProductPaths();
     return { success: true, data: product };
@@ -395,22 +397,23 @@ export async function updateProduct(
       }
     }
 
-    const product = await prisma.$transaction(async (tx) => {
-      const updateData: Record<string, string | boolean | null> = {};
-      
-      if (data.name !== undefined) updateData.name = data.name?.trim() || null;
-      if (data.nameAr !== undefined) updateData.nameAr = data.nameAr?.trim() || null;
-      if (data.description !== undefined) updateData.description = data.description?.trim() || null;
-      if (data.brand !== undefined) updateData.brand = data.brand?.trim() || null;
-      if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
-      if (data.publishToWebsite !== undefined) updateData.publishToWebsite = data.publishToWebsite;
-      if (data.featuredProduct !== undefined) updateData.featuredProduct = data.featuredProduct;
-      if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    const product = await prisma.$transaction(
+      async (tx) => {
+        const updateData: Record<string, string | boolean | null> = {};
+        
+        if (data.name !== undefined) updateData.name = data.name?.trim() || null;
+        if (data.nameAr !== undefined) updateData.nameAr = data.nameAr?.trim() || null;
+        if (data.description !== undefined) updateData.description = data.description?.trim() || null;
+        if (data.brand !== undefined) updateData.brand = data.brand?.trim() || null;
+        if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+        if (data.publishToWebsite !== undefined) updateData.publishToWebsite = data.publishToWebsite;
+        if (data.featuredProduct !== undefined) updateData.featuredProduct = data.featuredProduct;
+        if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
-      await tx.product.update({
-        where: { id },
-        data: updateData,
-      });
+        await tx.product.update({
+          where: { id },
+          data: updateData,
+        });
 
       if (data.variants) {
         const existingIds = new Set(existing.variants.map((v) => v.id));
@@ -464,9 +467,9 @@ export async function updateProduct(
 
         await syncProductColors(tx, id, preparedVariants, existing.variants);
 
-        for (const variant of preparedVariants) {
+        const variantOperations = preparedVariants.map((variant) => {
           if (variant.id && existingIds.has(variant.id)) {
-const updateData: Record<string, string | boolean | number | null | undefined> = {
+            const updateData: Record<string, string | boolean | number | null | undefined> = {
               sku: variant.sku,
               barcode: variant.barcode,
               size: variant.size?.trim() || "",
@@ -482,29 +485,31 @@ const updateData: Record<string, string | boolean | number | null | undefined> =
               updateData.colorHex = variant.colorHex?.trim() || null;
             }
 
-            await tx.productVariant.update({
+            return tx.productVariant.update({
               where: { id: variant.id },
               data: updateData,
             });
-          } else if (!variant.id) {
-            await tx.productVariant.create({
-              data: {
-                productId: id,
-                sku: variant.sku,
-                barcode: variant.barcode,
-                size: variant.size?.trim() || "",
-                color: variant.color?.trim() || "",
-                colorHex: variant.colorHex?.trim() || null,
-                globalColorId: variant.globalColorId || undefined,
-                costPrice: typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0"),
-                sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
-                stockQuantity: 0,
-                minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
-                isActive: true,
-              },
-            });
           }
-        }
+
+          return tx.productVariant.create({
+            data: {
+              productId: id,
+              sku: variant.sku,
+              barcode: variant.barcode,
+              size: variant.size?.trim() || "",
+              color: variant.color?.trim() || "",
+              colorHex: variant.colorHex?.trim() || null,
+              globalColorId: variant.globalColorId || undefined,
+              costPrice: typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0"),
+              sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
+              stockQuantity: 0,
+              minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
+              isActive: true,
+            },
+          });
+        });
+
+        await Promise.all(variantOperations);
       }
 
       if (data.images) {
@@ -521,37 +526,43 @@ const updateData: Record<string, string | boolean | number | null | undefined> =
           });
         }
 
-        for (let i = 0; i < data.images.length; i += 1) {
-          const image = data.images[i];
-          const isPrimary = i === firstPrimaryIndex;
+        const preparedImages = data.images.map((image, index) => ({
+          ...image,
+          isPrimary: index === firstPrimaryIndex,
+        }));
 
-          if (image.id) {
-            await tx.image.update({
-              where: { id: image.id },
+        const imageUpdates = preparedImages.filter((image) => image.id);
+        const imageCreates = preparedImages
+          .filter((image) => !image.id)
+          .map((image) => ({
+            productId: image.productVariantId ? null : id,
+            productVariantId: image.productVariantId || null,
+            url: image.url.trim(),
+            publicId: image.publicId.trim(),
+            altText: image.altText?.trim() || null,
+            sortOrder: image.sortOrder ?? 0,
+            isPrimary: image.isPrimary,
+            isActive: image.isActive ?? true,
+          }));
+
+        await Promise.all([
+          ...imageUpdates.map((image) =>
+            tx.image.update({
+              where: { id: image.id! },
               data: {
                 url: image.url.trim(),
                 publicId: image.publicId.trim(),
                 altText: image.altText?.trim() || null,
                 sortOrder: image.sortOrder ?? 0,
-                isPrimary,
+                isPrimary: image.isPrimary,
                 isActive: image.isActive ?? true,
               },
-            });
-          } else {
-            await tx.image.create({
-              data: {
-                productId: image.productVariantId ? null : id,
-                productVariantId: image.productVariantId || null,
-                url: image.url.trim(),
-                publicId: image.publicId.trim(),
-                altText: image.altText?.trim() || null,
-                sortOrder: image.sortOrder ?? 0,
-                isPrimary,
-                isActive: image.isActive ?? true,
-              },
-            });
-          }
-        }
+            })
+          ),
+          imageCreates.length > 0
+            ? tx.image.createMany({ data: imageCreates })
+            : Promise.resolve(),
+        ]);
       }
 
       return tx.product.findUnique({
@@ -569,7 +580,7 @@ const updateData: Record<string, string | boolean | number | null | undefined> =
           },
         },
       });
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     revalidateProductPaths();
     return { success: true, data: product! };
@@ -612,7 +623,7 @@ export async function deleteProduct(id: string) {
       await tx.product.delete({
         where: { id },
       });
-    });
+    }, { maxWait: 10000, timeout: 20000 });
 
     revalidateProductPaths();
     return { success: true, data: undefined };
