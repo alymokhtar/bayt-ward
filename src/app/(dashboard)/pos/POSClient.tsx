@@ -7,7 +7,6 @@ import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
 import { createSale } from "@/lib/actions/sales";
 import { createCustomer, searchCustomers } from "@/lib/actions/customers";
 import { searchVariants } from "@/lib/actions/products";
-import { useBarcodeScanner } from "@/lib/barcode-scanner";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency } from "@/lib/utils";
 import type { PaymentMethod } from "@prisma/client";
@@ -162,20 +161,38 @@ export default function POSClient({
     return () => clearTimeout(timer);
   }, [query, doSearch]);
 
-  const { handleKeyDown: handleBarcodeKeyDown, focusInput: focusBarcodeInput } =
-    useBarcodeScanner(async (value) => {
-      if (!isBarcodeQuery(value)) {
-        const data = await searchVariants(value);
-        setResults(data);
-        setError("");
-        return;
-      }
-
-      await resolveScanAndAdd(value);
-    }, searchRef);
+  const focusBarcodeInput = useCallback(() => {
+    if (!searchRef.current) return;
+    requestAnimationFrame(() => searchRef.current?.focus());
+  }, []);
 
   async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    await handleBarcodeKeyDown(e);
+    const inputValue = e.currentTarget.value ?? "";
+    console.log("Key down detected:", e.key, "Query:", query, "Input value:", inputValue);
+
+    if (e.key !== "Enter" && e.key !== "Tab") return;
+
+    e.preventDefault();
+
+    const nextValue = inputValue.trim();
+    console.log("Barcode submit value:", nextValue);
+
+    if (!nextValue) {
+      console.log("Barcode submit aborted: empty value.");
+      return;
+    }
+
+    setQuery(nextValue);
+
+    if (!isBarcodeQuery(nextValue)) {
+      console.log("Non-numeric search path triggered.");
+      const data = await searchVariants(nextValue);
+      setResults(data);
+      setError("");
+      return;
+    }
+
+    await resolveScanAndAdd(nextValue);
   }
 
   useEffect(() => {
