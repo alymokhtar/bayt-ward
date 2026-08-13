@@ -34,35 +34,37 @@ export default function ProductDetailClient({
   const searchParams = useSearchParams();
   const availableColors = useMemo(() => getAvailableColors(product), [product]);
   const initialSelectedColor = availableColors[0]?.name ?? "";
-  const [selectedColor, setSelectedColor] = useState(initialSelectedColor);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const requestedColor = searchParams.get("color") || searchParams.get("variant");
+  const requestedSize = searchParams.get("size");
+  const normalizedRequestedColor = requestedColor
+    ? availableColors.find((color) => color.name === requestedColor)?.name ?? null
+    : null;
+
+  const [selectedColor, setSelectedColor] = useState<string>(() => normalizedRequestedColor ?? initialSelectedColor);
+  const [selectedSize, setSelectedSize] = useState<string | null>(() => requestedSize ?? null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const { addToCart } = useStorefrontState();
 
   useEffect(() => {
-    const requestedColor = searchParams.get("color") || searchParams.get("variant");
-    const requestedSize = searchParams.get("size");
-
-    if (requestedColor) {
-      const normalizedColor = availableColors.find((color) => color.name === requestedColor)?.name;
-      if (normalizedColor) {
-        setSelectedColor(normalizedColor);
-      }
+    if (!zoomOpen) {
+      document.body.style.overflow = "";
+      return;
     }
 
-    if (requestedSize) {
-      setSelectedSize(requestedSize);
-    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
 
-    setActiveImageIndex(0);
-  }, [availableColors, searchParams]);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [zoomOpen]);
 
   const displayName = getProductDisplayName(product);
-  const activeColor = availableColors.some((color) => color.name === selectedColor)
-    ? selectedColor
-    : availableColors[0]?.name ?? "";
+  const activeColor = normalizedRequestedColor ??
+    (availableColors.some((color) => color.name === selectedColor) ? selectedColor : initialSelectedColor);
+  const selectedSizeValue = requestedSize ?? selectedSize;
 
   const galleryVariants = useMemo(
     () =>
@@ -85,7 +87,7 @@ export default function ProductDetailClient({
     [product, activeColor]
   );
 
-  const selectedVariant = sizes.find((item) => item.size === selectedSize) ?? sizes[0];
+  const selectedVariant = sizes.find((item) => item.size === selectedSizeValue) ?? sizes[0];
   const images = useMemo(() => {
     if (selectedVariant?.images.length) {
       return selectedVariant.images;
@@ -254,7 +256,7 @@ export default function ProductDetailClient({
             productId={product.id}
             whatsappNumber={whatsappNumber}
             color={activeColor || undefined}
-            size={selectedSize || selectedVariant?.size}
+            size={selectedSizeValue || selectedVariant?.size}
             disabled={!inStock}
             className="min-w-[12rem] flex-1"
           />
@@ -271,13 +273,28 @@ export default function ProductDetailClient({
 
       {zoomOpen && activeImage && activeImageUrl && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-3 sm:p-5"
           role="dialog"
           aria-modal="true"
           aria-label="معاينة الصورة"
           onClick={() => setZoomOpen(false)}
         >
-          <div className="relative h-[80vh] w-full max-w-4xl">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setZoomOpen(false);
+            }}
+            aria-label="إغلاق المعاينة"
+            className="absolute right-4 top-4 z-10 inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/30 bg-black/40 text-2xl text-white shadow-lg backdrop-blur-sm transition hover:bg-black/55 active:scale-95 sm:right-6 sm:top-6"
+          >
+            ×
+          </button>
+
+          <div
+            className="relative h-[78dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-black/20"
+            onClick={(event) => event.stopPropagation()}
+          >
             <Image
               src={optimizeCloudinaryUrl(activeImageUrl, {
                 width: 1600,
@@ -286,7 +303,8 @@ export default function ProductDetailClient({
               alt={activeImage.altText || displayName}
               fill
               sizes="100vw"
-              className="object-contain"
+              className="h-full w-full object-contain"
+              priority
             />
           </div>
         </div>
