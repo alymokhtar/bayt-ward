@@ -53,3 +53,19 @@ test("uses payment rows as the source of truth for historical sales totals", () 
   assert.equal(result.remainingAmount, 0);
   assert.equal(result.paymentSummary, "MIXED");
 });
+
+test("calculates remaining balance from real partial payments instead of assuming the sale is fully paid", () => {
+  const result = getSalePaymentSummary({
+    totalAmount: 500,
+    fallbackPaidAmount: 500,
+    paymentMethod: "CARD",
+    payments: [
+      { method: "CARD", amount: 300 },
+      { method: "CASH", amount: 100 },
+    ],
+  });
+
+  assert.equal(result.paidAmount, 400);
+  assert.equal(result.remainingAmount, 100);
+  assert.equal(result.paymentSummary, "MIXED");
+});

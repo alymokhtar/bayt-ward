@@ -187,12 +187,17 @@ export default function SaleDetailsModal({
       calculatedRemaining: historicalRemaining,
     });
   }
-  const paymentSummaryText = sale
-    ? sale.payments.length > 1
-      ? sale.payments
-          .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`)
+  const paymentSummaryText = salePaymentSummary
+    ? salePaymentSummary.normalizedPayments.length > 1
+      ? salePaymentSummary.normalizedPayments
+          .map(
+            (payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`
+          )
           .join(" • ")
-      : getPaymentDisplayLabel(sale.paymentMethod, sale.payments)
+      : getPaymentDisplayLabel(
+          salePaymentSummary.paymentSummary,
+          salePaymentSummary.normalizedPayments
+        )
     : "—";
 
   return (

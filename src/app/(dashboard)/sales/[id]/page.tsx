@@ -89,11 +89,16 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
     calculatedPaid: historicalPaidAmount,
     calculatedRemaining: historicalRemaining,
   });
-  const paymentSummaryText = sale.payments.length > 1
-    ? sale.payments
-        .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`)
+  const paymentSummaryText = salePaymentSummary.normalizedPayments.length > 1
+    ? salePaymentSummary.normalizedPayments
+        .map(
+          (payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`
+        )
         .join(" • ")
-    : getPaymentDisplayLabel(sale.paymentMethod, sale.payments);
+    : getPaymentDisplayLabel(
+        salePaymentSummary.paymentSummary,
+        salePaymentSummary.normalizedPayments
+      );
 
   return (
       <div className="space-y-6">
