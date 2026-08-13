@@ -176,7 +176,7 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
   }
   ${row("الإجمالي", fmt(data.totalAmount), true)}
   ${row("المدفوع", fmt(data.paidAmount))}
-  ${row("الباقي", fmt(Math.max(data.paidAmount - data.totalAmount, 0)), true)}
+  ${row("الباقي", fmt(data.changeAmount), true)}
   ${
     data.payments && data.payments.length > 1
       ? row(

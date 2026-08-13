@@ -346,7 +346,8 @@ export default function POSClient({
       discountPercent,
       totalAmount,
       paidAmount: splitPaymentEnabled ? totalAmount : paid,
-      changeAmount: splitPaymentEnabled ? 0 : changeAmount,
+      tenderedAmount: splitPaymentEnabled ? splitPaymentTotal : paid,
+      changeAmount: splitPaymentEnabled ? Math.max(0, splitPaymentTotal - totalAmount) : changeAmount,
       paymentMethod: splitPaymentEnabled ? "MIXED" as PaymentMethod : (paymentMethod || "CASH") as PaymentMethod,
       payments: splitPaymentEnabled ? splitPaymentEntries.map((entry) => ({
         amount: entry.amount,

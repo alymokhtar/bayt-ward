@@ -208,6 +208,7 @@ export async function createSale(data: {
   taxAmount?: number;
   totalAmount: number;
   paidAmount: number;
+  tenderedAmount?: number;
   changeAmount?: number;
   paymentMethod?: PaymentMethod;
   payments?: SalePaymentInput[];
@@ -238,6 +239,12 @@ export async function createSale(data: {
 
     const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
     const actualPaidAmount = data.payments?.length ? paymentTotal : effectivePaidAmount;
+    const tenderedAmount = data.payments?.length
+      ? paymentTotal
+      : (data.tenderedAmount ?? effectivePaidAmount);
+    const resolvedChangeAmount = data.payments?.length
+      ? Math.max(0, paymentTotal - data.totalAmount)
+      : (data.changeAmount ?? Math.max(0, tenderedAmount - data.totalAmount));
 
     if (normalizedPayments.length > 1) {
       if (Math.abs(paymentTotal - data.totalAmount) > 0.01) {
@@ -299,10 +306,9 @@ export async function createSale(data: {
           discountPercent: data.discountPercent ?? 0,
           taxAmount: data.taxAmount ?? 0,
           totalAmount: data.totalAmount,
+          tenderedAmount,
           paidAmount: actualPaidAmount,
-          changeAmount: data.payments?.length
-            ? Math.max(0, paymentTotal - data.totalAmount)
-            : (data.changeAmount ?? Math.max(0, effectivePaidAmount - data.totalAmount)),
+          changeAmount: resolvedChangeAmount,
           paymentMethod: salePaymentMethod,
           status: "COMPLETED",
           notes: data.notes,

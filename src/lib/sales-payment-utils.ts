@@ -46,6 +46,8 @@ export function normalizeSalePayments(input: {
 export function getSalePaymentSummary(input: {
   totalAmount: number;
   fallbackPaidAmount?: number;
+  tenderedAmount?: number;
+  changeAmount?: number;
   paymentMethod?: string | null;
   payments?: SalePaymentRow[] | null;
 }) {
@@ -59,11 +61,25 @@ export function getSalePaymentSummary(input: {
       };
     });
 
-  const paidAmount = normalizedPayments.length > 0
-    ? normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0)
-    : Number(input.fallbackPaidAmount ?? 0);
+  const explicitTenderedAmount =
+    input.tenderedAmount !== undefined && Number.isFinite(input.tenderedAmount)
+      ? Number(input.tenderedAmount)
+      : undefined;
+  const explicitChangeAmount =
+    input.changeAmount !== undefined && Number.isFinite(input.changeAmount)
+      ? Number(input.changeAmount)
+      : undefined;
 
-  const remainingAmount = Math.max(input.totalAmount - paidAmount, 0);
+  const paidAmount = explicitTenderedAmount !== undefined
+    ? explicitTenderedAmount
+    : normalizedPayments.length > 0
+      ? normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0)
+      : Number(input.fallbackPaidAmount ?? 0);
+
+  const remainingAmount = explicitChangeAmount !== undefined
+    ? explicitChangeAmount
+    : Math.max(input.totalAmount - paidAmount, 0);
+
   const paymentSummary = normalizedPayments.length > 1
     ? "MIXED"
     : normalizedPayments[0]?.method ?? input.paymentMethod ?? "CASH";

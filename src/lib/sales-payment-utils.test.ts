@@ -69,3 +69,18 @@ test("calculates remaining balance from real partial payments instead of assumin
   assert.equal(result.remainingAmount, 100);
   assert.equal(result.paymentSummary, "MIXED");
 });
+
+test("prefers explicit tendered and change values when they are stored on the sale", () => {
+  const result = getSalePaymentSummary({
+    totalAmount: 200,
+    fallbackPaidAmount: 150,
+    paymentMethod: "CASH",
+    payments: [{ method: "CASH", amount: 150 }],
+    tenderedAmount: 300,
+    changeAmount: 100,
+  });
+
+  assert.equal(result.paidAmount, 300);
+  assert.equal(result.remainingAmount, 100);
+  assert.equal(result.paymentSummary, "CASH");
+});

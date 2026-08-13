@@ -83,8 +83,9 @@ type SaleData = {
   discountAmount: number;
   taxAmount: number;
   totalAmount: number;
+  tenderedAmount: number | null;
   paidAmount: number;
-  changeAmount: number;
+  changeAmount: number | null;
   notes: string | null;
   createdAt: Date;
   paymentMethod: string | null;
@@ -167,13 +168,15 @@ export default function SaleDetailsModal({
     ? getSalePaymentSummary({
         totalAmount: sale.totalAmount,
         fallbackPaidAmount: sale.paidAmount,
+        tenderedAmount: sale.tenderedAmount ?? undefined,
+        changeAmount: sale.changeAmount ?? undefined,
         paymentMethod: sale.paymentMethod,
         payments: sale.payments,
       })
     : null;
 
-  const historicalPaidAmount = salePaymentSummary?.paidAmount ?? 0;
-  const historicalRemaining = salePaymentSummary?.remainingAmount ?? 0;
+  const historicalPaidAmount = sale?.tenderedAmount ?? salePaymentSummary?.paidAmount ?? 0;
+  const historicalRemaining = sale?.changeAmount ?? salePaymentSummary?.remainingAmount ?? 0;
 
   // Debug logging to trace data flow
   if (sale && process.env.NODE_ENV === 'development') {

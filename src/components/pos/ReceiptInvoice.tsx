@@ -168,7 +168,7 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
         </div>
         <div className="flex justify-between gap-2 font-semibold">
           <span>الباقي</span>
-          <span dir="ltr">{fmt(Math.max(data.paidAmount - data.totalAmount, 0))}</span>
+          <span dir="ltr">{fmt(data.changeAmount)}</span>
         </div>
         <div className="flex justify-between gap-2">
           <span>طريقة الدفع</span>

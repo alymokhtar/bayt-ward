@@ -304,6 +304,7 @@ export async function restoreBackupSnapshot(
     discountPercent: Number(row.discountPercent ?? 0),
     taxAmount: Number(row.taxAmount ?? 0),
     totalAmount: Number(row.totalAmount ?? 0),
+    tenderedAmount: Number(row.tenderedAmount ?? row.paidAmount ?? 0),
     paidAmount: Number(row.paidAmount ?? 0),
     changeAmount: Number(row.changeAmount ?? 0),
     paymentMethod: row.paymentMethod as "CASH" | "CARD" | "TRANSFER" | "INSTAPAY" | "WALLET" | "MIXED",

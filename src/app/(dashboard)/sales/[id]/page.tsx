@@ -72,12 +72,14 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
   const salePaymentSummary = getSalePaymentSummary({
     totalAmount: sale.totalAmount,
     fallbackPaidAmount: sale.paidAmount,
+    tenderedAmount: sale.tenderedAmount ?? undefined,
+    changeAmount: sale.changeAmount ?? undefined,
     paymentMethod: sale.paymentMethod,
     payments: sale.payments,
   });
 
-  const historicalPaidAmount = salePaymentSummary.paidAmount;
-  const historicalRemaining = salePaymentSummary.remainingAmount;
+  const historicalPaidAmount = sale.tenderedAmount ?? salePaymentSummary.paidAmount;
+  const historicalRemaining = sale.changeAmount ?? salePaymentSummary.remainingAmount;
 
   // Debug logging to trace data flow
   console.log('[SaleDetailPage] Invoice:', sale.invoiceNumber, {
