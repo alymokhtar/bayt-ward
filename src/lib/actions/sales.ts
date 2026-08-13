@@ -251,6 +251,7 @@ export async function createSale(data: {
         : normalizedPayments[0]?.method ?? (data.paymentMethod ?? "CASH");
 
     const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const actualPaidAmount = data.payments?.length ? paymentTotal : effectivePaidAmount;
 
     if (normalizedPayments.length > 1) {
       if (Math.abs(paymentTotal - data.totalAmount) > 0.01) {
@@ -312,8 +313,10 @@ export async function createSale(data: {
           discountPercent: data.discountPercent ?? 0,
           taxAmount: data.taxAmount ?? 0,
           totalAmount: data.totalAmount,
-          paidAmount: data.payments?.length ? data.totalAmount : effectivePaidAmount,
-          changeAmount: data.payments?.length ? 0 : (data.changeAmount ?? Math.max(0, effectivePaidAmount - data.totalAmount)),
+          paidAmount: actualPaidAmount,
+          changeAmount: data.payments?.length
+            ? Math.max(0, paymentTotal - data.totalAmount)
+            : (data.changeAmount ?? Math.max(0, effectivePaidAmount - data.totalAmount)),
           paymentMethod: salePaymentMethod,
           status: "COMPLETED",
           notes: data.notes,

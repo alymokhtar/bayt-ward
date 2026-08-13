@@ -218,12 +218,10 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
                 <span className="text-muted">المدفوع</span>
                 <span>{formatCurrency(sale.paidAmount)}</span>
               </div>
-              {sale.changeAmount > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-muted">الباقي</span>
-                  <span>{formatCurrency(sale.changeAmount)}</span>
-                </div>
-              )}
+              <div className="flex justify-between">
+                <span className="text-muted">الباقي</span>
+                <span>{formatCurrency(Math.max(sale.paidAmount - sale.totalAmount, 0))}</span>
+              </div>
               {hasReturns && (
                 <div className="flex justify-between text-red-600 pt-2 border-t border-red-200">
                   <span>إجمالي المسترد</span>

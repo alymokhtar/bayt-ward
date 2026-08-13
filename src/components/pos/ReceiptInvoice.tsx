@@ -166,14 +166,12 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
           <span>المدفوع</span>
           <span dir="ltr">{fmt(data.paidAmount)}</span>
         </div>
-        {data.changeAmount > 0 && (
-          <div className="flex justify-between gap-2 font-semibold">
-            <span>الباقي</span>
-            <span dir="ltr">{fmt(data.changeAmount)}</span>
-          </div>
-        )}
+        <div className="flex justify-between gap-2 font-semibold">
+          <span>الباقي</span>
+          <span dir="ltr">{fmt(Math.max(data.paidAmount - data.totalAmount, 0))}</span>
+        </div>
         <div className="flex justify-between gap-2">
-          <span>المدفوعات</span>
+          <span>طريقة المدفوعات</span>
           <span className="text-end">
             {data.payments && data.payments.length > 0
               ? data.payments.map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatNumber(payment.amount)}`).join(" • ")

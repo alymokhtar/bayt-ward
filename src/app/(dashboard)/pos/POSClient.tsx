@@ -374,6 +374,12 @@ export default function POSClient({
         customerName: customer?.name,
         customerPhone: customer?.phone,
         paymentMethod: splitPaymentEnabled ? "مختلط" : paymentMethod,
+        payments: splitPaymentEnabled
+          ? splitPaymentEntries.map((entry) => ({
+              method: entry.method,
+              amount: entry.amount,
+            }))
+          : [{ method: paymentMethod || "CASH", amount: paid }],
         items: soldItems.map((item) => ({
           name: item.variant.product.nameAr || item.variant.product.name,
           size: item.variant.size,
@@ -386,8 +392,8 @@ export default function POSClient({
         subtotal,
         discountAmount: totalDiscount,
         totalAmount: saleTotal,
-        paidAmount: paid,
-        changeAmount,
+        paidAmount: splitPaymentEnabled ? splitPaymentTotal : paid,
+        changeAmount: splitPaymentEnabled ? Math.max(0, splitPaymentTotal - totalAmount) : changeAmount,
         notes: notes || undefined,
       };
 

@@ -24,7 +24,7 @@ export function normalizeSalePayments(input: {
   const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
   const effectivePaidAmount = hasMultiplePayments
-    ? input.totalAmount
+    ? paymentTotal
     : Math.min(input.totalAmount, paymentTotal);
 
   const normalizedForStorage = normalizedPayments.map((payment) => ({
