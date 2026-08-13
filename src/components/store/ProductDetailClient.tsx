@@ -168,7 +168,7 @@ export default function ProductDetailClient({
     zoomOpen && activeImage && activeImageUrl
       ? createPortal(
           <div
-            className="fixed inset-0 z-[99999] bg-black/80"
+            className="fixed inset-0 z-[99999] bg-black/80 opacity-100 transition-opacity duration-300 ease-out"
             role="dialog"
             aria-modal="true"
             aria-label="معاينة الصورة"
@@ -221,7 +221,7 @@ export default function ProductDetailClient({
               style={{ transform: `translateY(${touchDeltaY}px)`, transition: touchStartY === null ? "transform 180ms ease-out" : "none" }}
             >
               <div
-                className="relative h-[78dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-black/20"
+                className="relative h-[78dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-black/20 opacity-100 scale-100 transition-all duration-300 ease-out"
                 onClick={(event) => event.stopPropagation()}
               >
                 <Image
@@ -232,7 +232,7 @@ export default function ProductDetailClient({
                   alt={activeImage.altText || displayName}
                   fill
                   sizes="100vw"
-                  className="h-full w-full object-contain"
+                  className="h-full w-full object-contain transition-transform duration-300 ease-out"
                   priority
                 />
               </div>
