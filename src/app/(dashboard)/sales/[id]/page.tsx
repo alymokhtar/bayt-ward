@@ -78,6 +78,17 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
 
   const historicalPaidAmount = salePaymentSummary.paidAmount;
   const historicalRemaining = salePaymentSummary.remainingAmount;
+
+  // Debug logging to trace data flow
+  console.log('[SaleDetailPage] Invoice:', sale.invoiceNumber, {
+    totalAmount: sale.totalAmount,
+    fallbackPaidAmount: sale.paidAmount,
+    paymentMethod: sale.paymentMethod,
+    paymentsLength: sale.payments?.length,
+    payments: sale.payments,
+    calculatedPaid: historicalPaidAmount,
+    calculatedRemaining: historicalRemaining,
+  });
   const paymentSummaryText = sale.payments.length > 1
     ? sale.payments
         .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`)

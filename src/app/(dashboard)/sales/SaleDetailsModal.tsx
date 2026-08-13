@@ -174,6 +174,19 @@ export default function SaleDetailsModal({
 
   const historicalPaidAmount = salePaymentSummary?.paidAmount ?? 0;
   const historicalRemaining = salePaymentSummary?.remainingAmount ?? 0;
+
+  // Debug logging to trace data flow
+  if (sale && process.env.NODE_ENV === 'development') {
+    console.log('[SaleDetailsModal] Invoice:', sale.invoiceNumber, {
+      totalAmount: sale.totalAmount,
+      fallbackPaidAmount: sale.paidAmount,
+      paymentMethod: sale.paymentMethod,
+      paymentsLength: sale.payments?.length,
+      payments: sale.payments,
+      calculatedPaid: historicalPaidAmount,
+      calculatedRemaining: historicalRemaining,
+    });
+  }
   const paymentSummaryText = sale
     ? sale.payments.length > 1
       ? sale.payments
