@@ -273,7 +273,7 @@ export default function ProductDetailClient({
 
       {zoomOpen && activeImage && activeImageUrl && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-3 sm:p-5"
+          className="fixed inset-0 z-[9999] bg-black/80"
           role="dialog"
           aria-modal="true"
           aria-label="معاينة الصورة"
@@ -291,21 +291,23 @@ export default function ProductDetailClient({
             ×
           </button>
 
-          <div
-            className="relative h-[78dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-black/20"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Image
-              src={optimizeCloudinaryUrl(activeImageUrl, {
-                width: 1600,
-                quality: 90,
-              })}
-              alt={activeImage.altText || displayName}
-              fill
-              sizes="100vw"
-              className="h-full w-full object-contain"
-              priority
-            />
+          <div className="flex h-full items-center justify-center p-3 sm:p-5">
+            <div
+              className="relative h-[78dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-black/20"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <Image
+                src={optimizeCloudinaryUrl(activeImageUrl, {
+                  width: 1600,
+                  quality: 90,
+                })}
+                alt={activeImage.altText || displayName}
+                fill
+                sizes="100vw"
+                className="h-full w-full object-contain"
+                priority
+              />
+            </div>
           </div>
         </div>
       )}
