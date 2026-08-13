@@ -12,7 +12,6 @@ import {
   getAvailableColors,
   getAvailableSizesForColor,
   getColorMedia,
-  getDefaultColor,
   getProductImages,
   getProductDisplayName,
 } from "@/lib/store/product-utils";
@@ -33,15 +32,9 @@ export default function ProductDetailClient({
   currencySymbol,
 }: ProductDetailClientProps) {
   const searchParams = useSearchParams();
-  const defaultColor = getDefaultColor(product);
   const availableColors = useMemo(() => getAvailableColors(product), [product]);
-  const [selectedColor, setSelectedColor] = useState(() => {
-    if (defaultColor && availableColors.some((color) => color.name === defaultColor)) {
-      return defaultColor;
-    }
-
-    return availableColors[0]?.name ?? "";
-  });
+  const initialSelectedColor = availableColors[0]?.name ?? "";
+  const [selectedColor, setSelectedColor] = useState(initialSelectedColor);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
