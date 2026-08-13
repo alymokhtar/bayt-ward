@@ -123,10 +123,10 @@ export default function ProductGallery({
                   onClick={() => handleColorChange(variant.name)}
                   aria-label={variant.name}
                   aria-pressed={isActive}
-                  className={`flex h-6 w-6 min-w-[1.5rem] min-h-[1.5rem] flex-none items-center justify-center rounded-full transition duration-150 ease-out active:scale-90 ${
+                  className={`flex h-6 w-6 min-w-[1.5rem] min-h-[1.5rem] flex-none items-center justify-center rounded-full border border-gray-300 bg-white shadow-sm transition duration-150 ease-out active:scale-90 ${
                     isActive
-                      ? "ring-2 ring-[rgba(255,190,135,0.95)]"
-                      : "ring-1 ring-white hover:ring-[rgba(249,166,75,0.35)]"
+                      ? "border-[3px] border-[#b35411] ring-2 ring-[rgba(255,190,135,0.95)] ring-offset-1 ring-offset-white shadow-md"
+                      : "border-gray-300 hover:border-[rgba(179,84,17,0.5)] hover:shadow-md"
                   }`}
                   style={{ backgroundColor: variant.hex }}
                 />
