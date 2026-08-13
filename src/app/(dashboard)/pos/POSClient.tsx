@@ -287,21 +287,10 @@ export default function POSClient({
 
   function updateSplitPaymentField(key: SplitPaymentKey, rawValue: string) {
     const nextValue = rawValue.replace(/[^\d.]/g, "");
-    const nextAmounts = { ...splitPaymentAmounts, [key]: nextValue };
-    const entries = Object.entries(nextAmounts).filter(([, value]) => value !== "" && parseFloat(value) > 0);
-
-    if (entries.length === 1 && totalAmount > 0) {
-      const [firstKey, firstValue] = entries[0];
-      const initialAmount = parseFloat(firstValue);
-      const remaining = Math.max(totalAmount - initialAmount, 0);
-      const nextField = SPLIT_PAYMENT_FIELDS.find(({ value }) => value !== firstKey && nextAmounts[value as SplitPaymentKey] === "");
-
-      if (remaining > 0 && nextField) {
-        nextAmounts[nextField.value] = remaining.toFixed(2);
-      }
-    }
-
-    setSplitPaymentAmounts(nextAmounts);
+    setSplitPaymentAmounts((prev) => ({
+      ...prev,
+      [key]: nextValue,
+    }));
   }
 
   async function handleCompleteSale() {
