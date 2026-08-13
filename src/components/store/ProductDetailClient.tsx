@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, ShoppingBag, Share2 } from "lucide-react";
 import ProductGallery from "@/components/store/ProductGallery";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
@@ -60,6 +61,51 @@ export default function ProductDetailClient({
       document.body.style.overflow = previousOverflow;
     };
   }, [zoomOpen]);
+
+  const lightboxNode =
+    zoomOpen && activeImage && activeImageUrl
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[99999] bg-black/80"
+            role="dialog"
+            aria-modal="true"
+            aria-label="معاينة الصورة"
+            onClick={() => setZoomOpen(false)}
+          >
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                setZoomOpen(false);
+              }}
+              aria-label="إغلاق المعاينة"
+              className="fixed right-4 top-4 z-[99999] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/60 p-2.5 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
+            >
+              ×
+            </button>
+
+            <div className="flex h-full items-center justify-center p-3 sm:p-5">
+              <div
+                className="relative h-[78dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-black/20"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <Image
+                  src={optimizeCloudinaryUrl(activeImageUrl, {
+                    width: 1600,
+                    quality: 90,
+                  })}
+                  alt={activeImage.altText || displayName}
+                  fill
+                  sizes="100vw"
+                  className="h-full w-full object-contain"
+                  priority
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
 
   const displayName = getProductDisplayName(product);
   const activeColor = normalizedRequestedColor ??
@@ -271,46 +317,7 @@ export default function ProductDetailClient({
         </div>
       </div>
 
-      {zoomOpen && activeImage && activeImageUrl && (
-        <div
-          className="fixed inset-0 z-[9999] bg-black/80"
-          role="dialog"
-          aria-modal="true"
-          aria-label="معاينة الصورة"
-          onClick={() => setZoomOpen(false)}
-        >
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              setZoomOpen(false);
-            }}
-            aria-label="إغلاق المعاينة"
-            className="fixed right-4 top-4 z-[99999] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/60 p-2.5 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
-          >
-            ×
-          </button>
-
-          <div className="flex h-full items-center justify-center p-3 sm:p-5">
-            <div
-              className="relative h-[78dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-black/20"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <Image
-                src={optimizeCloudinaryUrl(activeImageUrl, {
-                  width: 1600,
-                  quality: 90,
-                })}
-                alt={activeImage.altText || displayName}
-                fill
-                sizes="100vw"
-                className="h-full w-full object-contain"
-                priority
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {lightboxNode}
     </div>
   );
 }
