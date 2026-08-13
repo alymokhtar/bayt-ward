@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSalePayments } from "./sales-payment-utils";
+import { getSalePaymentSummary, normalizeSalePayments } from "./sales-payment-utils";
 import { getPaymentDisplayLabel } from "./utils";
 
 test("caps a single overpayment to the sale total for payment records", () => {
@@ -36,4 +36,20 @@ test("shows the single payment method for one payment entry", () => {
 
 test("shows mixed for multiple payment entries", () => {
   assert.equal(getPaymentDisplayLabel("CASH", [{ method: "CASH" }, { method: "CARD" }]), "مختلط");
+});
+
+test("uses payment rows as the source of truth for historical sales totals", () => {
+  const result = getSalePaymentSummary({
+    totalAmount: 200,
+    fallbackPaidAmount: 999,
+    paymentMethod: "CASH",
+    payments: [
+      { method: "CASH", amount: 120 },
+      { method: "CARD", amount: 80 },
+    ],
+  });
+
+  assert.equal(result.paidAmount, 200);
+  assert.equal(result.remainingAmount, 0);
+  assert.equal(result.paymentSummary, "MIXED");
 });

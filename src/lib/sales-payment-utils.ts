@@ -5,6 +5,11 @@ export type NormalizedSalePayment = {
   method: PaymentMethod;
 };
 
+export type SalePaymentRow = {
+  method?: string | null;
+  amount?: number | string | null;
+};
+
 export function normalizeSalePayments(input: {
   payments?: Array<{ amount: number; method: PaymentMethod }>;
   paidAmount: number;
@@ -35,5 +40,35 @@ export function normalizeSalePayments(input: {
   return {
     normalizedPayments: normalizedForStorage,
     effectivePaidAmount,
+  };
+}
+
+export function getSalePaymentSummary(input: {
+  totalAmount: number;
+  fallbackPaidAmount?: number;
+  paymentMethod?: string | null;
+  payments?: SalePaymentRow[] | null;
+}) {
+  const normalizedPayments = (input.payments ?? [])
+    .filter((payment) => payment && (payment.amount !== null && payment.amount !== undefined))
+    .map((payment) => ({
+      method: payment.method ?? input.paymentMethod ?? "CASH",
+      amount: Number(payment.amount ?? 0),
+    }));
+
+  const paidAmount = normalizedPayments.length > 0
+    ? normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0)
+    : Number(input.fallbackPaidAmount ?? 0);
+
+  const remainingAmount = Math.max(paidAmount - input.totalAmount, 0);
+  const paymentSummary = normalizedPayments.length > 1
+    ? "MIXED"
+    : normalizedPayments[0]?.method ?? input.paymentMethod ?? "CASH";
+
+  return {
+    paidAmount,
+    remainingAmount,
+    paymentSummary,
+    normalizedPayments,
   };
 }

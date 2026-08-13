@@ -17,9 +17,11 @@ import SaleWhatsAppButton from "@/components/whatsapp/SaleWhatsAppButton";
 import { getSale } from "@/lib/actions/sales";
 import { getStoreSettings } from "@/lib/actions/settings";
 import { STORE_NAME_AR } from "@/lib/constants";
+import { getSalePaymentSummary } from "@/lib/sales-payment-utils";
 import {
   formatCurrency,
   formatDateTime,
+  getPaymentDisplayLabel,
   getPaymentMethodLabel,
 } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -161,20 +163,23 @@ export default function SaleDetailsModal({
     sale?.returns
       .filter((r) => r.status === "APPROVED")
       .reduce((sum, r) => sum + r.refundAmount, 0) ?? 0;
-  const historicalPaidAmount = sale
-    ? (sale.payments.length > 0
-        ? sale.payments.reduce((sum, payment) => sum + payment.amount, 0)
-        : sale.paidAmount)
-    : 0;
-  const historicalRemaining = sale
-    ? Math.max(historicalPaidAmount - sale.totalAmount, 0)
-    : 0;
+  const salePaymentSummary = sale
+    ? getSalePaymentSummary({
+        totalAmount: sale.totalAmount,
+        fallbackPaidAmount: sale.paidAmount,
+        paymentMethod: sale.paymentMethod,
+        payments: sale.payments,
+      })
+    : null;
+
+  const historicalPaidAmount = salePaymentSummary?.paidAmount ?? 0;
+  const historicalRemaining = salePaymentSummary?.remainingAmount ?? 0;
   const paymentSummaryText = sale
     ? sale.payments.length > 1
       ? sale.payments
           .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`)
           .join(" • ")
-      : getPaymentMethodLabel(sale.payments[0]?.method ?? sale.paymentMethod)
+      : getPaymentDisplayLabel(sale.paymentMethod, sale.payments)
     : "—";
 
   return (

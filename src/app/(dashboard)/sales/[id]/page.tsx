@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/Table";
 import { getSale } from "@/lib/actions/sales";
 import { STORE_NAME_AR } from "@/lib/constants";
+import { getSalePaymentSummary } from "@/lib/sales-payment-utils";
 import {
   formatCurrency,
   formatDateTime,
+  getPaymentDisplayLabel,
   getPaymentMethodLabel,
 } from "@/lib/utils";
 import PrintInvoiceButton from "@/components/ui/PrintInvoiceButton";
@@ -67,15 +69,20 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
   const totalRefunded = sale.returns
     .filter((r) => r.status === "APPROVED")
     .reduce((sum, r) => sum + r.refundAmount, 0);
-  const historicalPaidAmount = sale.payments.length > 0
-    ? sale.payments.reduce((sum, payment) => sum + payment.amount, 0)
-    : sale.paidAmount;
-  const historicalRemaining = Math.max(historicalPaidAmount - sale.totalAmount, 0);
+  const salePaymentSummary = getSalePaymentSummary({
+    totalAmount: sale.totalAmount,
+    fallbackPaidAmount: sale.paidAmount,
+    paymentMethod: sale.paymentMethod,
+    payments: sale.payments,
+  });
+
+  const historicalPaidAmount = salePaymentSummary.paidAmount;
+  const historicalRemaining = salePaymentSummary.remainingAmount;
   const paymentSummaryText = sale.payments.length > 1
     ? sale.payments
         .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`)
         .join(" • ")
-    : getPaymentMethodLabel(sale.payments[0]?.method ?? sale.paymentMethod);
+    : getPaymentDisplayLabel(sale.paymentMethod, sale.payments);
 
   return (
       <div className="space-y-6">
