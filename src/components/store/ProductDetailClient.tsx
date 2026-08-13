@@ -149,6 +149,7 @@ export default function ProductDetailClient({
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [touchDeltaX, setTouchDeltaX] = useState(0);
   const [touchDeltaY, setTouchDeltaY] = useState(0);
+  const [gestureAxis, setGestureAxis] = useState<"horizontal" | "vertical" | null>(null);
   const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
 
   useEffect(() => {
@@ -177,52 +178,57 @@ export default function ProductDetailClient({
     return () => clearInterval(timer);
   }, [zoomOpen, images.length, isAutoPlayPaused]);
 
-  const pauseAutoPlay = () => {
-    setIsAutoPlayPaused(true);
-    window.clearTimeout((pauseAutoPlay as unknown as { timeoutId?: number }).timeoutId);
-    (pauseAutoPlay as unknown as { timeoutId?: number }).timeoutId = window.setTimeout(() => {
-      setIsAutoPlayPaused(false);
-    }, 2200);
-  };
-
   const lightboxNode =
     zoomOpen && activeImage && activeImageUrl
       ? createPortal(
           <div
-            className="fixed inset-0 z-[99999] h-[100dvh] bg-black/88 opacity-100 transition-opacity duration-300 ease-out"
+            className="fixed inset-0 z-[99999] h-[100dvh] bg-black/88 opacity-100 transition-opacity duration-500 ease-out"
             role="dialog"
             aria-modal="true"
             aria-label="معاينة الصورة"
             onClick={() => setZoomOpen(false)}
-            onPointerDown={() => pauseAutoPlay()}
             onTouchStart={(event) => {
-              setTouchStartX(event.touches[0]?.clientX ?? null);
-              setTouchStartY(event.touches[0]?.clientY ?? null);
+              const x = event.touches[0]?.clientX ?? 0;
+              const y = event.touches[0]?.clientY ?? 0;
+              setTouchStartX(x);
+              setTouchStartY(y);
               setTouchDeltaX(0);
               setTouchDeltaY(0);
+              setGestureAxis(null);
               setIsAutoPlayPaused(true);
             }}
             onTouchMove={(event) => {
               if (touchStartX === null || touchStartY === null) return;
+
               const currentX = event.touches[0]?.clientX ?? touchStartX;
               const currentY = event.touches[0]?.clientY ?? touchStartY;
               const deltaX = currentX - touchStartX;
               const deltaY = currentY - touchStartY;
 
-              setTouchDeltaX(deltaX);
-              setTouchDeltaY(deltaY);
+              if (gestureAxis === null) {
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 14) {
+                  setGestureAxis("horizontal");
+                } else if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 14) {
+                  setGestureAxis("vertical");
+                }
+              }
+
+              if (gestureAxis === "horizontal") {
+                setTouchDeltaX(deltaX);
+              } else if (gestureAxis === "vertical") {
+                setTouchDeltaY(deltaY);
+              }
             }}
             onTouchEnd={() => {
-              const absX = Math.abs(touchDeltaX);
-              const absY = Math.abs(touchDeltaY);
-
-              if (absX > absY && absX > 50) {
-                if (touchDeltaX < 0) {
-                  setActiveImageIndex((current) => (current + 1) % images.length);
-                } else {
-                  setActiveImageIndex((current) => (current - 1 + images.length) % images.length);
+              if (gestureAxis === "horizontal") {
+                if (Math.abs(touchDeltaX) > 60) {
+                  if (touchDeltaX < 0) {
+                    setActiveImageIndex((current) => (current + 1) % images.length);
+                  } else {
+                    setActiveImageIndex((current) => (current - 1 + images.length) % images.length);
+                  }
                 }
-              } else if (touchDeltaY > 140) {
+              } else if (gestureAxis === "vertical" && touchDeltaY > 120) {
                 setZoomOpen(false);
               }
 
@@ -230,18 +236,19 @@ export default function ProductDetailClient({
               setTouchStartY(null);
               setTouchDeltaX(0);
               setTouchDeltaY(0);
-              window.setTimeout(() => setIsAutoPlayPaused(false), 1800);
+              setGestureAxis(null);
+              window.setTimeout(() => setIsAutoPlayPaused(false), 1500);
             }}
           >
             <div
               className="flex h-full w-full items-center justify-center"
               style={{
-                transform: `translateY(${touchDeltaY}px)`,
-                transition: touchStartY === null ? "transform 180ms ease-out" : "none",
+                transform: `translateY(${gestureAxis === "vertical" ? touchDeltaY : 0}px)`,
+                transition: gestureAxis === null ? "transform 180ms ease-out" : "none",
               }}
             >
               <div
-                className="relative h-[100dvh] w-screen overflow-hidden bg-black/20 opacity-100 scale-100 transition-all duration-300 ease-out"
+                className="relative h-[100dvh] w-screen overflow-hidden bg-black/20 opacity-100 scale-100 transition-all duration-500 ease-out"
                 onClick={(event) => event.stopPropagation()}
               >
                 <button
@@ -269,19 +276,31 @@ export default function ProductDetailClient({
 
                 <div
                   className="relative h-full w-full"
-                  style={{ transform: `translateX(${touchDeltaX * 0.15}px)`, transition: touchStartX === null ? "transform 250ms ease-out" : "none" }}
+                  style={{
+                    transform: `translateX(${gestureAxis === "horizontal" ? touchDeltaX * 0.2 : 0}px)`,
+                    transition: gestureAxis === null ? "transform 250ms ease-out" : "none",
+                  }}
                 >
-                  <Image
-                    src={optimizeCloudinaryUrl(activeImageUrl, {
-                      width: 1600,
-                      quality: 90,
-                    })}
-                    alt={activeImage.altText || displayName}
-                    fill
-                    sizes="100vw"
-                    className="h-full w-full object-contain transition-all duration-300 ease-out"
-                    priority
-                  />
+                  {images.map((image, index) => {
+                    const isActive = index === activeImageIndex;
+                    return (
+                      <Image
+                        key={image.id || `${image.url}-${index}`}
+                        src={optimizeCloudinaryUrl(image.url, {
+                          width: 1600,
+                          quality: 90,
+                        })}
+                        alt={image.alt || displayName}
+                        fill
+                        sizes="100vw"
+                        className={cn(
+                          "absolute inset-0 h-full w-full object-contain transition-opacity duration-500 ease-out",
+                          isActive ? "opacity-100" : "opacity-0"
+                        )}
+                        priority={isActive}
+                      />
+                    );
+                  })}
                 </div>
 
                 {images.length > 1 && (
