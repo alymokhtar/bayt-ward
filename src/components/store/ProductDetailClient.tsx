@@ -290,7 +290,7 @@ export default function ProductDetailClient({
                           width: 1600,
                           quality: 90,
                         })}
-                        alt={image.alt || displayName}
+                        alt={image.altText || displayName}
                         fill
                         sizes="100vw"
                         className={cn(
