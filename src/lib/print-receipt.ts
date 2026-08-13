@@ -178,16 +178,16 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
   ${row("المدفوع", fmt(data.paidAmount))}
   ${row("الباقي", fmt(Math.max(data.paidAmount - data.totalAmount, 0)), true)}
   ${
-    data.payments && data.payments.length > 0
+    data.payments && data.payments.length > 1
       ? row(
-          "طريقة المدفوعات",
+          "طريقة الدفع",
           escapeHtml(
             data.payments
               .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatNumber(payment.amount)}`)
               .join(" • ")
           )
         )
-      : row("طريقة الدفع", escapeHtml(getPaymentMethodLabel(data.paymentMethod)))
+      : row("طريقة الدفع", escapeHtml(getPaymentMethodLabel(data.payments?.[0]?.method ?? data.paymentMethod)))
   }
 
   ${
