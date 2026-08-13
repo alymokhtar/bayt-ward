@@ -67,6 +67,10 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
   const totalRefunded = sale.returns
     .filter((r) => r.status === "APPROVED")
     .reduce((sum, r) => sum + r.refundAmount, 0);
+  const historicalPaidAmount = sale.payments.length > 0
+    ? sale.payments.reduce((sum, payment) => sum + payment.amount, 0)
+    : sale.paidAmount;
+  const historicalRemaining = Math.max(historicalPaidAmount - sale.totalAmount, 0);
 
   return (
       <div className="space-y-6">
@@ -216,11 +220,11 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">المدفوع</span>
-                <span>{formatCurrency(sale.paidAmount)}</span>
+                <span>{formatCurrency(historicalPaidAmount)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">الباقي</span>
-                <span>{formatCurrency(Math.max(sale.paidAmount - sale.totalAmount, 0))}</span>
+                <span>{formatCurrency(historicalRemaining)}</span>
               </div>
               {hasReturns && (
                 <div className="flex justify-between text-red-600 pt-2 border-t border-red-200">
