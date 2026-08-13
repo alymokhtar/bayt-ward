@@ -20,7 +20,6 @@ import { STORE_NAME_AR } from "@/lib/constants";
 import {
   formatCurrency,
   formatDateTime,
-  getPaymentDisplayLabel,
   getPaymentMethodLabel,
 } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -170,6 +169,13 @@ export default function SaleDetailsModal({
   const historicalRemaining = sale
     ? Math.max(historicalPaidAmount - sale.totalAmount, 0)
     : 0;
+  const paymentSummaryText = sale
+    ? sale.payments.length > 1
+      ? sale.payments
+          .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`)
+          .join(" • ")
+      : getPaymentMethodLabel(sale.payments[0]?.method ?? sale.paymentMethod)
+    : "—";
 
   return (
     <Modal
@@ -247,17 +253,9 @@ export default function SaleDetailsModal({
                   <p className="font-medium">{sale.user.name}</p>
                 </div>
                 <div>
-                  <p className="text-muted">المدفوعات</p>
+                  <p className="text-muted">طريقة الدفع</p>
                   <div className="space-y-1 font-medium">
-                    {sale.payments?.length ? (
-                      sale.payments.map((payment) => (
-                        <p key={`${payment.method}-${payment.amount}`}>
-                          {getPaymentMethodLabel(payment.method)}: {formatCurrency(payment.amount)}
-                        </p>
-                      ))
-                    ) : (
-                      <p>{getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}</p>
-                    )}
+                    <p>{paymentSummaryText}</p>
                   </div>
                 </div>
                 <div>

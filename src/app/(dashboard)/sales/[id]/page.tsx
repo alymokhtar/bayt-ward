@@ -71,6 +71,11 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
     ? sale.payments.reduce((sum, payment) => sum + payment.amount, 0)
     : sale.paidAmount;
   const historicalRemaining = Math.max(historicalPaidAmount - sale.totalAmount, 0);
+  const paymentSummaryText = sale.payments.length > 1
+    ? sale.payments
+        .map((payment) => `${getPaymentMethodLabel(payment.method)}: ${formatCurrency(payment.amount)}`)
+        .join(" • ")
+    : getPaymentMethodLabel(sale.payments[0]?.method ?? sale.paymentMethod);
 
   return (
       <div className="space-y-6">
@@ -136,9 +141,7 @@ export default async function SaleDetailPage({ params }: SaleDetailPageProps) {
               </div>
               <div>
                 <p className="text-muted">طريقة الدفع</p>
-                <p className="font-medium">
-                  {getPaymentMethodLabel(sale.paymentMethod)}
-                </p>
+                <p className="font-medium">{paymentSummaryText}</p>
               </div>
               <div>
                 <p className="text-muted">التاريخ</p>

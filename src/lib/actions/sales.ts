@@ -128,27 +128,13 @@ export async function getSale(id: string) {
 
   const sale = await prisma.sale.findUnique({
     where: { id },
-    select: {
-      id: true,
-      invoiceNumber: true,
-      customerId: true,
-      subtotal: true,
-      discountAmount: true,
-      discountPercent: true,
-      taxAmount: true,
-      totalAmount: true,
-      paidAmount: true,
-      changeAmount: true,
-      paymentMethod: true,
+    include: {
       payments: {
         select: {
           method: true,
           amount: true,
         },
       },
-      status: true,
-      notes: true,
-      createdAt: true,
       customer: {
         select: {
           id: true,
