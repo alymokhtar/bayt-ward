@@ -145,6 +145,25 @@ export default function ProductDetailClient({
       })
     : null;
 
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [touchDeltaY, setTouchDeltaY] = useState(0);
+
+  useEffect(() => {
+    if (!zoomOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setZoomOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [zoomOpen]);
+
   const lightboxNode =
     zoomOpen && activeImage && activeImageUrl
       ? createPortal(
@@ -154,6 +173,25 @@ export default function ProductDetailClient({
             aria-modal="true"
             aria-label="معاينة الصورة"
             onClick={() => setZoomOpen(false)}
+            onTouchStart={(event) => {
+              setTouchStartY(event.touches[0]?.clientY ?? null);
+              setTouchDeltaY(0);
+            }}
+            onTouchMove={(event) => {
+              if (touchStartY === null) return;
+              const currentY = event.touches[0]?.clientY ?? touchStartY;
+              const delta = currentY - touchStartY;
+              if (delta > 0) {
+                setTouchDeltaY(delta);
+              }
+            }}
+            onTouchEnd={() => {
+              if (touchDeltaY > 140) {
+                setZoomOpen(false);
+              }
+              setTouchStartY(null);
+              setTouchDeltaY(0);
+            }}
           >
             <button
               type="button"
@@ -162,12 +200,26 @@ export default function ProductDetailClient({
                 setZoomOpen(false);
               }}
               aria-label="إغلاق المعاينة"
-              className="fixed right-4 top-4 z-[99999] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/60 p-2.5 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
+              className="fixed right-4 top-4 z-[99999] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/60 p-2.5 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
             >
-              ×
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
             </button>
 
-            <div className="flex h-full items-center justify-center p-3 sm:p-5">
+            <div
+              className="flex h-full items-center justify-center p-3 sm:p-5"
+              style={{ transform: `translateY(${touchDeltaY}px)`, transition: touchStartY === null ? "transform 180ms ease-out" : "none" }}
+            >
               <div
                 className="relative h-[78dvh] w-full max-w-4xl overflow-hidden rounded-[1.5rem] bg-black/20"
                 onClick={(event) => event.stopPropagation()}
