@@ -145,8 +145,11 @@ export default function ProductDetailClient({
       })
     : null;
 
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [touchDeltaX, setTouchDeltaX] = useState(0);
   const [touchDeltaY, setTouchDeltaY] = useState(0);
+  const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
 
   useEffect(() => {
     if (!zoomOpen) return;
@@ -164,6 +167,24 @@ export default function ProductDetailClient({
     };
   }, [zoomOpen]);
 
+  useEffect(() => {
+    if (!zoomOpen || images.length <= 1 || isAutoPlayPaused) return;
+
+    const timer = window.setInterval(() => {
+      setActiveImageIndex((current) => (current + 1) % images.length);
+    }, 3500);
+
+    return () => clearInterval(timer);
+  }, [zoomOpen, images.length, isAutoPlayPaused]);
+
+  const pauseAutoPlay = () => {
+    setIsAutoPlayPaused(true);
+    window.clearTimeout((pauseAutoPlay as unknown as { timeoutId?: number }).timeoutId);
+    (pauseAutoPlay as unknown as { timeoutId?: number }).timeoutId = window.setTimeout(() => {
+      setIsAutoPlayPaused(false);
+    }, 2200);
+  };
+
   const lightboxNode =
     zoomOpen && activeImage && activeImageUrl
       ? createPortal(
@@ -173,29 +194,51 @@ export default function ProductDetailClient({
             aria-modal="true"
             aria-label="معاينة الصورة"
             onClick={() => setZoomOpen(false)}
+            onPointerDown={() => pauseAutoPlay()}
             onTouchStart={(event) => {
+              setTouchStartX(event.touches[0]?.clientX ?? null);
               setTouchStartY(event.touches[0]?.clientY ?? null);
+              setTouchDeltaX(0);
               setTouchDeltaY(0);
+              setIsAutoPlayPaused(true);
             }}
             onTouchMove={(event) => {
-              if (touchStartY === null) return;
+              if (touchStartX === null || touchStartY === null) return;
+              const currentX = event.touches[0]?.clientX ?? touchStartX;
               const currentY = event.touches[0]?.clientY ?? touchStartY;
-              const delta = currentY - touchStartY;
-              if (delta > 0) {
-                setTouchDeltaY(delta);
-              }
+              const deltaX = currentX - touchStartX;
+              const deltaY = currentY - touchStartY;
+
+              setTouchDeltaX(deltaX);
+              setTouchDeltaY(deltaY);
             }}
             onTouchEnd={() => {
-              if (touchDeltaY > 140) {
+              const absX = Math.abs(touchDeltaX);
+              const absY = Math.abs(touchDeltaY);
+
+              if (absX > absY && absX > 50) {
+                if (touchDeltaX < 0) {
+                  setActiveImageIndex((current) => (current + 1) % images.length);
+                } else {
+                  setActiveImageIndex((current) => (current - 1 + images.length) % images.length);
+                }
+              } else if (touchDeltaY > 140) {
                 setZoomOpen(false);
               }
+
+              setTouchStartX(null);
               setTouchStartY(null);
+              setTouchDeltaX(0);
               setTouchDeltaY(0);
+              window.setTimeout(() => setIsAutoPlayPaused(false), 1800);
             }}
           >
             <div
               className="flex h-full w-full items-center justify-center"
-              style={{ transform: `translateY(${touchDeltaY}px)`, transition: touchStartY === null ? "transform 180ms ease-out" : "none" }}
+              style={{
+                transform: `translateY(${touchDeltaY}px)`,
+                transition: touchStartY === null ? "transform 180ms ease-out" : "none",
+              }}
             >
               <div
                 className="relative h-[100dvh] w-screen overflow-hidden bg-black/20 opacity-100 scale-100 transition-all duration-300 ease-out"
@@ -224,17 +267,48 @@ export default function ProductDetailClient({
                   </svg>
                 </button>
 
-                <Image
-                  src={optimizeCloudinaryUrl(activeImageUrl, {
-                    width: 1600,
-                    quality: 90,
-                  })}
-                  alt={activeImage.altText || displayName}
-                  fill
-                  sizes="100vw"
-                  className="h-full w-full object-contain transition-transform duration-300 ease-out"
-                  priority
-                />
+                <div
+                  className="relative h-full w-full"
+                  style={{ transform: `translateX(${touchDeltaX * 0.15}px)`, transition: touchStartX === null ? "transform 250ms ease-out" : "none" }}
+                >
+                  <Image
+                    src={optimizeCloudinaryUrl(activeImageUrl, {
+                      width: 1600,
+                      quality: 90,
+                    })}
+                    alt={activeImage.altText || displayName}
+                    fill
+                    sizes="100vw"
+                    className="h-full w-full object-contain transition-all duration-300 ease-out"
+                    priority
+                  />
+                </div>
+
+                {images.length > 1 && (
+                  <div className="absolute inset-x-0 bottom-4 z-10 flex items-center justify-center gap-2 px-4">
+                    {images.map((image, index) => {
+                      const isActive = index === activeImageIndex;
+
+                      return (
+                        <button
+                          key={image.id || `${image.url}-${index}`}
+                          type="button"
+                          aria-label={`عرض الصورة ${index + 1}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setActiveImageIndex(index);
+                            setIsAutoPlayPaused(true);
+                            window.setTimeout(() => setIsAutoPlayPaused(false), 1800);
+                          }}
+                          className={cn(
+                            "h-2.5 rounded-full transition-all duration-200",
+                            isActive ? "w-8 bg-white" : "w-2.5 bg-white/60 hover:bg-white/80"
+                          )}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>,
