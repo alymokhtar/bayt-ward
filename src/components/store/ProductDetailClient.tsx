@@ -286,7 +286,7 @@ export default function ProductDetailClient({
               setZoomOpen(false);
             }}
             aria-label="إغلاق المعاينة"
-            className="absolute right-4 top-4 z-[10000] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/50 p-2 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-black/65 active:scale-95"
+            className="fixed right-4 top-4 z-[99999] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/60 p-2.5 text-xl font-bold text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
           >
             ×
           </button>
