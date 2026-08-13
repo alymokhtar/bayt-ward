@@ -150,7 +150,7 @@ export default function ProductDetailClient({
   const [touchDeltaX, setTouchDeltaX] = useState(0);
   const [touchDeltaY, setTouchDeltaY] = useState(0);
   const [gestureAxis, setGestureAxis] = useState<"horizontal" | "vertical" | null>(null);
-  const [isAutoPlayPaused, setIsAutoPlayPaused] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   useEffect(() => {
     if (!zoomOpen) return;
@@ -169,18 +169,17 @@ export default function ProductDetailClient({
   }, [zoomOpen]);
 
   useEffect(() => {
-    if (!zoomOpen || images.length <= 1 || isAutoPlayPaused) return;
+    if (!zoomOpen || images.length <= 1 || hasInteracted) return;
 
     const timer = window.setInterval(() => {
       setActiveImageIndex((current) => (current + 1) % images.length);
     }, 3500);
 
     return () => clearInterval(timer);
-  }, [zoomOpen, images.length, isAutoPlayPaused]);
+  }, [zoomOpen, images.length, hasInteracted]);
 
-  const pauseAutoPlay = () => {
-    setIsAutoPlayPaused(true);
-    window.setTimeout(() => setIsAutoPlayPaused(false), 1800);
+  const markAsInteracted = () => {
+    setHasInteracted(true);
   };
 
   const navigateImage = (direction: "next" | "prev") => {
@@ -191,7 +190,7 @@ export default function ProductDetailClient({
         ? (activeImageIndex + 1) % images.length
         : (activeImageIndex - 1 + images.length) % images.length;
 
-    pauseAutoPlay();
+    markAsInteracted();
     setActiveImageIndex(nextIndex);
   };
 
@@ -212,7 +211,7 @@ export default function ProductDetailClient({
               setTouchDeltaX(0);
               setTouchDeltaY(0);
               setGestureAxis(null);
-              setIsAutoPlayPaused(true);
+              markAsInteracted();
             }}
             onTouchMove={(event) => {
               if (touchStartX === null || touchStartY === null) return;
@@ -250,9 +249,6 @@ export default function ProductDetailClient({
               setTouchDeltaX(0);
               setTouchDeltaY(0);
               setGestureAxis(null);
-              if (gestureAxis !== "vertical") {
-                window.setTimeout(() => setIsAutoPlayPaused(false), 1500);
-              }
             }}
           >
             <div
@@ -380,8 +376,8 @@ export default function ProductDetailClient({
                           aria-label={`عرض الصورة ${index + 1}`}
                           onClick={(event) => {
                             event.stopPropagation();
+                            markAsInteracted();
                             setActiveImageIndex(index);
-                            pauseAutoPlay();
                           }}
                           className={cn(
                             "h-2.5 rounded-full transition-all duration-200",
@@ -430,6 +426,7 @@ export default function ProductDetailClient({
           onSelectImage={setActiveImageIndex}
           onMainImageClick={(index) => {
             setActiveImageIndex(index);
+            setHasInteracted(false);
             setZoomOpen(true);
           }}
         />
