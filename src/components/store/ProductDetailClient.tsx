@@ -178,6 +178,23 @@ export default function ProductDetailClient({
     return () => clearInterval(timer);
   }, [zoomOpen, images.length, isAutoPlayPaused]);
 
+  const pauseAutoPlay = () => {
+    setIsAutoPlayPaused(true);
+    window.setTimeout(() => setIsAutoPlayPaused(false), 1800);
+  };
+
+  const navigateImage = (direction: "next" | "prev") => {
+    if (images.length <= 1) return;
+
+    const nextIndex =
+      direction === "next"
+        ? (activeImageIndex + 1) % images.length
+        : (activeImageIndex - 1 + images.length) % images.length;
+
+    pauseAutoPlay();
+    setActiveImageIndex(nextIndex);
+  };
+
   const lightboxNode =
     zoomOpen && activeImage && activeImageUrl
       ? createPortal(
@@ -222,11 +239,7 @@ export default function ProductDetailClient({
             onTouchEnd={() => {
               if (gestureAxis === "horizontal") {
                 if (Math.abs(touchDeltaX) > 60) {
-                  if (touchDeltaX < 0) {
-                    setActiveImageIndex((current) => (current + 1) % images.length);
-                  } else {
-                    setActiveImageIndex((current) => (current - 1 + images.length) % images.length);
-                  }
+                  navigateImage(touchDeltaX < 0 ? "next" : "prev");
                 }
               } else if (gestureAxis === "vertical" && touchDeltaY > 120) {
                 setZoomOpen(false);
@@ -237,7 +250,9 @@ export default function ProductDetailClient({
               setTouchDeltaX(0);
               setTouchDeltaY(0);
               setGestureAxis(null);
-              window.setTimeout(() => setIsAutoPlayPaused(false), 1500);
+              if (gestureAxis !== "vertical") {
+                window.setTimeout(() => setIsAutoPlayPaused(false), 1500);
+              }
             }}
           >
             <div
@@ -273,6 +288,56 @@ export default function ProductDetailClient({
                     <path d="M6 6l12 12M18 6L6 18" />
                   </svg>
                 </button>
+
+                {images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label="الصورة السابقة"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigateImage("prev");
+                      }}
+                      className="absolute left-3 top-1/2 z-20 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white shadow-lg backdrop-blur-sm transition-all duration-200 hover:bg-black/70 active:scale-95"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M15 18l-6-6 6-6" />
+                      </svg>
+                    </button>
+
+                    <button
+                      type="button"
+                      aria-label="الصورة التالية"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigateImage("next");
+                      }}
+                      className="absolute right-3 top-1/2 z-20 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white shadow-lg backdrop-blur-sm transition-all duration-200 hover:bg-black/70 active:scale-95"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
+                        className="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9 18l6-6-6-6" />
+                      </svg>
+                    </button>
+                  </>
+                )}
 
                 <div
                   className="relative h-full w-full"
@@ -316,8 +381,7 @@ export default function ProductDetailClient({
                           onClick={(event) => {
                             event.stopPropagation();
                             setActiveImageIndex(index);
-                            setIsAutoPlayPaused(true);
-                            window.setTimeout(() => setIsAutoPlayPaused(false), 1800);
+                            pauseAutoPlay();
                           }}
                           className={cn(
                             "h-2.5 rounded-full transition-all duration-200",
