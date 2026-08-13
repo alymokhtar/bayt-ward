@@ -168,7 +168,7 @@ export default function ProductDetailClient({
     zoomOpen && activeImage && activeImageUrl
       ? createPortal(
           <div
-            className="fixed inset-0 z-[99999] bg-black/88 opacity-100 transition-opacity duration-300 ease-out"
+            className="fixed inset-0 z-[99999] h-[100dvh] bg-black/88 opacity-100 transition-opacity duration-300 ease-out"
             role="dialog"
             aria-modal="true"
             aria-label="معاينة الصورة"
@@ -198,7 +198,7 @@ export default function ProductDetailClient({
               style={{ transform: `translateY(${touchDeltaY}px)`, transition: touchStartY === null ? "transform 180ms ease-out" : "none" }}
             >
               <div
-                className="relative h-screen w-screen overflow-hidden bg-black/20 opacity-100 scale-100 transition-all duration-300 ease-out"
+                className="relative h-[100dvh] w-screen overflow-hidden bg-black/20 opacity-100 scale-100 transition-all duration-300 ease-out"
                 onClick={(event) => event.stopPropagation()}
               >
                 <button
@@ -208,7 +208,7 @@ export default function ProductDetailClient({
                     setZoomOpen(false);
                   }}
                   aria-label="إغلاق المعاينة"
-                  className="absolute right-3 top-3 z-[99999] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/60 p-2.5 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
+                  className="absolute right-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[99999] inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/30 bg-black/60 p-2.5 text-white shadow-lg backdrop-blur-sm transition hover:bg-black/70 active:scale-95"
                 >
                   <svg
                     viewBox="0 0 24 24"
