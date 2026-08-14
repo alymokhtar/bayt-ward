@@ -161,9 +161,13 @@ export const getCachedSalesChartData = unstable_cache(
     }
 
     const firstDay = salesChartData[0]?.date;
+    const lastDay = salesChartData[salesChartData.length - 1]?.date;
     const firstDayStart = firstDay
       ? getBusinessDayBoundsForDateKey(firstDay).start
       : getEgyptBusinessDayBounds(now).start;
+    const lastDayEnd = lastDay
+      ? getBusinessDayBoundsForDateKey(lastDay).end
+      : getEgyptBusinessDayBounds(now).end;
 
     const rows = await prisma.$queryRaw<
       {
@@ -173,14 +177,15 @@ export const getCachedSalesChartData = unstable_cache(
       }[]
     >`
       SELECT
-        TO_CHAR((p."createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours', 'YYYY-MM-DD') AS day,
+        TO_CHAR(((p."createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours')::timestamptz, 'YYYY-MM-DD') AS day,
         COALESCE(SUM(p."amount"), 0)::float AS total,
         COUNT(*)::int AS count
       FROM "Payment" p
       INNER JOIN "Sale" s ON p."orderId" = s.id
       WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
         AND p."createdAt" >= ${firstDayStart}
-      GROUP BY day
+        AND p."createdAt" < ${lastDayEnd}
+      GROUP BY TO_CHAR(((p."createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours')::timestamptz, 'YYYY-MM-DD')
       ORDER BY day ASC
     `;
 
