@@ -176,17 +176,23 @@ export const getCachedSalesChartData = unstable_cache(
         count: number;
       }[]
     >`
+      WITH chart_rows AS (
+        SELECT
+          DATE((p."createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours') AS business_day,
+          p."amount" AS amount
+        FROM "Payment" p
+        INNER JOIN "Sale" s ON p."orderId" = s.id
+        WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+          AND p."createdAt" >= ${firstDayStart}
+          AND p."createdAt" < ${lastDayEnd}
+      )
       SELECT
-        TO_CHAR(((p."createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours')::timestamptz, 'YYYY-MM-DD') AS day,
-        COALESCE(SUM(p."amount"), 0)::float AS total,
+        TO_CHAR(chart_rows.business_day, 'YYYY-MM-DD') AS day,
+        COALESCE(SUM(chart_rows.amount), 0)::float AS total,
         COUNT(*)::int AS count
-      FROM "Payment" p
-      INNER JOIN "Sale" s ON p."orderId" = s.id
-      WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
-        AND p."createdAt" >= ${firstDayStart}
-        AND p."createdAt" < ${lastDayEnd}
-      GROUP BY TO_CHAR(((p."createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours')::timestamptz, 'YYYY-MM-DD')
-      ORDER BY day ASC
+      FROM chart_rows
+      GROUP BY chart_rows.business_day
+      ORDER BY chart_rows.business_day ASC
     `;
 
     const byDay = new Map(rows.map((row) => [row.day, row]));
