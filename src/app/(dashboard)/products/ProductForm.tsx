@@ -26,7 +26,7 @@ import { getDeletedVariantIds } from "@/lib/variant-sync";
 import VariantImageUploader from "@/components/products/VariantImageUploader";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Category = { id: string; name: string; nameAr: string | null };
 
@@ -143,6 +143,7 @@ export default function ProductForm({
     }) || [emptyVariant(undefined, initialVariantCode)]
   );
   const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
+  const variantCardRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   const [loading, setLoading] = useState(false);
   const [addingVariant, setAddingVariant] = useState(false);
@@ -281,7 +282,14 @@ export default function ProductForm({
     const codes = result.data[0];
     setVariants((prev) => {
       const template = prev[0];
-      return [...prev, emptyVariant(template, codes)];
+      const nextVariants = [...prev, emptyVariant(template, codes)];
+
+      requestAnimationFrame(() => {
+        const newestCard = variantCardRefs.current[nextVariants.length - 1];
+        newestCard?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+
+      return nextVariants;
     });
   }
 
@@ -489,6 +497,9 @@ export default function ProductForm({
         {variants.map((variant, index) => (
           <div
             key={variant.id || index}
+            ref={(element) => {
+              variantCardRefs.current[index] = element;
+            }}
             className="rounded-lg border border-border p-4 space-y-3"
           >
             <div className="flex items-center justify-between">
