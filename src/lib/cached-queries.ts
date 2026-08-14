@@ -30,7 +30,8 @@ type KpiData = {
 /** KPIs in a single SQL round-trip (replaces 5 separate Prisma calls) */
 export const getCachedDashboardKpis = unstable_cache(
   async (): Promise<KpiData> => {
-    const now = new Date();
+    try {
+      const now = new Date();
     const { start: todayStart, end: todayEnd } = getEgyptBusinessDayBounds(now);
     const monthRange = getReportPeriodRange("month");
     const { start: monthStart, end: monthEnd } = getBusinessDayBoundsFromDateKeys(
@@ -57,7 +58,7 @@ export const getCachedDashboardKpis = unstable_cache(
       SELECT
         -- ✅ استخدام جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
         (SELECT COALESCE(SUM(p."amount"), 0)::float FROM "Payment" p
-          INNER JOIN "Sale" s ON p."saleId" = s.id
+          INNER JOIN "Sale" s ON p."orderId" = s.id
           WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND p."createdAt" >= ${todayStart}
             AND p."createdAt" < ${todayEnd}) AS "todayGrossSales",
@@ -67,7 +68,7 @@ export const getCachedDashboardKpis = unstable_cache(
             AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
         -- ✅ استخدام جدول Payment لشهر كامل
         (SELECT COALESCE(SUM(p."amount"), 0)::float FROM "Payment" p
-          INNER JOIN "Sale" s ON p."saleId" = s.id
+          INNER JOIN "Sale" s ON p."orderId" = s.id
           WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND p."createdAt" >= ${monthStart}
             AND p."createdAt" < ${monthEnd}) AS "monthSales",
@@ -118,6 +119,24 @@ export const getCachedDashboardKpis = unstable_cache(
       totalCustomers: data.totalCustomers,
       lowStockCount: data.lowStockCount,
     };
+    } catch (error) {
+      console.error("❌ Error in getCachedDashboardKpis:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      return {
+        todayGrossSales: 0,
+        todayReturns: 0,
+        todayExpenses: 0,
+        todayNetSales: 0,
+        todaySalesCount: 0,
+        monthSales: 0,
+        monthSalesCount: 0,
+        totalProducts: 0,
+        totalCustomers: 0,
+        lowStockCount: 0,
+      };
+    }
   },
   ["dashboard-kpis"],
   {
@@ -129,7 +148,8 @@ export const getCachedDashboardKpis = unstable_cache(
 /** 7-day chart grouped by Egypt business day (03:00 → 03:00 Cairo). */
 export const getCachedSalesChartData = unstable_cache(
   async () => {
-    const now = new Date();
+    try {
+      const now = new Date();
     const salesChartData: { date: string; total: number; count: number }[] = [];
 
     for (let i = 6; i >= 0; i--) {
@@ -157,7 +177,7 @@ export const getCachedSalesChartData = unstable_cache(
         COALESCE(SUM(p."amount"), 0)::float AS total,
         COUNT(*)::int AS count
       FROM "Payment" p
-      INNER JOIN "Sale" s ON p."saleId" = s.id
+      INNER JOIN "Sale" s ON p."orderId" = s.id
       WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
         AND p."createdAt" >= ${firstDayStart}
       GROUP BY day
@@ -175,6 +195,23 @@ export const getCachedSalesChartData = unstable_cache(
         count: match.count,
       };
     });
+    } catch (error) {
+      console.error("❌ Error in getCachedSalesChartData:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      // إرجاع بيانات فارغة للـ 7 أيام الماضية
+      const now = new Date();
+      const emptyChartData = [];
+      for (let i = 6; i >= 0; i--) {
+        emptyChartData.push({
+          date: getOffsetBusinessDateKey(-i, now),
+          total: 0,
+          count: 0,
+        });
+      }
+      return emptyChartData;
+    }
   },
   ["dashboard-chart"],
   {
@@ -810,19 +847,20 @@ export const getCachedSuppliersList = unstable_cache(
 
 export const getCachedSalesReport = unstable_cache(
   async (paramsJson: string) => {
-    const { from, to } = JSON.parse(paramsJson) as {
-      from?: string;
-      to?: string;
-    };
-    const { start, end } = getReportDateRange(from, to);
+    try {
+      const { from, to } = JSON.parse(paramsJson) as {
+        from?: string;
+        to?: string;
+      };
+      const { start, end } = getReportDateRange(from, to);
 
-    // ✅ توحيد الفلتر مع مراجعة الخزنة والـ KPI - فقط المبيعات المكتملة أو المرتجعة جزئياً
-    const completedSalesWhere = {
-      status: { in: ["COMPLETED" as const, "PARTIALLY_REFUNDED" as const, "REFUNDED" as const] },
-      createdAt: { gte: start, lt: end },
-    };
+      // ✅ توحيد الفلتر مع مراجعة الخزنة والـ KPI - فقط المبيعات المكتملة أو المرتجعة جزئياً
+      const completedSalesWhere = {
+        status: { in: ["COMPLETED" as const, "PARTIALLY_REFUNDED" as const, "REFUNDED" as const] },
+        createdAt: { gte: start, lt: end },
+      };
 
-    const [sales, payments, returns, expenses, salesList] = await Promise.all([
+      const [sales, payments, returns, expenses, salesList] = await Promise.all([
       // ✅ استخدام نفس الفلتر المستخدم في مراجعة الخزنة
       prisma.sale.aggregate({
         where: completedSalesWhere,
@@ -842,7 +880,6 @@ export const getCachedSalesReport = unstable_cache(
           sale: completedSalesWhere,
         },
         _sum: { amount: true },
-        _count: true,
       }),
       prisma.return.aggregate({
         where: {
@@ -905,6 +942,27 @@ export const getCachedSalesReport = unstable_cache(
         createdAt: sale.createdAt,
       })),
     };
+    } catch (error) {
+      console.error("❌ Error in getCachedSalesReport:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        paramsJson,
+      });
+      // إرجاع بيانات فارغة بدلاً من انهيار الصفحة
+      return {
+        period: { from: new Date(), to: new Date() },
+        totalSales: 0,
+        salesCount: 0,
+        averageSale: 0,
+        totalDiscount: 0,
+        totalTax: 0,
+        netSales: 0,
+        returnsCount: 0,
+        totalReturns: 0,
+        totalExpenses: 0,
+        salesList: [],
+      };
+    }
   },
   ["sales-report"],
   {
@@ -1024,11 +1082,12 @@ export const getCachedInventoryReport = unstable_cache(
 
 export const getCachedProfitReport = unstable_cache(
   async (paramsJson: string) => {
-    const { from, to } = JSON.parse(paramsJson) as {
-      from?: string;
-      to?: string;
-    };
-    const { start, end } = getReportDateRange(from, to);
+    try {
+      const { from, to } = JSON.parse(paramsJson) as {
+        from?: string;
+        to?: string;
+      };
+      const { start, end } = getReportDateRange(from, to);
 
     const [revenueAgg, payments, cogsRows, returnedCogsRows, returns, expenses, purchases] =
       await Promise.all([
@@ -1120,6 +1179,27 @@ export const getCachedProfitReport = unstable_cache(
       purchasesTotal: purchases._sum.totalAmount ?? 0,
       purchasesCount: purchases._count,
     };
+    } catch (error) {
+      console.error("❌ Error in getCachedProfitReport:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        paramsJson,
+      });
+      return {
+        period: { from: new Date(), to: new Date() },
+        revenue: 0,
+        netRevenue: 0,
+        costOfGoodsSold: 0,
+        grossProfit: 0,
+        totalReturns: 0,
+        totalExpenses: 0,
+        expensesCount: 0,
+        netProfit: 0,
+        profitMargin: 0,
+        purchasesTotal: 0,
+        purchasesCount: 0,
+      };
+    }
   },
   ["profit-report"],
   {

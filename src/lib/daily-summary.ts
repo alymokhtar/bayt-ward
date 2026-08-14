@@ -7,7 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 export async function getDailySummary() {
-  const { start, end } = getEgyptBusinessDayBounds();
+  try {
+    const { start, end } = getEgyptBusinessDayBounds();
 
   const [salesAgg, payments, returnsAgg, costOfGoodsSoldRows, returnedCogsRows, expensesAgg] =
     await Promise.all([
@@ -85,6 +86,23 @@ export async function getDailySummary() {
     grossProfit,
     netProfit: grossProfit - totalExpenses,
   };
+  } catch (error) {
+    console.error("❌ Error in getDailySummary:", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    // إرجاع ملخص فارغ بدلاً من انهيار الدالة
+    return {
+      totalSales: 0,
+      totalReturns: 0,
+      invoicesCount: 0,
+      totalExpenses: 0,
+      netRevenue: 0,
+      costOfGoodsSold: 0,
+      grossProfit: 0,
+      netProfit: 0,
+    };
+  }
 }
 
 export function formatDailySummaryMessage(
