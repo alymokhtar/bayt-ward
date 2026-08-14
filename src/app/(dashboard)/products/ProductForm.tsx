@@ -144,6 +144,7 @@ export default function ProductForm({
   );
   const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
   const variantCardRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const [highlightedVariantIndex, setHighlightedVariantIndex] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [addingVariant, setAddingVariant] = useState(false);
@@ -156,6 +157,16 @@ export default function ProductForm({
       .find((image) => image.isPrimary);
     return primaryImage?.id ?? null;
   });
+
+  useEffect(() => {
+    if (highlightedVariantIndex === null) return;
+
+    const timeout = window.setTimeout(() => {
+      setHighlightedVariantIndex(null);
+    }, 1400);
+
+    return () => window.clearTimeout(timeout);
+  }, [highlightedVariantIndex]);
 
   useEffect(() => {
     if (isEdit || initialVariantCode) return;
@@ -280,6 +291,9 @@ export default function ProductForm({
     }
 
     const codes = result.data[0];
+    const nextIndex = variants.length;
+    setHighlightedVariantIndex(nextIndex);
+
     setVariants((prev) => {
       const template = prev[0];
       const nextVariants = [...prev, emptyVariant(template, codes)];
@@ -500,7 +514,11 @@ export default function ProductForm({
             ref={(element) => {
               variantCardRefs.current[index] = element;
             }}
-            className="rounded-lg border border-border p-4 space-y-3"
+            className={`rounded-lg border p-4 space-y-3 transition-all duration-500 ${
+              highlightedVariantIndex === index
+                ? "border-gold bg-gold/5 shadow-[0_0_0_2px_rgba(217,169,89,0.25)] ring-2 ring-gold/30"
+                : "border-border bg-white"
+            }`}
           >
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-muted">
