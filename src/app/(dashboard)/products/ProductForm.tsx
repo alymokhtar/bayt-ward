@@ -144,6 +144,7 @@ export default function ProductForm({
   );
   const [deletedVariantIds, setDeletedVariantIds] = useState<string[]>([]);
   const variantCardRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const formFooterRef = useRef<HTMLDivElement | null>(null);
   const [highlightedVariantIndex, setHighlightedVariantIndex] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -299,8 +300,7 @@ export default function ProductForm({
       const nextVariants = [...prev, emptyVariant(template, codes)];
 
       requestAnimationFrame(() => {
-        const newestCard = variantCardRefs.current[nextVariants.length - 1];
-        newestCard?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        formFooterRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
       });
 
       return nextVariants;
@@ -711,7 +711,7 @@ export default function ProductForm({
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div ref={formFooterRef} className="flex gap-3 pt-2">
         <Button type="submit" loading={loading}>
           {isEdit ? "حفظ التعديلات" : "إنشاء المنتج"}
         </Button>
