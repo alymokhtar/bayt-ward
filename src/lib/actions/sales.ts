@@ -239,11 +239,14 @@ export async function createSale(data: {
         : normalizedPayments[0]?.method ?? (data.paymentMethod ?? "CASH");
 
     const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    const actualPaidAmount = data.payments?.length ? paymentTotal : effectivePaidAmount;
-    // Use the explicit tenderedAmount from Frontend if provided, otherwise calculate it
+    const rawTenderedTotal = (data.payments ?? []).reduce(
+      (sum, payment) => sum + Number(payment.amount ?? 0),
+      0
+    );
+    const actualPaidAmount = effectivePaidAmount;
     const tenderedAmount = data.tenderedAmount !== undefined
       ? data.tenderedAmount
-      : (data.payments?.length ? paymentTotal : effectivePaidAmount);
+      : (data.payments?.length ? rawTenderedTotal : data.paidAmount);
     const resolvedChangeAmount = data.tenderedAmount !== undefined
       ? Math.max(0, data.tenderedAmount - data.totalAmount)
       : (data.changeAmount ?? Math.max(0, tenderedAmount - data.totalAmount));

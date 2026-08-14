@@ -21,16 +21,21 @@ export function normalizeSalePayments(input: {
   const normalizedPayments = (input.payments?.length
     ? input.payments
     : [{ amount: input.paidAmount, method: input.paymentMethod ?? "CASH" }]
-  ).map((payment) => ({
-    amount: Number(payment.amount.toFixed(2)),
-    method: payment.method,
-  }));
+  ).map((payment) => {
+    const rawAmount = Number(payment.amount ?? 0);
+    const cappedAmount = hasMultiplePayments ? rawAmount : Math.min(rawAmount, input.totalAmount);
+
+    return {
+      amount: Number(cappedAmount.toFixed(2)),
+      method: payment.method,
+    };
+  });
 
   const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
 
   const effectivePaidAmount = hasMultiplePayments
     ? paymentTotal
-    : Math.max(input.totalAmount, paymentTotal);
+    : Math.min(input.totalAmount, paymentTotal);
 
   return {
     normalizedPayments,
