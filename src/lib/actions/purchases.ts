@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { generateInvoiceNumber } from "@/lib/utils";
+import { generateInvoiceNumberSafe } from "@/lib/invoice-generator";
 import { invalidatePurchasesData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { getCachedPurchasesList } from "@/lib/cached-queries";
 import type { Prisma } from "@prisma/client";
@@ -164,7 +164,7 @@ export async function createPurchase(data: {
       return { success: false, error: "أحد المنتجات غير موجود" };
     }
 
-    const invoiceNumber = generateInvoiceNumber("PUR");
+    const invoiceNumber = await generateInvoiceNumberSafe("PUR");
     const now = new Date();
 
     const purchase = await prisma.$transaction(

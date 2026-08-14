@@ -2,7 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
-import { generateInvoiceNumber, formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
+import { generateInvoiceNumberSafe } from "@/lib/invoice-generator";
+import { formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
 import { getCachedSalesPage } from "@/lib/cached-queries";
 import { getCashRegisterReview as fetchCashRegisterReview } from "@/lib/cash-register";
 import { invalidateSalesData, revalidateInventoryCache } from "@/lib/revalidate-tags";
@@ -295,7 +296,7 @@ export async function createSale(data: {
         }
       }
 
-      const invoiceNumber = generateInvoiceNumber("INV");
+      const invoiceNumber = await generateInvoiceNumberSafe("INV");
 
       const createdSale = await tx.sale.create({
         data: {

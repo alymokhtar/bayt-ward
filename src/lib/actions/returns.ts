@@ -2,7 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { generateInvoiceNumber, formatCurrency, formatDateTime } from "@/lib/utils";
+import { generateInvoiceNumberSafe } from "@/lib/invoice-generator";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { invalidateReturnsData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { getCachedReturnsList } from "@/lib/cached-queries";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
@@ -183,7 +184,7 @@ export async function createReturn(data: {
         });
       }
 
-      const returnNumber = generateInvoiceNumber("RET");
+      const returnNumber = await generateInvoiceNumberSafe("RET");
 
       const created = await tx.return.create({
         data: {
