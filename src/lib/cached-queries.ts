@@ -170,15 +170,11 @@ export const getCachedSalesChartData = unstable_cache(
       : getEgyptBusinessDayBounds(now).end;
 
     const rows = await prisma.$queryRaw<
-      {
-        day: string;
-        total: number;
-        count: number;
-      }[]
+      Array<{ day: string; total: number; count: number }>
     >`
       WITH chart_rows AS (
         SELECT
-          DATE((p."createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours') AS business_day,
+          DATE((p."createdAt" AT TIME ZONE 'Africa/Cairo') - INTERVAL '3 hours') AS business_day,
           p."amount" AS amount
         FROM "Payment" p
         INNER JOIN "Sale" s ON p."orderId" = s.id
