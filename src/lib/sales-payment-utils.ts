@@ -30,15 +30,10 @@ export function normalizeSalePayments(input: {
 
   const effectivePaidAmount = hasMultiplePayments
     ? paymentTotal
-    : Math.min(input.totalAmount, paymentTotal);
-
-  const normalizedForStorage = normalizedPayments.map((payment) => ({
-    ...payment,
-    amount: payment.amount > 0 && payment.amount > input.totalAmount ? input.totalAmount : payment.amount,
-  }));
+    : Math.max(input.totalAmount, paymentTotal);
 
   return {
-    normalizedPayments: normalizedForStorage,
+    normalizedPayments,
     effectivePaidAmount,
   };
 }
