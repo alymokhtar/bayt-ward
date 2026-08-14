@@ -10,6 +10,7 @@ export async function getCashRegisterReview(from?: string, to?: string) {
   const toKey = to || fromKey;
   const { start, end } = getBusinessDayBoundsFromDateKeys(fromKey, toKey);
 
+  // ✅ فقط المبيعات المكتملة أو المرتجعة جزئياً (استثناء المعلقة والملغاة)
   const saleWhere = {
     status: { in: ["COMPLETED" as const, "PARTIALLY_REFUNDED" as const, "REFUNDED" as const] },
     createdAt: { gte: start, lt: end },

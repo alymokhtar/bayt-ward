@@ -55,18 +55,22 @@ export const getCachedDashboardKpis = unstable_cache(
       ]
     >`
       SELECT
-        (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
-            AND "createdAt" >= ${todayStart}
-            AND "createdAt" < ${todayEnd}) AS "todayGrossSales",
+        -- ✅ استخدام جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
+        (SELECT COALESCE(SUM(p."amount"), 0)::float FROM "Payment" p
+          INNER JOIN "Sale" s ON p."saleId" = s.id
+          WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+            AND p."createdAt" >= ${todayStart}
+            AND p."createdAt" < ${todayEnd}) AS "todayGrossSales",
         (SELECT COUNT(*)::int FROM "Sale"
           WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND "createdAt" >= ${todayStart}
             AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
-        (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
-          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
-            AND "createdAt" >= ${monthStart}
-            AND "createdAt" < ${monthEnd}) AS "monthSales",
+        -- ✅ استخدام جدول Payment لشهر كامل
+        (SELECT COALESCE(SUM(p."amount"), 0)::float FROM "Payment" p
+          INNER JOIN "Sale" s ON p."saleId" = s.id
+          WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+            AND p."createdAt" >= ${monthStart}
+            AND p."createdAt" < ${monthEnd}) AS "monthSales",
         (SELECT COUNT(*)::int FROM "Sale"
           WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND "createdAt" >= ${monthStart}
@@ -149,12 +153,13 @@ export const getCachedSalesChartData = unstable_cache(
       }[]
     >`
       SELECT
-        TO_CHAR(("createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours', 'YYYY-MM-DD') AS day,
-        COALESCE(SUM("totalAmount"), 0)::float AS total,
+        TO_CHAR((p."createdAt" AT TIME ZONE ${BUSINESS_TIME_ZONE}) - INTERVAL '3 hours', 'YYYY-MM-DD') AS day,
+        COALESCE(SUM(p."amount"), 0)::float AS total,
         COUNT(*)::int AS count
-      FROM "Sale"
-      WHERE status = 'COMPLETED'
-        AND "createdAt" >= ${firstDayStart}
+      FROM "Payment" p
+      INNER JOIN "Sale" s ON p."saleId" = s.id
+      WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+        AND p."createdAt" >= ${firstDayStart}
       GROUP BY day
       ORDER BY day ASC
     `;
@@ -811,11 +816,16 @@ export const getCachedSalesReport = unstable_cache(
     };
     const { start, end } = getReportDateRange(from, to);
 
-    const [sales, returns, expenses, salesList] = await Promise.all([
+    // ✅ توحيد الفلتر مع مراجعة الخزنة والـ KPI - فقط المبيعات المكتملة أو المرتجعة جزئياً
+    const completedSalesWhere = {
+      status: { in: ["COMPLETED" as const, "PARTIALLY_REFUNDED" as const, "REFUNDED" as const] },
+      createdAt: { gte: start, lt: end },
+    };
+
+    const [sales, payments, returns, expenses, salesList] = await Promise.all([
+      // ✅ استخدام نفس الفلتر المستخدم في مراجعة الخزنة
       prisma.sale.aggregate({
-        where: {
-          createdAt: { gte: start, lt: end },
-        },
+        where: completedSalesWhere,
         _sum: {
           totalAmount: true,
           subtotal: true,
@@ -824,6 +834,15 @@ export const getCachedSalesReport = unstable_cache(
         },
         _count: true,
         _avg: { totalAmount: true },
+      }),
+      // ✅ حساب إجمالي المبيعات من جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
+      prisma.payment.aggregate({
+        where: {
+          createdAt: { gte: start, lt: end },
+          sale: completedSalesWhere,
+        },
+        _sum: { amount: true },
+        _count: true,
       }),
       prisma.return.aggregate({
         where: {
@@ -840,9 +859,7 @@ export const getCachedSalesReport = unstable_cache(
         _sum: { amount: true },
       }),
       prisma.sale.findMany({
-        where: {
-          createdAt: { gte: start, lt: end },
-        },
+        where: completedSalesWhere,
         select: {
           id: true,
           invoiceNumber: true,
@@ -860,7 +877,8 @@ export const getCachedSalesReport = unstable_cache(
       }),
     ]);
 
-    const grossSales = sales._sum.totalAmount ?? 0;
+    // ✅ استخدام Payment.amount بدلاً من Sale.totalAmount لضمان التطابق مع مراجعة الخزنة
+    const grossSales = payments._sum.amount ?? 0;
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
 
@@ -1012,7 +1030,7 @@ export const getCachedProfitReport = unstable_cache(
     };
     const { start, end } = getReportDateRange(from, to);
 
-    const [revenueAgg, cogsRows, returnedCogsRows, returns, expenses, purchases] =
+    const [revenueAgg, payments, cogsRows, returnedCogsRows, returns, expenses, purchases] =
       await Promise.all([
         prisma.sale.aggregate({
           where: {
@@ -1020,6 +1038,17 @@ export const getCachedProfitReport = unstable_cache(
             createdAt: { gte: start, lt: end },
           },
           _sum: { totalAmount: true },
+        }),
+        // ✅ حساب إجمالي المبيعات من جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
+        prisma.payment.aggregate({
+          where: {
+            createdAt: { gte: start, lt: end },
+            sale: {
+              status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+              createdAt: { gte: start, lt: end },
+            },
+          },
+          _sum: { amount: true },
         }),
         prisma.$queryRaw<[{ cogs: number }]>`
           SELECT COALESCE(SUM(si.quantity * pv."costPrice"), 0)::float AS cogs
@@ -1063,7 +1092,8 @@ export const getCachedProfitReport = unstable_cache(
         }),
       ]);
 
-    const revenue = revenueAgg._sum.totalAmount ?? 0;
+    // ✅ استخدام Payment.amount بدلاً من Sale.totalAmount لضمان التطابق مع مراجعة الخزنة
+    const revenue = payments._sum.amount ?? 0;
     const totalCogs = cogsRows[0]?.cogs ?? 0;
     const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
     const costOfGoodsSold = totalCogs - returnedCogs;

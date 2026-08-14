@@ -9,7 +9,7 @@ import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 export async function getDailySummary() {
   const { start, end } = getEgyptBusinessDayBounds();
 
-  const [salesAgg, returnsAgg, costOfGoodsSoldRows, returnedCogsRows, expensesAgg] =
+  const [salesAgg, payments, returnsAgg, costOfGoodsSoldRows, returnedCogsRows, expensesAgg] =
     await Promise.all([
       prisma.sale.aggregate({
         where: {
@@ -18,6 +18,17 @@ export async function getDailySummary() {
         },
         _sum: { totalAmount: true },
         _count: true,
+      }),
+      // ✅ حساب إجمالي المبيعات من جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
+      prisma.payment.aggregate({
+        where: {
+          createdAt: { gte: start, lt: end },
+          sale: {
+            status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+            createdAt: { gte: start, lt: end },
+          },
+        },
+        _sum: { amount: true },
       }),
       prisma.return.aggregate({
         where: {
@@ -53,7 +64,8 @@ export async function getDailySummary() {
       }),
     ]);
 
-  const totalSales = salesAgg._sum.totalAmount ?? 0;
+  // ✅ استخدام Payment.amount بدلاً من Sale.totalAmount لضمان التطابق مع مراجعة الخزنة
+  const totalSales = payments._sum.amount ?? 0;
   const totalReturns = returnsAgg._sum.refundAmount ?? 0;
   const invoicesCount = salesAgg._count;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
