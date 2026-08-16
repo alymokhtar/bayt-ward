@@ -50,7 +50,7 @@ export default function ProductCard({
   return (
     <article className="group overflow-hidden rounded-lg border border-[var(--store-border)] bg-white shadow-[0_8px_24px_rgba(75,54,37,0.09)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(75,54,37,0.14)]">
       <div className="relative aspect-[4/5] overflow-hidden bg-[var(--store-cream)]">
-        <Link href={href} className="block h-full">
+        <Link href={href} prefetch={true} className="block h-full">
           {optimizedUrl ? (
             <Image
               src={optimizedUrl}
@@ -90,7 +90,7 @@ export default function ProductCard({
         )}
       </div>
 
-      <Link href={href} className="block">
+      <Link href={href} prefetch={true} className="block">
         <div className="space-y-2 px-3 py-4 text-center">
           <h3 className="line-clamp-1 text-sm font-medium text-[var(--store-text)] transition group-hover:text-[var(--store-gold)] md:text-base">
             {displayName}

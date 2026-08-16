@@ -23,6 +23,7 @@ export default function CategoryCard({ category, coverImage }: CategoryCardProps
   return (
     <Link
       href={getCategoryPath(category.id)}
+      prefetch={true}
       className="group block overflow-hidden rounded-lg border border-[var(--store-border)] bg-white shadow-[0_8px_24px_rgba(75,54,37,0.09)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_34px_rgba(75,54,37,0.14)]"
     >
       <div className="relative aspect-[1.08/1] overflow-hidden bg-[var(--store-cream)]">
