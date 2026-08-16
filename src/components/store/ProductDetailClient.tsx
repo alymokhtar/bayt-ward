@@ -414,8 +414,8 @@ export default function ProductDetailClient({
   }
 
   return (
-    <div className="grid overflow-hidden gap-8 rounded-[2.3rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.95))] p-4 shadow-[0_24px_70px_rgba(80,54,28,0.12)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
-      <div className="space-y-4">
+    <div className="grid gap-4 overflow-hidden rounded-[2.1rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.95))] p-3 shadow-[0_24px_70px_rgba(80,54,28,0.12)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+      <div className="space-y-3 md:space-y-4">
         <ProductGallery
           productName={displayName}
           priceLabel={formatCurrency(price, currencySymbol)}
@@ -432,8 +432,8 @@ export default function ProductDetailClient({
         />
       </div>
 
-      <div className="min-w-0 space-y-6">
-        <div className="space-y-2">
+      <div className="min-w-0 space-y-3 md:space-y-6">
+        <div className="space-y-1.5 md:space-y-2">
           <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] text-[var(--store-gold)]" dir="rtl">
             {product.category.nameAr?.trim() || product.category.name?.trim() || "القسم"}
           </p>
@@ -442,46 +442,51 @@ export default function ProductDetailClient({
           )}
         </div>
 
-        <div className="flex flex-wrap items-end gap-3 rounded-[1.4rem] border border-[var(--store-border)] bg-white/70 px-4 py-3">
-          <p
-            className={cn(
-              "inline-flex rounded-full px-3 py-1 text-xs font-medium",
-              inStock
-                ? "bg-emerald-50 text-emerald-700"
-                : "bg-neutral-100 text-neutral-600"
-            )}
-          >
-            {inStock ? "متوفر" : "غير متوفر حالياً"}
-          </p>
-        </div>
-
-        {sizes.length > 0 && (
-          <div className="space-y-3 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">
-            <p className="text-sm font-medium">المقاس</p>
-            <div className="flex flex-wrap gap-2">
-              {sizes.map((item) => (
-                <button
-                  key={item.size}
-                  type="button"
-                  disabled={!item.inStock}
-                  onClick={() => {
-                    setSelectedSize(item.size);
-                    setActiveImageIndex(0);
-                  }}
-                  className={cn(
-                    "min-w-12 rounded-full border px-4 py-2 text-sm transition",
-                    selectedSize === item.size || (!selectedSize && item === sizes[0])
-                      ? "border-[var(--store-text)] bg-[var(--store-text)] text-white"
-                      : "border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)]",
-                    !item.inStock && "opacity-40 line-through"
-                  )}
-                >
-                  {item.size}
-                </button>
-              ))}
+        <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-2.5 md:p-4">
+          <div className="flex flex-col gap-2 md:gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs text-[var(--store-muted)] md:text-sm">الحالة</span>
+              <p
+                className={cn(
+                  "inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium md:px-3 md:text-xs",
+                  inStock
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-neutral-100 text-neutral-600"
+                )}
+              >
+                {inStock ? "متوفر" : "غير متوفر حالياً"}
+              </p>
             </div>
+
+            {sizes.length > 0 && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-[var(--store-muted)] md:text-sm">المقاس</span>
+                <div className="flex flex-wrap justify-end gap-1.5 md:gap-2">
+                  {sizes.map((item) => (
+                    <button
+                      key={item.size}
+                      type="button"
+                      disabled={!item.inStock}
+                      onClick={() => {
+                        setSelectedSize(item.size);
+                        setActiveImageIndex(0);
+                      }}
+                      className={cn(
+                        "min-w-10 rounded-full border px-2.5 py-1.5 text-xs transition md:min-w-12 md:px-4 md:py-2 md:text-sm",
+                        selectedSize === item.size || (!selectedSize && item === sizes[0])
+                          ? "border-[var(--store-text)] bg-[var(--store-text)] text-white"
+                          : "border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)]",
+                        !item.inStock && "opacity-40 line-through"
+                      )}
+                    >
+                      {item.size}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {product.description && (
           <div className="space-y-2 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">

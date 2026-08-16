@@ -56,13 +56,13 @@ export default function ProductGallery({
   }
 
   return (
-    <section key={selectedColor} className="mx-auto w-full max-w-md pb-6">
-      <div className="overflow-hidden rounded-[2rem] bg-[#fff6ed] p-3 shadow-sm shadow-[rgba(111,80,47,0.12)]">
+    <section key={selectedColor} className="mx-auto w-full max-w-md pb-2 md:pb-6">
+      <div className="overflow-hidden rounded-[1.75rem] bg-[#fff6ed] p-2 shadow-sm shadow-[rgba(111,80,47,0.12)] md:rounded-[2rem] md:p-3">
         <button
           type="button"
           onClick={() => onMainImageClick?.(activeImageIndex)}
           aria-label="تكبير الصورة"
-          className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.75rem] bg-[#fff1e0] shadow-sm"
+          className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.35rem] bg-[#fff1e0] shadow-sm md:rounded-[1.75rem]"
         >
           {activeImageUrl ? (
             <Image
@@ -81,7 +81,7 @@ export default function ProductGallery({
         </button>
 
         {images.length > 1 && (
-          <div className="mt-3 flex gap-3 overflow-x-auto pb-1 hide-scrollbar">
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1 hide-scrollbar md:mt-3 md:gap-3">
             {images.map((image, index) => (
               <button
                 key={image.id}
@@ -113,7 +113,7 @@ export default function ProductGallery({
           </div>
         )}
 
-        <div className="mt-3 rounded-[1.75rem] bg-white/95 px-3 py-3 shadow-sm shadow-[rgba(111,80,47,0.08)]">
+        <div className="mt-2 rounded-[1.35rem] bg-white/95 px-2.5 py-2.5 shadow-sm shadow-[rgba(111,80,47,0.08)] md:mt-3 md:rounded-[1.75rem] md:px-3 md:py-3">
           <div className="flex flex-wrap items-center gap-1.5 py-1">
             {colorVariants.map((variant) => {
               const isActive = variant.name === selectedColor;
@@ -136,9 +136,9 @@ export default function ProductGallery({
           </div>
         </div>
 
-        <div className="mt-4 space-y-2 px-1">
-          <h1 className="text-xl font-semibold text-[#3d2b1f] sm:text-2xl">{productName}</h1>
-          <p className="text-2xl font-bold text-[#b35411]">{priceLabel}</p>
+        <div className="mt-2 space-y-1 px-1 md:mt-4 md:space-y-2">
+          <h1 className="text-lg font-semibold text-[#3d2b1f] sm:text-2xl md:text-xl">{productName}</h1>
+          <p className="text-xl font-bold text-[#b35411] md:text-2xl">{priceLabel}</p>
         </div>
       </div>
     </section>
