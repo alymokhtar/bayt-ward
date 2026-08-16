@@ -4,6 +4,8 @@ export type StoreOrderMessageParams = {
   productName: string;
   color?: string;
   size?: string;
+  price?: number;
+  currencySymbol?: string;
   productUrl?: string;
   productId?: string;
   whatsappNumber: string;
@@ -56,17 +58,27 @@ export function buildStoreOrderMessage({
   productName,
   color,
   size,
+  price,
+  currencySymbol,
   productUrl,
   productId,
 }: Omit<StoreOrderMessageParams, "whatsappNumber">): string {
   const lines = [
-    "مرحبا بيت ورد",
-    "أرغب في طلب المنتج:",
-    productName,
+    "مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذا المنتج:",
+    "",
+    `المنتج: ${productName}`,
   ];
 
   if (color) lines.push(`اللون: ${color}`);
   if (size) lines.push(`المقاس: ${size}`);
+  
+  if (price !== undefined && currencySymbol) {
+    const formattedPrice = price.toLocaleString("ar-EG", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+    lines.push(`السعر: ${formattedPrice} ${currencySymbol}`);
+  }
 
   const productLink = getStoreProductLink(productUrl, productId);
   if (productLink) {

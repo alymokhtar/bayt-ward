@@ -516,6 +516,8 @@ export default function ProductDetailClient({
               whatsappNumber={whatsappNumber}
               color={activeColor || undefined}
               size={selectedSizeValue || selectedVariant?.size}
+              price={price}
+              currencySymbol={currencySymbol}
               disabled={!inStock}
               className="flex-[2] min-w-0 whitespace-nowrap rounded-full px-3 py-3 text-sm md:px-6 md:py-3.5"
             />

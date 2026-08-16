@@ -9,6 +9,8 @@ type WhatsAppOrderButtonProps = {
   whatsappNumber: string;
   color?: string;
   size?: string;
+  price?: number;
+  currencySymbol?: string;
   disabled?: boolean;
   className?: string;
 };
@@ -20,6 +22,8 @@ export default function WhatsAppOrderButton({
   whatsappNumber,
   color,
   size,
+  price,
+  currencySymbol,
   disabled = false,
   className = "",
 }: WhatsAppOrderButtonProps) {
@@ -41,6 +45,8 @@ export default function WhatsAppOrderButton({
     whatsappNumber,
     color,
     size,
+    price,
+    currencySymbol,
   });
 
   return (
