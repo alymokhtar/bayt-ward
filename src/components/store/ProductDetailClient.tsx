@@ -497,7 +497,7 @@ export default function ProductDetailClient({
           </div>
         )}
 
-        <div className="flex w-full flex-col gap-2.5 md:flex-wrap md:flex-row md:gap-3">
+        <div className="flex w-full items-stretch gap-2.5 md:flex-wrap md:flex-row md:gap-3">
           <button
             type="button"
             onClick={handleAddToCart}
@@ -507,7 +507,16 @@ export default function ProductDetailClient({
             {addedToCart ? <Check className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
             {addedToCart ? "تمت الإضافة" : "إضافة إلى السلة"}
           </button>
-          <div className="grid grid-cols-2 gap-2.5 md:flex md:flex-1 md:gap-3">
+
+          <div className="flex w-full items-stretch gap-2.5 md:flex md:flex-1 md:gap-3">
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex w-1/4 flex-none items-center justify-center gap-2 rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] px-2 py-3 text-sm font-medium text-[var(--store-text)] transition hover:border-[var(--store-gold)] md:w-auto md:flex-none md:px-6 md:py-3.5"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+
             <WhatsAppOrderButton
               productName={displayName}
               productUrl={productUrl}
@@ -516,16 +525,8 @@ export default function ProductDetailClient({
               color={activeColor || undefined}
               size={selectedSizeValue || selectedVariant?.size}
               disabled={!inStock}
-              className="w-full md:min-w-[12rem] md:flex-1"
+              className="flex-[2] !w-auto min-w-0 whitespace-nowrap rounded-full px-3 py-3 text-sm md:min-w-[12rem] md:flex-1 md:px-6 md:py-3.5"
             />
-            <button
-              type="button"
-              onClick={handleShare}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] px-4 py-3 text-sm font-medium text-[var(--store-text)] transition hover:border-[var(--store-gold)] md:flex-none md:px-6 md:py-3.5"
-            >
-              <Share2 className="h-4 w-4" />
-              مشاركة
-            </button>
           </div>
         </div>
       </div>

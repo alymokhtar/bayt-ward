@@ -51,8 +51,8 @@ export default function WhatsAppOrderButton({
       aria-disabled={disabled}
       className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3.5 text-sm font-medium text-white transition hover:bg-[#1da851] disabled:opacity-50 ${className}`}
     >
-      <span aria-hidden="true">💬</span>
-      اطلبي عبر واتساب
+      <span aria-hidden="true" className="shrink-0">💬</span>
+      <span className="truncate whitespace-nowrap">اطلبي عبر واتساب</span>
     </a>
   );
 }
