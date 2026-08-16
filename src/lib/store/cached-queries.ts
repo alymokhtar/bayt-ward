@@ -55,8 +55,8 @@ export const getCachedPublishedProducts = unstable_cache(
   },
   ["storefront-products"],
   {
-    tags: [CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    tags: [CACHE_TAG.products, CACHE_TAG.storefront, "products-list"],
+    revalidate: false,
   }
 );
 
@@ -74,7 +74,7 @@ export const getCachedFeaturedProducts = unstable_cache(
   ["storefront-featured"],
   {
     tags: [CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );
 
@@ -89,7 +89,7 @@ export const getCachedNewestProducts = unstable_cache(
   ["storefront-newest"],
   {
     tags: [CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );
 
@@ -141,7 +141,7 @@ export const getCachedSearchProducts = unstable_cache(
   ["storefront-search-products"],
   {
     tags: [CACHE_TAG.products, CACHE_TAG.categories, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );
 
@@ -169,8 +169,8 @@ export const getCachedStoreCategories = unstable_cache(
     }),
   ["storefront-categories"],
   {
-    tags: [CACHE_TAG.categories, CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    tags: [CACHE_TAG.categories, CACHE_TAG.products, CACHE_TAG.storefront, "categories-list"],
+    revalidate: false,
   }
 );
 
@@ -207,7 +207,7 @@ export const getCachedStoreCategoryCovers = unstable_cache(
   ["storefront-category-covers"],
   {
     tags: [CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );
 
@@ -236,7 +236,7 @@ export const getCachedStoreCategory = unstable_cache(
   ["storefront-category"],
   {
     tags: [CACHE_TAG.categories, CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );
 
@@ -252,7 +252,7 @@ export const getCachedPublishedProduct = unstable_cache(
   ["storefront-product"],
   {
     tags: [CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );
 
@@ -271,7 +271,7 @@ export const getCachedSimilarProducts = unstable_cache(
   ["storefront-similar"],
   {
     tags: [CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );
 
@@ -306,7 +306,7 @@ export const getCachedGalleryImages = unstable_cache(
   ["storefront-gallery"],
   {
     tags: [CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );
 
@@ -320,6 +320,6 @@ export const getCachedPublishedProductIds = unstable_cache(
   ["storefront-product-ids"],
   {
     tags: [CACHE_TAG.products, CACHE_TAG.storefront],
-    revalidate: STORE_REVALIDATE_SECONDS,
+    revalidate: false,
   }
 );

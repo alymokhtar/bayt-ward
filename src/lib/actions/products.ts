@@ -1,5 +1,6 @@
 "use server";
 
+import { updateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { normalizeScanCode, resolveStoredBarcode } from "@/lib/barcode";
@@ -358,6 +359,9 @@ export async function createProduct(data: {
     );
 
     revalidateProductPaths();
+    // Immediate cache invalidation for storefront
+    updateTag('products-list');
+    updateTag('product-' + product.id);
     return { success: true, data: product };
   } catch (error) {
     return handleActionError(error);
@@ -587,6 +591,9 @@ export async function updateProduct(
     }, { maxWait: 10000, timeout: 20000 });
 
     revalidateProductPaths();
+    // Immediate cache invalidation for storefront
+    updateTag('products-list');
+    updateTag('product-' + id);
     return { success: true, data: product! };
   } catch (error) {
     return handleActionError(error);
@@ -630,6 +637,9 @@ export async function deleteProduct(id: string) {
     }, { maxWait: 10000, timeout: 20000 });
 
     revalidateProductPaths();
+    // Immediate cache invalidation for storefront
+    updateTag('products-list');
+    updateTag('product-' + id);
     return { success: true, data: undefined };
   } catch (error) {
     return handleActionError(error);

@@ -1,5 +1,6 @@
 "use server";
 
+import { updateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 import { generateInvoiceNumberSafe } from "@/lib/invoice-generator";
@@ -402,6 +403,10 @@ export async function createSale(data: {
     });
 
     revalidateSalePaths();
+    // Immediate cache invalidation for stock & storefront products
+    sale.items.forEach((item) => {
+      updateTag('products-list');
+    });
 
     void checkLowStockAndNotify(data.items.map((item) => item.variantId));
     void sendTelegramMessage(formatSaleTelegramMessage(sale));
@@ -502,6 +507,10 @@ export async function cancelSale(id: string, reason?: string) {
     });
 
     revalidateSalePaths();
+    // Immediate cache invalidation for stock & storefront products
+    cancelled.items.forEach(() => {
+      updateTag('products-list');
+    });
 
     void sendTelegramMessage(
       [

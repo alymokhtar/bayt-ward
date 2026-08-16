@@ -1,5 +1,6 @@
 "use server";
 
+import { updateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { invalidateCategoriesData } from "@/lib/revalidate-tags";
@@ -73,6 +74,8 @@ export async function createCategory(data: {
     });
 
     revalidateCategoryPaths();
+    // Immediate cache invalidation for storefront
+    updateTag('categories-list');
     return { success: true, data: category };
   } catch (error) {
     return handleActionError(error);
@@ -149,6 +152,9 @@ export async function updateCategory(
     });
 
     revalidateCategoryPaths();
+    // Immediate cache invalidation for storefront
+    updateTag('categories-list');
+    updateTag(`category-${id}`);
     return { success: true, data: category };
   } catch (error) {
     return handleActionError(error);
@@ -178,6 +184,9 @@ export async function deleteCategory(id: string) {
     await prisma.category.delete({ where: { id } });
 
     revalidateCategoryPaths();
+    // Immediate cache invalidation for storefront
+    updateTag('categories-list');
+    updateTag(`category-${id}`);
     return { success: true, data: undefined };
   } catch (error) {
     return handleActionError(error);

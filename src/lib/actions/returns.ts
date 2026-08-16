@@ -1,5 +1,6 @@
 "use server";
 
+import { updateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumberSafe } from "@/lib/invoice-generator";
@@ -254,6 +255,11 @@ export async function createReturn(data: {
     });
 
     revalidateReturnPaths();
+    // Immediate cache invalidation for stock & storefront products
+    returnRecord.items.forEach(() => {
+      updateTag('products-list');
+    });
+    
     void checkLowStockAndNotify(data.items.map((item) => item.variantId));
     void sendTelegramMessage(buildReturnTelegramMessage(returnRecord));
     return { success: true, data: returnRecord };
