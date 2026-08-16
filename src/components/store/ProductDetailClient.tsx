@@ -414,8 +414,8 @@ export default function ProductDetailClient({
   }
 
   return (
-    <div className="grid gap-4 overflow-hidden rounded-[2.1rem] border border-[var(--store-border)] bg-[linear-gradient(135deg,rgba(255,250,243,1),rgba(252,247,239,0.95))] p-3 shadow-[0_24px_70px_rgba(80,54,28,0.12)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
-      <div className="space-y-3 md:space-y-4">
+    <div className="grid gap-3 overflow-hidden rounded-[1.8rem] border border-[#eadcc9] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.65),_rgba(255,246,236,0.96)_35%,_rgba(247,239,230,0.98)_100%)] p-2.5 shadow-[0_18px_48px_rgba(80,54,28,0.1)] backdrop-blur md:gap-10 md:p-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+      <div className="space-y-2 md:space-y-4">
         <ProductGallery
           productName={displayName}
           priceLabel={formatCurrency(price, currencySymbol)}
@@ -432,23 +432,23 @@ export default function ProductDetailClient({
         />
       </div>
 
-      <div className="min-w-0 space-y-3 md:space-y-6">
-        <div className="space-y-1.5 md:space-y-2">
-          <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-3 py-1 text-[10px] text-[var(--store-gold)]" dir="rtl">
+      <div className="min-w-0 space-y-2 md:space-y-6">
+        <div className="space-y-1 md:space-y-2">
+          <p className="inline-flex rounded-full border border-[var(--store-border)] bg-white/80 px-2.5 py-1 text-[10px] font-medium text-[var(--store-gold)] md:px-3" dir="rtl">
             {product.category.nameAr?.trim() || product.category.name?.trim() || "القسم"}
           </p>
           {product.brand && (
-            <p className="text-sm text-[var(--store-muted)]">{product.brand}</p>
+            <p className="text-xs text-[var(--store-muted)] md:text-sm">{product.brand}</p>
           )}
         </div>
 
-        <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-2.5 md:p-4">
+        <div className="rounded-[1.2rem] border border-[#eadcc9] bg-white/80 p-2.5 shadow-[0_8px_18px_rgba(88,61,34,0.04)] md:p-4">
           <div className="flex flex-col gap-2 md:gap-3">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-[var(--store-muted)] md:text-sm">الحالة</span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-[var(--store-muted)] md:text-sm">الحالة</span>
               <p
                 className={cn(
-                  "inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium md:px-3 md:text-xs",
+                  "inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium shadow-sm md:px-3 md:text-xs",
                   inStock
                     ? "bg-emerald-50 text-emerald-700"
                     : "bg-neutral-100 text-neutral-600"
@@ -459,8 +459,8 @@ export default function ProductDetailClient({
             </div>
 
             {sizes.length > 0 && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs text-[var(--store-muted)] md:text-sm">المقاس</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-[var(--store-muted)] md:text-sm">المقاس</span>
                 <div className="flex flex-wrap justify-end gap-1.5 md:gap-2">
                   {sizes.map((item) => (
                     <button
@@ -472,9 +472,9 @@ export default function ProductDetailClient({
                         setActiveImageIndex(0);
                       }}
                       className={cn(
-                        "min-w-10 rounded-full border px-2.5 py-1.5 text-xs transition md:min-w-12 md:px-4 md:py-2 md:text-sm",
+                        "min-w-9 rounded-full border px-2 py-1.5 text-[10px] font-medium transition md:min-w-12 md:px-4 md:py-2 md:text-sm",
                         selectedSize === item.size || (!selectedSize && item === sizes[0])
-                          ? "border-[var(--store-text)] bg-[var(--store-text)] text-white"
+                          ? "border-[var(--store-text)] bg-[var(--store-text)] text-white shadow-sm"
                           : "border-[var(--store-border)] bg-[var(--store-surface)] text-[var(--store-text)]",
                         !item.inStock && "opacity-40 line-through"
                       )}
@@ -489,42 +489,44 @@ export default function ProductDetailClient({
         </div>
 
         {product.description && (
-          <div className="space-y-2 rounded-[1.5rem] border border-[var(--store-border)] bg-white/70 p-4">
-            <h2 className="text-sm font-semibold">الوصف</h2>
-            <p className="text-sm leading-7 text-[var(--store-muted)] whitespace-pre-line" dir="rtl">
+          <div className="space-y-2 rounded-[1.15rem] border border-[var(--store-border)] bg-white/70 p-3 md:p-4">
+            <h2 className="text-xs font-semibold text-[var(--store-text)] md:text-sm">الوصف</h2>
+            <p className="text-xs leading-6 text-[var(--store-muted)] whitespace-pre-line md:text-sm md:leading-7" dir="rtl">
               {product.description}
             </p>
           </div>
         )}
 
-        <div className="flex w-full flex-wrap gap-3">
+        <div className="flex w-full flex-col gap-2.5 md:flex-wrap md:flex-row md:gap-3">
           <button
             type="button"
             onClick={handleAddToCart}
             disabled={!inStock || !selectedVariant}
-            className="inline-flex min-w-[12rem] flex-1 items-center justify-center gap-2 rounded-full bg-[var(--store-gold)] px-6 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--store-gold-deep)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#b88938,#a8732d)] px-4 py-3 text-sm font-bold text-white shadow-[0_10px_24px_rgba(184,137,56,0.28)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 md:min-w-[12rem] md:flex-1 md:px-6 md:py-3.5"
           >
             {addedToCart ? <Check className="h-4 w-4" /> : <ShoppingBag className="h-4 w-4" />}
             {addedToCart ? "تمت الإضافة" : "إضافة إلى السلة"}
           </button>
-          <WhatsAppOrderButton
-            productName={displayName}
-            productUrl={productUrl}
-            productId={product.id}
-            whatsappNumber={whatsappNumber}
-            color={activeColor || undefined}
-            size={selectedSizeValue || selectedVariant?.size}
-            disabled={!inStock}
-            className="min-w-[12rem] flex-1"
-          />
-          <button
-            type="button"
-            onClick={handleShare}
-            className="inline-flex flex-none items-center justify-center gap-2 rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] px-6 py-3.5 text-sm font-medium text-[var(--store-text)] transition hover:border-[var(--store-gold)]"
-          >
-            <Share2 className="h-4 w-4" />
-            مشاركة
-          </button>
+          <div className="grid grid-cols-2 gap-2.5 md:flex md:flex-1 md:gap-3">
+            <WhatsAppOrderButton
+              productName={displayName}
+              productUrl={productUrl}
+              productId={product.id}
+              whatsappNumber={whatsappNumber}
+              color={activeColor || undefined}
+              size={selectedSizeValue || selectedVariant?.size}
+              disabled={!inStock}
+              className="w-full md:min-w-[12rem] md:flex-1"
+            />
+            <button
+              type="button"
+              onClick={handleShare}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] px-4 py-3 text-sm font-medium text-[var(--store-text)] transition hover:border-[var(--store-gold)] md:flex-none md:px-6 md:py-3.5"
+            >
+              <Share2 className="h-4 w-4" />
+              مشاركة
+            </button>
+          </div>
         </div>
       </div>
 

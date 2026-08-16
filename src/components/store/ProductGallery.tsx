@@ -56,13 +56,13 @@ export default function ProductGallery({
   }
 
   return (
-    <section key={selectedColor} className="mx-auto w-full max-w-md pb-2 md:pb-6">
-      <div className="overflow-hidden rounded-[1.75rem] bg-[#fff6ed] p-2 shadow-sm shadow-[rgba(111,80,47,0.12)] md:rounded-[2rem] md:p-3">
+    <section key={selectedColor} className="mx-auto w-full max-w-md pb-1 md:max-w-none md:pb-6">
+      <div className="overflow-hidden rounded-[1.5rem] border border-[#eadcc9] bg-[linear-gradient(180deg,#fffaf4_0%,#fef5ec_100%)] p-2.5 shadow-[0_12px_26px_rgba(87,61,39,0.08)] md:rounded-[2rem] md:p-3">
         <button
           type="button"
           onClick={() => onMainImageClick?.(activeImageIndex)}
           aria-label="تكبير الصورة"
-          className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.35rem] bg-[#fff1e0] shadow-sm md:rounded-[1.75rem]"
+          className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.2rem] bg-[#fff1e0] shadow-[inset_0_0_0_1px_rgba(129,96,56,0.04)] md:rounded-[1.75rem]"
         >
           {activeImageUrl ? (
             <Image
@@ -81,7 +81,7 @@ export default function ProductGallery({
         </button>
 
         {images.length > 1 && (
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1 hide-scrollbar md:mt-3 md:gap-3">
+          <div className="mt-2.5 flex gap-2 overflow-x-auto pb-1 hide-scrollbar md:mt-3 md:gap-3">
             {images.map((image, index) => (
               <button
                 key={image.id}
@@ -89,7 +89,7 @@ export default function ProductGallery({
                 onClick={() => handleThumbnailClick(index)}
                 aria-label={`عرض الصورة ${index + 1}`}
                 aria-current={index === activeImageIndex}
-                className={`min-w-[5.25rem] overflow-hidden rounded-2xl border border-transparent bg-white/80 shadow-sm transition duration-150 ease-out hover:border-[rgba(249,166,75,0.5)] hover:shadow-md ${
+                className={`min-w-[5rem] overflow-hidden rounded-2xl border border-transparent bg-white/80 shadow-sm transition duration-150 ease-out hover:border-[rgba(249,166,75,0.5)] hover:shadow-md ${
                   index === activeImageIndex ? "ring-2 ring-[rgba(255,190,135,0.85)]" : ""
                 } active:scale-95`}
               >
@@ -113,8 +113,8 @@ export default function ProductGallery({
           </div>
         )}
 
-        <div className="mt-2 rounded-[1.35rem] bg-white/95 px-2.5 py-2.5 shadow-sm shadow-[rgba(111,80,47,0.08)] md:mt-3 md:rounded-[1.75rem] md:px-3 md:py-3">
-          <div className="flex flex-wrap items-center gap-1.5 py-1">
+        <div className="mt-2.5 rounded-[1.2rem] border border-[#f0e2d3] bg-white/90 px-2.5 py-2 shadow-[0_4px_12px_rgba(92,63,33,0.04)] md:mt-3 md:rounded-[1.75rem] md:px-3 md:py-3">
+          <div className="flex flex-wrap items-center justify-center gap-1.5 py-0.5 md:justify-start">
             {colorVariants.map((variant) => {
               const isActive = variant.name === selectedColor;
               return (
@@ -136,9 +136,11 @@ export default function ProductGallery({
           </div>
         </div>
 
-        <div className="mt-2 space-y-1 px-1 md:mt-4 md:space-y-2">
-          <h1 className="text-lg font-semibold text-[#3d2b1f] sm:text-2xl md:text-xl">{productName}</h1>
-          <p className="text-xl font-bold text-[#b35411] md:text-2xl">{priceLabel}</p>
+        <div className="mt-2.5 flex items-end justify-between gap-2 px-1 md:mt-4 md:block md:space-y-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="line-clamp-2 text-base font-semibold leading-6 text-[#3d2b1f] sm:text-2xl md:text-xl md:leading-7">{productName}</h1>
+          </div>
+          <p className="shrink-0 text-lg font-black tracking-tight text-[#b35411] md:text-2xl">{priceLabel}</p>
         </div>
       </div>
     </section>
