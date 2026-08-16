@@ -48,6 +48,10 @@ function appendProductQueryParams(productLink: string, color?: string, size?: st
   return queryString ? `${basePath}?${queryString}` : basePath;
 }
 
+export {
+  appendProductQueryParams,
+};
+
 export function buildStoreOrderMessage({
   productName,
   color,

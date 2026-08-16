@@ -18,6 +18,7 @@ import {
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/utils";
+import { appendProductQueryParams } from "@/lib/store/whatsapp";
 
 type Props = {
   settings: Record<string, string>;
@@ -104,9 +105,11 @@ export default function StoreHeaderControls({
         : process.env.NEXT_PUBLIC_SITE_URL || "";
 
     const lines = cartItems.map((item) => {
-      const productUrl = item.productId
+      const baseProductUrl = item.productId
         ? `${origin}/store/product/${item.productId}`.replace(/([^:]\/)\/+/g, "$1")
         : item.href;
+      
+      const productUrl = appendProductQueryParams(baseProductUrl, item.color, item.size);
 
       const details = [item.color, item.size].filter(Boolean).join(" / ");
 
