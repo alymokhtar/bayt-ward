@@ -104,27 +104,36 @@ export default function StoreHeaderControls({
         ? window.location.origin
         : process.env.NEXT_PUBLIC_SITE_URL || "";
 
-    const lines = cartItems.map((item) => {
+    const productLines = cartItems.map((item) => {
       const baseProductUrl = item.productId
         ? `${origin}/store/product/${item.productId}`.replace(/([^:]\/)\/+/g, "$1")
         : item.href;
       
       const productUrl = appendProductQueryParams(baseProductUrl, item.color, item.size);
 
-      const details = [item.color, item.size].filter(Boolean).join(" / ");
+      const itemTotal = item.unitPrice * item.quantity;
 
-      return [
-        `- المنتج: ${item.name}`,
-        `  المواصفات: ${details || "بدون مواصفات"} | الكمية: ${item.quantity}`,
-        `  السعر: ${formatCurrency(item.unitPrice * item.quantity, item.currencySymbol)}`,
-        `  الرابط: ${productUrl}`,
-      ].join("\n");
+      const productDetails = [
+        `المنتج: ${item.name}`,
+        ...(item.color ? [`اللون: ${item.color}`] : []),
+        ...(item.size ? [`المقاس: ${item.size}`] : []),
+        `الكمية: ${item.quantity}`,
+        `السعر: ${formatCurrency(itemTotal, item.currencySymbol)}`,
+        `الرابط: ${productUrl}`,
+      ];
+
+      return productDetails.join("\n");
     });
+
+    const totalAmount = cartItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+    const currencySymbolForTotal = cartItems.length > 0 ? cartItems[0]!.currencySymbol : currencySymbol;
 
     const message = [
       "مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذه المنتجات:",
-      ...lines,
-      `الإجمالي: ${formatCurrency(cartItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0), currencySymbol)}`,
+      "",
+      ...productLines,
+      "",
+      `الإجمالي: ${formatCurrency(totalAmount, currencySymbolForTotal)}`,
     ].join("\n");
 
     const whatsappUrl = getWhatsAppUrl(whatsappNumber, message);
