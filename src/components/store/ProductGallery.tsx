@@ -71,6 +71,7 @@ export default function ProductGallery({
               fill
               sizes="100vw"
               className="object-cover"
+              priority
             />
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-[#8f7a68]">
