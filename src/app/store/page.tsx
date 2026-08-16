@@ -116,6 +116,7 @@ async function StoreProductsSection({
       <div className="mt-8 text-center">
         <Link
           href="/store/products"
+          prefetch={true}
           className="inline-flex min-h-11 min-w-64 items-center justify-center rounded border border-[var(--store-gold)] bg-white px-8 text-sm font-bold text-[var(--store-gold)] transition hover:bg-[var(--store-gold)] hover:text-white"
         >
           عرض جميع المنتجات
@@ -168,6 +169,7 @@ async function StoreArrivalSection({
       <div className="mt-8 text-center">
         <Link
           href="/store/products"
+          prefetch={true}
           className="inline-flex min-h-11 min-w-64 items-center justify-center rounded border border-[var(--store-gold)] bg-white px-8 text-sm font-bold text-[var(--store-gold)] transition hover:bg-[var(--store-gold)] hover:text-white"
         >
           عرض جميع المنتجات
