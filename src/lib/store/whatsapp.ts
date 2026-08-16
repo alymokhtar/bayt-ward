@@ -73,7 +73,7 @@ export function buildStoreOrderMessage({
   if (size) lines.push(`المقاس: ${size}`);
   
   if (price !== undefined && currencySymbol) {
-    const formattedPrice = price.toLocaleString("ar-EG", {
+    const formattedPrice = price.toLocaleString("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
