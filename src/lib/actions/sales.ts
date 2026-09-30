@@ -400,6 +400,9 @@ export async function createSale(data: {
       }
 
       return createdSale;
+    }, {
+      maxWait: 10000,
+      timeout: 30000,
     });
 
     revalidateSalePaths();
