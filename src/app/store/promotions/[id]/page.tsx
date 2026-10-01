@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { unstable_cache } from "next/cache";
 import { ArrowRight, BadgePercent, CalendarDays, Clock3, Gift, Sparkles } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
 import SectionHeading from "@/components/store/SectionHeading";
@@ -13,6 +14,43 @@ import { STORE_NAME_AR } from "@/lib/constants";
 type PromotionPageProps = {
   params: Promise<{ id: string }>;
 };
+
+export const revalidate = 60;
+
+const getCachedPromotion = unstable_cache(
+  async (id: string) =>
+    prisma.promotion.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        type: true,
+        buyQuantity: true,
+        getQuantity: true,
+        discountPercent: true,
+        discountAmount: true,
+        startDate: true,
+        endDate: true,
+        isActive: true,
+        categories: { select: { id: true, name: true, nameAr: true } },
+        products: { select: { id: true } },
+      },
+    }),
+  ["store-promotion-detail"],
+  { revalidate: 60, tags: ["store-promotions"] },
+);
+
+function isPromotionCurrentlyActive(
+  promotion: NonNullable<Awaited<ReturnType<typeof getCachedPromotion>>>,
+  now: Date,
+): boolean {
+  return (
+    promotion.isActive &&
+    (!promotion.startDate || promotion.startDate <= now) &&
+    (!promotion.endDate || promotion.endDate >= now)
+  );
+}
 
 function formatPromotionDate(value: Date | null): string | null {
   if (!value || !Number.isFinite(value.getTime())) return null;
@@ -68,19 +106,11 @@ function getPromotionOffer(promotion: {
 
 export async function generateMetadata({ params }: PromotionPageProps): Promise<Metadata> {
   const { id } = await params;
-  const promotion = await prisma.promotion.findFirst({
-    where: {
-      id,
-      isActive: true,
-      AND: [
-        { OR: [{ startDate: null }, { startDate: { lte: new Date() } }] },
-        { OR: [{ endDate: null }, { endDate: { gte: new Date() } }] },
-      ],
-    },
-    select: { name: true, description: true },
-  });
+  const promotion = await getCachedPromotion(id);
 
-  if (!promotion) return { title: "العرض غير متاح" };
+  if (!promotion || !isPromotionCurrentlyActive(promotion, new Date())) {
+    return { title: "العرض غير متاح" };
+  }
 
   return {
     title: `${promotion.name} | ${STORE_NAME_AR}`,
@@ -91,53 +121,32 @@ export async function generateMetadata({ params }: PromotionPageProps): Promise<
 export default async function PromotionPage({ params }: PromotionPageProps) {
   const { id } = await params;
   const now = new Date();
-  const promotion = await prisma.promotion.findFirst({
-    where: {
-      id,
-      isActive: true,
-      AND: [
-        { OR: [{ startDate: null }, { startDate: { lte: now } }] },
-        { OR: [{ endDate: null }, { endDate: { gte: now } }] },
-      ],
-    },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      type: true,
-      buyQuantity: true,
-      getQuantity: true,
-      discountPercent: true,
-      discountAmount: true,
-      startDate: true,
-      endDate: true,
-      categories: { select: { id: true, name: true, nameAr: true } },
-      products: { select: { id: true } },
-    },
-  });
-
-  if (!promotion) notFound();
-
-  const categoryIds = promotion.categories.map((category) => category.id);
-  const directProductIds = promotion.products.map((product) => product.id);
-  const hasTargets = categoryIds.length > 0 || directProductIds.length > 0;
-  const targetFilter = hasTargets
-    ? {
-        OR: [
-          ...(categoryIds.length > 0 ? [{ categoryId: { in: categoryIds } }] : []),
-          ...(directProductIds.length > 0 ? [{ id: { in: directProductIds } }] : []),
-        ],
-      }
-    : {};
-
-  const [productsPage, settings] = await Promise.all([
+  const [promotion, settings, targetedProducts] = await Promise.all([
+    getCachedPromotion(id),
+    getCachedStoreSettingsPublic(),
     prisma.product.findMany({
-      where: { ...PUBLISHED_PRODUCT_WHERE, ...targetFilter },
+      where: {
+        ...PUBLISHED_PRODUCT_WHERE,
+        OR: [
+          { promotions: { some: { id } } },
+          { category: { promotions: { some: { id } } } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       select: storeProductListSelect,
     }),
-    getCachedStoreSettingsPublic(),
   ]);
+
+  if (!promotion || !isPromotionCurrentlyActive(promotion, now)) notFound();
+
+  const hasTargets = promotion.categories.length > 0 || promotion.products.length > 0;
+  const productsPage = hasTargets
+    ? targetedProducts
+    : await prisma.product.findMany({
+        where: PUBLISHED_PRODUCT_WHERE,
+        orderBy: { createdAt: "desc" },
+        select: storeProductListSelect,
+      });
 
   const currencySymbol = settings.currency_symbol || "MRU";
   const categoryNames = promotion.categories

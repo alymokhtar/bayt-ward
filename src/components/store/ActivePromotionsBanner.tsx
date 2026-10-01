@@ -131,6 +131,7 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
 
       <Link
         href={`/store/promotions/${promotion.id}`}
+        prefetch={true}
         className="mt-auto inline-flex min-h-10 items-center gap-2 self-start pt-4 text-sm font-bold text-[var(--store-text)] transition-colors hover:text-[var(--store-gold-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-gold)]"
       >
         تسوقي العرض
