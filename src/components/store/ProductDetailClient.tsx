@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { Check, ShoppingBag, Share2 } from "lucide-react";
 import ProductGallery from "@/components/store/ProductGallery";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
+import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
 import WhatsAppOrderButton from "@/components/store/WhatsAppOrderButton";
 import { optimizeCloudinaryUrl, STORE_IMAGE_SIZES } from "@/lib/store/images";
 import {
@@ -46,7 +47,7 @@ export default function ProductDetailClient({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
-  const { addToCart } = useStorefrontState();
+  const { addToCart, activePromotions } = useStorefrontState();
 
   useEffect(() => {
     if (!zoomOpen) {
@@ -107,6 +108,48 @@ export default function ProductDetailClient({
   }, [activeColor, availableColors, product, selectedVariant]);
   const price = selectedVariant?.price ?? product.variants[0]?.sellingPrice ?? 0;
   const inStock = selectedVariant ? selectedVariant.inStock : product.variants.some((v) => v.stockQuantity > 0);
+  const productPromotions = activePromotions.filter((promotion) =>
+    promotionMatchesProduct(promotion, product.id, product.categoryId),
+  );
+  const discountResult = calculateCartDiscounts(
+    [{
+      productId: product.id,
+      variantId: selectedVariant?.variantId,
+      categoryId: product.categoryId,
+      unitPrice: price,
+      quantity: 1,
+      name: displayName,
+    }],
+    productPromotions,
+  );
+  const hasDirectDiscount = discountResult.discountAmount > 0;
+  const appliedDirectPromotions = productPromotions.filter(
+    (promotion) =>
+      promotion.type !== "BUY_X_GET_Y" &&
+      discountResult.appliedPromotions.some(({ id }) => id === promotion.id),
+  );
+  const priceLabel = hasDirectDiscount ? (
+    <span className="flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1" dir="rtl">
+      <span className="text-sm font-medium text-gray-400 line-through md:text-lg">
+        {formatCurrency(price, currencySymbol)}
+      </span>
+      <span className="text-xl font-bold text-emerald-600 md:text-2xl">
+        {formatCurrency(discountResult.finalTotal, currencySymbol)}
+      </span>
+      {appliedDirectPromotions.map((promotion) => (
+        <span
+          key={promotion.id}
+          className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold leading-4 text-emerald-700 md:text-xs"
+        >
+          {promotion.type === "PERCENTAGE"
+            ? `خصم ${promotion.discountPercent ?? 0}%`
+            : `خصم ${formatCurrency(promotion.discountAmount ?? 0, currencySymbol)}`}
+        </span>
+      ))}
+    </span>
+  ) : (
+    <span>{formatCurrency(price, currencySymbol)}</span>
+  );
 
   function handleColorChange(color: string) {
     setSelectedColor(color);
@@ -419,7 +462,7 @@ export default function ProductDetailClient({
       <div className="space-y-2 md:space-y-4">
         <ProductGallery
           productName={displayName}
-          priceLabel={formatCurrency(price, currencySymbol)}
+          priceLabel={priceLabel}
           colorVariants={galleryVariants}
           selectedColor={activeColor}
           activeImageIndex={activeImageIndex}
@@ -489,6 +532,28 @@ export default function ProductDetailClient({
           </div>
         </div>
 
+        {productPromotions.some((promotion) => promotion.type === "BUY_X_GET_Y") && (
+          <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/90 p-3 md:p-4">
+            {productPromotions
+              .filter((promotion) => promotion.type === "BUY_X_GET_Y")
+              .map((promotion) => (
+                <div key={promotion.id} className="space-y-1.5">
+                  <p className="flex items-start gap-2 text-xs font-bold leading-6 text-amber-900 md:text-sm">
+                    <span aria-hidden="true">🎁</span>
+                    <span>
+                      عرض خاص: اشتري {promotion.buyQuantity ?? "—"} واحصلي على {promotion.getQuantity ?? "—"} مجاناً
+                    </span>
+                  </p>
+                  <p className="pr-6 text-[11px] font-medium text-amber-800 md:text-xs">
+                    {promotion.endDate
+                      ? `ساري حتى ${formatPromotionEndDate(promotion.endDate)} | أو حتى نفاذ الكمية`
+                      : "أو حتى نفاذ الكمية"}
+                  </p>
+                </div>
+              ))}
+          </div>
+        )}
+
         {product.description && (
           <div className="space-y-2 rounded-[1.15rem] border border-[var(--store-border)] bg-white/70 p-3 md:p-4">
             <h2 className="text-xs font-semibold text-[var(--store-text)] md:text-sm">الوصف</h2>
@@ -538,4 +603,34 @@ export default function ProductDetailClient({
       {lightboxNode}
     </div>
   );
+}
+
+function promotionMatchesProduct(
+  promotion: Promotion,
+  productId: string,
+  categoryId: string,
+): boolean {
+  const matchesProduct = (promotion.products ?? []).some((target) =>
+    (typeof target === "string" ? target : target.id) === productId,
+  );
+  const matchesCategory = (promotion.categories ?? []).some((target) =>
+    (typeof target === "string" ? target : target.id) === categoryId,
+  );
+
+  return (
+    (promotion.products?.length ?? 0) === 0 &&
+    (promotion.categories?.length ?? 0) === 0
+  ) || matchesProduct || matchesCategory;
+}
+
+function formatPromotionEndDate(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return "نهاية فترة العرض";
+
+  return new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
+    timeZone: "Africa/Cairo",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(date);
 }

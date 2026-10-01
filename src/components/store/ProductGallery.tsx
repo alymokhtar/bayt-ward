@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useMemo } from "react";
 import { isValidImageUrl } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 type GalleryImage = {
   id: string;
@@ -19,7 +20,7 @@ type ColorVariant = {
 
 type ProductGalleryProps = {
   productName: string;
-  priceLabel: string;
+  priceLabel: ReactNode;
   colorVariants: ColorVariant[];
   selectedColor: string;
   activeImageIndex: number;
@@ -140,7 +141,7 @@ export default function ProductGallery({
           <div className="min-w-0 flex-1">
             <h1 className="line-clamp-2 text-base font-semibold leading-6 text-[#3d2b1f] sm:text-2xl md:text-xl md:leading-7">{productName}</h1>
           </div>
-          <p className="shrink-0 text-lg font-black tracking-tight text-[#b35411] md:text-2xl">{priceLabel}</p>
+          <div className="shrink-0 text-lg font-black tracking-tight text-[#b35411] md:text-2xl">{priceLabel}</div>
         </div>
       </div>
     </section>
