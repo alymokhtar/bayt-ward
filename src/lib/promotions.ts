@@ -47,25 +47,62 @@ function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function parseDate(value: Date | string): number | null {
-  const timestamp = value instanceof Date ? value.getTime() : Date.parse(value);
-  return Number.isFinite(timestamp) ? timestamp : null;
+function getCairoDateParts(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Cairo",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(date);
+  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value);
+
+  return {
+    year: getPart("year"),
+    month: getPart("month"),
+    day: getPart("day"),
+  };
 }
 
-function isPromotionActive(promotion: Promotion, now: number): boolean {
-  if (!promotion.isActive) return false;
+function getCalendarDateKey(value: Date | string): number | null {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
 
-  if (promotion.startDate != null) {
-    const startDate = parseDate(promotion.startDate);
-    if (startDate === null || startDate > now) return false;
-  }
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+}
 
-  if (promotion.endDate != null) {
-    const endDate = parseDate(promotion.endDate);
-    if (endDate === null || endDate < now) return false;
-  }
+export function getPromotionDateRangeBounds(now = new Date()) {
+  const { year, month, day } = getCairoDateParts(now);
+  const dayStart = new Date(Date.UTC(year, month - 1, day));
 
-  return true;
+  return {
+    dayStart,
+    dayEnd: new Date(dayStart.getTime() + 86_400_000 - 1),
+  };
+}
+
+export function isPromotionDateRangeActive(
+  startDate: Date | string | null | undefined,
+  endDate: Date | string | null | undefined,
+  now = new Date(),
+): boolean {
+  const { year, month, day } = getCairoDateParts(now);
+  const todayKey = Date.UTC(year, month - 1, day);
+  const startKey = startDate == null ? null : getCalendarDateKey(startDate);
+  const endKey = endDate == null ? null : getCalendarDateKey(endDate);
+
+  if (startDate != null && startKey == null) return false;
+  if (endDate != null && endKey == null) return false;
+
+  return (startKey == null || startKey <= todayKey) && (endKey == null || endKey >= todayKey);
+}
+
+function isPromotionActive(promotion: Promotion, now: Date): boolean {
+  return promotion.isActive && isPromotionDateRangeActive(
+    promotion.startDate,
+    promotion.endDate,
+    now,
+  );
 }
 
 function getTargetId(target: PromotionTarget): string {
@@ -181,7 +218,6 @@ export function calculateCartDiscounts(
   activePromotions: Promotion[],
   now: Date = new Date(),
 ): DiscountResult {
-  const nowTimestamp = now.getTime();
   const validCartItems = cartItems.flatMap((item) => {
     if (
       !Number.isFinite(item.unitPrice) ||
@@ -203,7 +239,7 @@ export function calculateCartDiscounts(
   );
   const appliedDiscounts = new Map<string, AppliedPromotion>();
 
-  if (!Number.isFinite(nowTimestamp)) {
+  if (!Number.isFinite(now.getTime())) {
     return {
       originalTotal,
       discountAmount: 0,
@@ -213,7 +249,7 @@ export function calculateCartDiscounts(
   }
 
   const eligiblePromotions = activePromotions.filter((promotion) =>
-    isPromotionActive(promotion, nowTimestamp),
+    isPromotionActive(promotion, now),
   );
   const quantityDiscountedProductIds = new Set<string>();
 

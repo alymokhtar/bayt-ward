@@ -15,7 +15,7 @@ import {
   isProductInStock,
 } from "@/lib/store/product-utils";
 import type { StoreProductListItem } from "@/lib/store/types";
-import type { Promotion } from "@/lib/promotions";
+import { isPromotionDateRangeActive, type Promotion } from "@/lib/promotions";
 import { formatCurrency } from "@/lib/utils";
 
 type ProductCardProps = {
@@ -161,16 +161,8 @@ function promotionAppliesToProduct(
   promotion: Promotion,
   product: StoreProductListItem,
 ): boolean {
-  if (!promotion.isActive) return false;
-
-  const now = Date.now();
-  if (promotion.startDate) {
-    const startTime = new Date(promotion.startDate).getTime();
-    if (!Number.isFinite(startTime) || startTime > now) return false;
-  }
-  if (promotion.endDate) {
-    const endTime = new Date(promotion.endDate).getTime();
-    if (!Number.isFinite(endTime) || endTime < now) return false;
+  if (!promotion.isActive || !isPromotionDateRangeActive(promotion.startDate, promotion.endDate)) {
+    return false;
   }
 
   const productTargets = promotion.products ?? [];

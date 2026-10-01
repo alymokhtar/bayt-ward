@@ -10,6 +10,7 @@ import { PUBLISHED_PRODUCT_WHERE } from "@/lib/store/constants";
 import { storeProductListSelect } from "@/lib/store/types";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { STORE_NAME_AR } from "@/lib/constants";
+import { isPromotionDateRangeActive } from "@/lib/promotions";
 
 type PromotionPageProps = {
   params: Promise<{ id: string }>;
@@ -47,8 +48,7 @@ function isPromotionCurrentlyActive(
 ): boolean {
   return (
     promotion.isActive &&
-    (!promotion.startDate || promotion.startDate <= now) &&
-    (!promotion.endDate || promotion.endDate >= now)
+    isPromotionDateRangeActive(promotion.startDate, promotion.endDate, now)
   );
 }
 

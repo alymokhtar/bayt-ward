@@ -1,13 +1,16 @@
 import { prisma } from "@/lib/prisma";
 import type { Promotion } from "@/lib/promotions";
+import { getPromotionDateRangeBounds } from "@/lib/promotions";
 
 export async function getActivePromotionsData(now = new Date()): Promise<Promotion[]> {
+  const { dayStart, dayEnd } = getPromotionDateRangeBounds(now);
+
   return prisma.promotion.findMany({
     where: {
       isActive: true,
       AND: [
-        { OR: [{ startDate: null }, { startDate: { lte: now } }] },
-        { OR: [{ endDate: null }, { endDate: { gte: now } }] },
+        { OR: [{ startDate: null }, { startDate: { lte: dayEnd } }] },
+        { OR: [{ endDate: null }, { endDate: { gte: dayStart } }] },
       ],
     },
     orderBy: { createdAt: "asc" },

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   calculateCartDiscounts,
+  isPromotionDateRangeActive,
   type CartItem,
   type Promotion,
 } from "./promotions";
@@ -163,6 +164,19 @@ test("ignores inactive and out-of-date promotions", () => {
 
   assert.equal(result.discountAmount, 0);
   assert.deepEqual(result.appliedPromotions, []);
+});
+
+test("treats promotion date bounds as inclusive Cairo calendar days", () => {
+  const shortlyAfterCairoMidnight = new Date("2026-10-01T21:05:00.000Z");
+
+  assert.equal(
+    isPromotionDateRangeActive("2026-10-02T00:00:00.000Z", "2026-10-02T00:00:00.000Z", shortlyAfterCairoMidnight),
+    true,
+  );
+  assert.equal(
+    isPromotionDateRangeActive(null, "2026-10-01T23:59:59.999Z", shortlyAfterCairoMidnight),
+    false,
+  );
 });
 
 test("checks the cart minimum and caps independent promotions at their eligible item totals", () => {
