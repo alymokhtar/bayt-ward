@@ -43,5 +43,5 @@ export interface PromotionRecord {
 
 export interface PromotionFormOptions {
   categories: { id: string; name: string }[];
-  products: { id: string; name: string }[];
+  products: { id: string; name: string; categoryId: string; skus: string[] }[];
 }

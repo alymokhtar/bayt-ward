@@ -142,11 +142,26 @@ export async function getPromotionFormOptions() {
     }),
     prisma.product.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: {
+        id: true,
+        name: true,
+        categoryId: true,
+        variants: {
+          select: { sku: true },
+          orderBy: { sku: "asc" },
+          take: 10,
+        },
+      },
     }),
   ]);
 
-  return { categories, products };
+  return {
+    categories,
+    products: products.map(({ variants, ...product }) => ({
+      ...product,
+      skus: variants.map(({ sku }) => sku),
+    })),
+  };
 }
 
 export async function createPromotion(input: PromotionInput): Promise<ActionResult> {

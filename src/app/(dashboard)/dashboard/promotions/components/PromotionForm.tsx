@@ -56,22 +56,41 @@ export default function PromotionForm({
   const [minOrderAmount, setMinOrderAmount] = useState(numberValue(promotion?.minOrderAmount));
   const [startDate, setStartDate] = useState(dateInputValue(promotion?.startDate));
   const [endDate, setEndDate] = useState(dateInputValue(promotion?.endDate));
-  const [categoryIds, setCategoryIds] = useState<string[]>(
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
     promotion?.categories.map(({ id }) => id) ?? [],
   );
-  const [productIds, setProductIds] = useState<string[]>(
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(
     promotion?.products.map(({ id }) => id) ?? [],
   );
   const [productSearch, setProductSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const filteredProducts = options.products.filter((product) =>
-    product.name.toLocaleLowerCase().includes(productSearch.trim().toLocaleLowerCase()),
-  );
+  const normalizedProductSearch = productSearch.trim().toLocaleLowerCase();
+  const filteredProducts = options.products.filter((product) => {
+    const matchesCategory =
+      selectedCategoryIds.length === 0 || selectedCategoryIds.includes(product.categoryId);
+    const matchesSearch =
+      !normalizedProductSearch ||
+      product.name.toLocaleLowerCase().includes(normalizedProductSearch) ||
+      product.skus.some((sku) => sku.toLocaleLowerCase().includes(normalizedProductSearch));
 
-  function selectedValues(event: React.ChangeEvent<HTMLSelectElement>): string[] {
-    return Array.from(event.currentTarget.selectedOptions, (option) => option.value);
+    return matchesCategory && matchesSearch;
+  });
+  const hiddenSelectedProductCount = selectedProductIds.filter(
+    (id) => !filteredProducts.some((product) => product.id === id),
+  ).length;
+
+  function toggleSelection(
+    selectedIds: string[],
+    setSelectedIds: (ids: string[]) => void,
+    id: string,
+  ) {
+    setSelectedIds(
+      selectedIds.includes(id)
+        ? selectedIds.filter((selectedId) => selectedId !== id)
+        : [...selectedIds, id],
+    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -98,8 +117,8 @@ export default function PromotionForm({
       startDate,
       endDate,
       isActive: promotion?.isActive ?? true,
-      categoryIds,
-      productIds,
+      categoryIds: selectedCategoryIds,
+      productIds: selectedProductIds,
     };
 
     try {
@@ -278,56 +297,136 @@ export default function PromotionForm({
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label htmlFor="promotion-categories" className="block text-sm font-medium text-brown">
-              الأقسام المستهدفة
-            </label>
-            <select
-              id="promotion-categories"
-              multiple
-              size={5}
-              value={categoryIds}
-              onChange={(event) => setCategoryIds(selectedValues(event))}
-              className="w-full rounded-lg border border-border bg-white p-2 text-sm text-brown focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
-            >
-              {options.categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted">يمكن دمج الأقسام مع المنتجات في العرض نفسه.</p>
-          </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <fieldset className="min-w-0 space-y-3 rounded-lg border border-border p-4">
+            <legend className="px-1 text-sm font-semibold text-brown">الأقسام المستهدفة</legend>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted" aria-live="polite">
+                تم تحديد {selectedCategoryIds.length} {selectedCategoryIds.length === 1 ? "قسم" : "أقسام"}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryIds(options.categories.map(({ id }) => id))}
+                className="rounded-md border border-gold/30 px-2.5 py-1.5 text-xs font-medium text-brown transition hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+              >
+                تحديد الكل
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCategoryIds([])}
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted transition hover:bg-cream-dark/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+              >
+                إلغاء تحديد الكل
+              </button>
+            </div>
+            <div className="grid max-h-52 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2">
+              {options.categories.map((category) => {
+                const checked = selectedCategoryIds.includes(category.id);
+                const checkboxId = `promotion-category-${category.id}`;
 
-          <div className="space-y-1.5">
-            <label htmlFor="promotion-product-search" className="block text-sm font-medium text-brown">
-              المنتجات المستهدفة
-            </label>
+                return (
+                  <label
+                    key={category.id}
+                    htmlFor={checkboxId}
+                    className={`flex min-h-10 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${checked ? "border-gold/50 bg-gold/10 text-brown" : "border-border bg-white text-brown hover:bg-cream-dark/40"}`}
+                  >
+                    <input
+                      id={checkboxId}
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSelection(selectedCategoryIds, setSelectedCategoryIds, category.id)}
+                      className="h-4 w-4 shrink-0 rounded border-border accent-gold focus:ring-gold"
+                    />
+                    <span className="min-w-0 truncate">{category.name}</span>
+                  </label>
+                );
+              })}
+              {options.categories.length === 0 && (
+                <p className="col-span-full py-4 text-center text-xs text-muted">لا توجد أقسام متاحة</p>
+              )}
+            </div>
+          </fieldset>
+
+          <fieldset className="min-w-0 space-y-3 rounded-lg border border-border p-4">
+            <legend className="px-1 text-sm font-semibold text-brown">المنتجات المستهدفة</legend>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-medium text-muted" aria-live="polite">
+                تم تحديد {selectedProductIds.length} {selectedProductIds.length === 1 ? "منتج" : "منتجات"}
+              </span>
+            </div>
             <Input
               id="promotion-product-search"
-              aria-label="بحث المنتجات"
-              placeholder="ابحث عن منتج"
+              aria-label="بحث المنتجات أو SKU"
+              placeholder="ابحث بالاسم أو SKU"
               value={productSearch}
               onChange={(event) => setProductSearch(event.target.value)}
             />
-            <select
-              id="promotion-products"
-              multiple
-              size={5}
-              value={productIds}
-              onChange={(event) => setProductIds(selectedValues(event))}
-              className="w-full rounded-lg border border-border bg-white p-2 text-sm text-brown focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30"
-            >
-              {filteredProducts.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-muted">اترك القائمتين فارغتين لتطبيق العرض على الجميع.</p>
-          </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedProductIds((current) =>
+                    [...new Set([...current, ...filteredProducts.map(({ id }) => id)])],
+                  )
+                }
+                className="rounded-md border border-gold/30 px-2.5 py-1.5 text-xs font-medium text-brown transition hover:bg-gold/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+              >
+                تحديد المعروض ({filteredProducts.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedProductIds([])}
+                className="rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted transition hover:bg-cream-dark/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+              >
+                إلغاء التحديد
+              </button>
+            </div>
+            <div className="max-h-52 space-y-1 overflow-y-auto rounded-md border border-border bg-white p-2">
+              {filteredProducts.map((product) => {
+                const checked = selectedProductIds.includes(product.id);
+                const checkboxId = `promotion-product-${product.id}`;
+
+                return (
+                  <label
+                    key={product.id}
+                    htmlFor={checkboxId}
+                    className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-md px-2.5 py-2 text-sm transition-colors ${checked ? "bg-gold/10 text-brown" : "text-brown hover:bg-cream-dark/40"}`}
+                  >
+                    <input
+                      id={checkboxId}
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSelection(selectedProductIds, setSelectedProductIds, product.id)}
+                      className="h-4 w-4 shrink-0 rounded border-border accent-gold focus:ring-gold"
+                    />
+                    <span className="min-w-0 flex-1 truncate">{product.name}</span>
+                    {product.skus.length > 0 && (
+                      <span className="max-w-28 shrink-0 truncate text-[11px] text-muted" dir="ltr">
+                        {product.skus.slice(0, 2).join(" · ")}
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
+              {filteredProducts.length === 0 && (
+                <p className="py-6 text-center text-xs text-muted">
+                  {options.products.length === 0 ? "لا توجد منتجات متاحة" : "لا توجد منتجات مطابقة"}
+                </p>
+              )}
+            </div>
+            {hiddenSelectedProductCount > 0 && (
+              <p className="text-xs text-muted">
+                {hiddenSelectedProductCount} منتج محدد خارج نتائج التصفية، وسيظل ضمن العرض.
+              </p>
+            )}
+          </fieldset>
         </div>
+
+        <p className="rounded-md bg-cream-dark/40 px-3 py-2.5 text-xs leading-5 text-muted">
+          تنويه: إذا تركت الأقسام والمنتجات بدون تحديد، سيتم تطبيق العرض تلقائياً على كل منتجات المتجر.
+        </p>
       </form>
     </Modal>
   );
