@@ -11,16 +11,33 @@ import { storeProductListSelect } from "@/lib/store/types";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { STORE_NAME_AR } from "@/lib/constants";
 import { isPromotionDateRangeActive } from "@/lib/promotions";
+import type { StoreProductListItem } from "@/lib/store/types";
 
 type PromotionPageProps = {
   params: Promise<{ id: string }>;
 };
 
+type CachedPromotion = {
+  id: string;
+  name: string;
+  description: string | null;
+  type: string;
+  buyQuantity: number | null;
+  getQuantity: number | null;
+  discountPercent: number | null;
+  discountAmount: number | null;
+  startDate: string | null;
+  endDate: string | null;
+  isActive: boolean;
+  categories: { id: string; name: string; nameAr: string | null }[];
+  products: { id: string }[];
+};
+
 export const revalidate = 60;
 
 const getCachedPromotion = unstable_cache(
-  async (id: string) =>
-    prisma.promotion.findUnique({
+  async (id: string): Promise<CachedPromotion | null> => {
+    const promotion = await prisma.promotion.findUnique({
       where: { id },
       select: {
         id: true,
@@ -37,13 +54,17 @@ const getCachedPromotion = unstable_cache(
         categories: { select: { id: true, name: true, nameAr: true } },
         products: { select: { id: true } },
       },
-    }),
+    });
+
+    if (!promotion) return null;
+    return JSON.parse(JSON.stringify(promotion)) as CachedPromotion;
+  },
   ["store-promotion-detail"],
   { revalidate: 60, tags: ["store-promotions"] },
 );
 
 function isPromotionCurrentlyActive(
-  promotion: NonNullable<Awaited<ReturnType<typeof getCachedPromotion>>>,
+  promotion: CachedPromotion,
   now: Date,
 ): boolean {
   return (
@@ -52,8 +73,10 @@ function isPromotionCurrentlyActive(
   );
 }
 
-function formatPromotionDate(value: Date | null): string | null {
-  if (!value || !Number.isFinite(value.getTime())) return null;
+function formatPromotionDate(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
 
   return new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
     timeZone: "UTC",
@@ -61,19 +84,27 @@ function formatPromotionDate(value: Date | null): string | null {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(value);
+  }).format(date);
 }
 
-function getDateKey(value: Date): number {
-  return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
+function getDateKey(value: Date | string): number | null {
+  const date = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
-function formatPromotionDateRange(startDate: Date | null, endDate: Date | null): string {
+function formatPromotionDateRange(
+  startDate: Date | string | null | undefined,
+  endDate: Date | string | null | undefined,
+): string {
   const start = formatPromotionDate(startDate);
   const end = formatPromotionDate(endDate);
 
   if (start && end && startDate && endDate) {
-    const dayDifference = Math.round((getDateKey(endDate) - getDateKey(startDate)) / 86_400_000);
+    const startKey = getDateKey(startDate);
+    const endKey = getDateKey(endDate);
+    if (startKey == null || endKey == null) return "ساري حالياً";
+    const dayDifference = Math.round((endKey - startKey) / 86_400_000);
     if (dayDifference === 0) return `ساري يوم ${start}`;
     if (dayDifference === 1) return `ساري من يوم ${start} إلى يوم ${end}`;
     return `ساري من يوم ${start} حتى يوم ${end}`;
@@ -106,7 +137,13 @@ function getPromotionOffer(promotion: {
 
 export async function generateMetadata({ params }: PromotionPageProps): Promise<Metadata> {
   const { id } = await params;
-  const promotion = await getCachedPromotion(id);
+  let promotion: CachedPromotion | null;
+  try {
+    promotion = await getCachedPromotion(id);
+  } catch (error) {
+    console.error("Unable to load promotion metadata:", error);
+    return { title: `العروض | ${STORE_NAME_AR}` };
+  }
 
   if (!promotion || !isPromotionCurrentlyActive(promotion, new Date())) {
     return { title: "العرض غير متاح" };
@@ -121,35 +158,69 @@ export async function generateMetadata({ params }: PromotionPageProps): Promise<
 export default async function PromotionPage({ params }: PromotionPageProps) {
   const { id } = await params;
   const now = new Date();
-  const [promotion, settings, targetedProducts] = await Promise.all([
-    getCachedPromotion(id),
-    getCachedStoreSettingsPublic(),
-    prisma.product.findMany({
-      where: {
-        ...PUBLISHED_PRODUCT_WHERE,
-        OR: [
-          { promotions: { some: { id } } },
-          { category: { promotions: { some: { id } } } },
-        ],
-      },
-      orderBy: { createdAt: "desc" },
-      select: storeProductListSelect,
-    }),
-  ]);
+  let promotion: CachedPromotion | null;
+  let currencySymbol = "MRU";
+  let sanitizedProducts: StoreProductListItem[] = [];
+
+  try {
+    const [promotionData, settings, targetedProducts] = await Promise.all([
+      getCachedPromotion(id),
+      getCachedStoreSettingsPublic(),
+      prisma.product.findMany({
+        where: {
+          ...PUBLISHED_PRODUCT_WHERE,
+          OR: [
+            { promotions: { some: { id } } },
+            { category: { promotions: { some: { id } } } },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+        select: storeProductListSelect,
+      }),
+    ]);
+
+    promotion = promotionData;
+    currencySymbol = settings.currency_symbol || "MRU";
+
+    if (promotionData) {
+      const hasTargets =
+        (promotionData.categories?.length ?? 0) > 0 ||
+        (promotionData.products?.length ?? 0) > 0;
+      const products = hasTargets
+        ? targetedProducts
+        : await prisma.product.findMany({
+            where: PUBLISHED_PRODUCT_WHERE,
+            orderBy: { createdAt: "desc" },
+            select: storeProductListSelect,
+          });
+
+      sanitizedProducts = JSON.parse(JSON.stringify(products)) as StoreProductListItem[];
+    }
+  } catch (error) {
+    console.error("Unable to render promotion detail page:", error);
+    return (
+      <div dir="rtl" className="store-container store-section min-h-[50vh]">
+        <div className="rounded-xl border border-[var(--store-border)] bg-white px-5 py-12 text-center">
+          <h1 className="text-lg font-bold text-[var(--store-text)]">تعذر تحميل تفاصيل العرض</h1>
+          <p className="mt-2 text-sm text-[var(--store-muted)]">
+            حدثت مشكلة مؤقتة. يرجى المحاولة مرة أخرى بعد قليل.
+          </p>
+          <Link
+            href="/promotions"
+            className="mt-5 inline-flex min-h-10 items-center justify-center rounded bg-[var(--store-gold)] px-5 text-sm font-bold text-white transition hover:bg-[var(--store-gold-deep)]"
+          >
+            العودة إلى العروض
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (!promotion || !isPromotionCurrentlyActive(promotion, now)) notFound();
 
-  const hasTargets = promotion.categories.length > 0 || promotion.products.length > 0;
-  const productsPage = hasTargets
-    ? targetedProducts
-    : await prisma.product.findMany({
-        where: PUBLISHED_PRODUCT_WHERE,
-        orderBy: { createdAt: "desc" },
-        select: storeProductListSelect,
-      });
-
-  const currencySymbol = settings.currency_symbol || "MRU";
-  const categoryNames = promotion.categories
+  const categories = promotion.categories ?? [];
+  const productsPage = sanitizedProducts ?? [];
+  const categoryNames = categories
     .map((category) => category.nameAr?.trim() || category.name)
     .join("، ");
 

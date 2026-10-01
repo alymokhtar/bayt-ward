@@ -52,7 +52,34 @@ function PromotionIndexCard({ promotion }: { promotion: Promotion }) {
 }
 
 export default async function StorePromotionsPage() {
-  const promotions = await getActivePromotionsData();
+  let promotions: Promotion[];
+  try {
+    const result = await getActivePromotionsData();
+    promotions = JSON.parse(JSON.stringify(result)) as Promotion[];
+  } catch (error) {
+    console.error("Unable to load active promotions:", error);
+
+    return (
+      <div dir="rtl" className="store-container store-section min-h-[50vh]">
+        <header className="mb-7">
+          <p className="text-sm font-bold text-[var(--store-gold-deep)]">لفترة محدودة</p>
+          <h1 className="mt-2 text-3xl font-bold text-[var(--store-text)]">عروض بيت ورد</h1>
+        </header>
+        <div role="alert" className="rounded-xl border border-[var(--store-border)] bg-white px-5 py-12 text-center">
+          <h2 className="text-lg font-bold text-[var(--store-text)]">تعذر تحميل العروض حالياً</h2>
+          <p className="mt-2 text-sm text-[var(--store-muted)]">يرجى المحاولة مرة أخرى بعد قليل.</p>
+          <Link
+            href="/store"
+            className="mt-5 inline-flex min-h-10 items-center justify-center rounded bg-[var(--store-gold)] px-5 text-sm font-bold text-white transition hover:bg-[var(--store-gold-deep)]"
+          >
+            العودة للمتجر
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const activePromotions = promotions ?? [];
 
   return (
     <div dir="rtl" className="store-container store-section min-h-[50vh]">
@@ -64,9 +91,9 @@ export default async function StorePromotionsPage() {
         </p>
       </header>
 
-      {promotions.length > 0 ? (
+      {activePromotions.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {promotions.map((promotion) => (
+          {activePromotions.map((promotion) => (
             <PromotionIndexCard key={promotion.id} promotion={promotion} />
           ))}
         </div>
