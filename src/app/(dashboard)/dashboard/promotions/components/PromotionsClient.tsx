@@ -13,13 +13,13 @@ import {
 } from "@/components/ui/Table";
 import { BadgePercent, Pencil, Plus, Tag, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { deletePromotion, togglePromotionStatus } from "../actions";
+import { deletePromotion, getPromotions, togglePromotionStatus } from "../actions";
 import {
   PROMOTION_TYPES,
   type PromotionFormOptions,
   type PromotionRecord,
   type PromotionType,
+  type PromotionView,
 } from "../types";
 import PromotionForm from "./PromotionForm";
 
@@ -73,12 +73,27 @@ function PromotionTypeBadge({ type }: { type: PromotionType }) {
 }
 
 export default function PromotionsClient({ promotions, options }: PromotionsClientProps) {
-  const router = useRouter();
+  const [promotionRows, setPromotionRows] = useState(promotions);
+  const [view, setView] = useState<PromotionView>("current");
+  const [loadingList, setLoadingList] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<PromotionRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PromotionRecord | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+
+  async function refreshRows(nextView = view) {
+    setLoadingList(true);
+    try {
+      const rows = await getPromotions(nextView);
+      setPromotionRows(rows);
+      setView(nextView);
+    } catch {
+      setNotice({ message: "تعذر تحميل العروض. حاولي مرة أخرى", error: true });
+    } finally {
+      setLoadingList(false);
+    }
+  }
 
   useEffect(() => {
     if (!notice) return;
@@ -100,7 +115,7 @@ export default function PromotionsClient({ promotions, options }: PromotionsClie
     setFormOpen(false);
     setEditing(null);
     setNotice({ message });
-    router.refresh();
+    void refreshRows();
   }
 
   async function handleToggle(promotion: PromotionRecord) {
@@ -114,7 +129,9 @@ export default function PromotionsClient({ promotions, options }: PromotionsClie
     }
 
     setNotice({ message: promotion.isActive ? "تم إيقاف العرض" : "تم تفعيل العرض" });
-    router.refresh();
+    setPromotionRows((current) => current.map((row) =>
+      row.id === promotion.id ? { ...row, isActive: !promotion.isActive } : row,
+    ));
   }
 
   async function handleDelete() {
@@ -130,17 +147,45 @@ export default function PromotionsClient({ promotions, options }: PromotionsClie
 
     setDeleteTarget(null);
     setNotice({ message: "تم حذف العرض" });
-    router.refresh();
+    setPromotionRows((current) => current.filter((row) => row.id !== deleteTarget.id));
   }
 
   return (
     <div className="space-y-4" dir="rtl">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted">{promotions.length} عرض</p>
+        <div
+          role="tablist"
+          aria-label="تصفية العروض"
+          className="inline-flex rounded-lg border border-border bg-cream-dark/40 p-1"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "current"}
+            disabled={loadingList}
+            onClick={() => void refreshRows("current")}
+            className={`min-h-9 rounded-md px-3 text-sm font-medium transition ${view === "current" ? "bg-white text-brown shadow-sm" : "text-muted hover:text-brown"} disabled:opacity-50`}
+          >
+            العروض الحالية
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === "expired"}
+            disabled={loadingList}
+            onClick={() => void refreshRows("expired")}
+            className={`min-h-9 rounded-md px-3 text-sm font-medium transition ${view === "expired" ? "bg-white text-brown shadow-sm" : "text-muted hover:text-brown"} disabled:opacity-50`}
+          >
+            أرشيف العروض المنتهية
+          </button>
+        </div>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-muted">{promotionRows.length} عرض</p>
         <Button onClick={openCreate}>
           <Plus className="h-4 w-4" />
           عرض جديد
         </Button>
+        </div>
       </div>
 
       <Table>
@@ -155,14 +200,18 @@ export default function PromotionsClient({ promotions, options }: PromotionsClie
           </TableRow>
         </TableHeader>
         <TableBody>
-          {promotions.length === 0 ? (
+          {promotionRows.length === 0 ? (
             <TableRow>
               <td colSpan={6} className="p-2 py-12 text-center text-muted md:p-3">
-                لا توجد عروض حتى الآن
+                {loadingList
+                  ? "جاري تحميل العروض..."
+                  : view === "expired"
+                    ? "لا توجد عروض منتهية في الأرشيف"
+                    : "لا توجد عروض حالية أو قادمة"}
               </td>
             </TableRow>
           ) : (
-            promotions.map((promotion) => (
+            promotionRows.map((promotion) => (
               <TableRow key={promotion.id}>
                 <TableCell className="min-w-44">
                   <p className="font-semibold text-brown">{promotion.name}</p>

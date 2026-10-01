@@ -5,6 +5,7 @@ export const PROMOTION_TYPES = {
 } as const;
 
 export type PromotionType = (typeof PROMOTION_TYPES)[keyof typeof PROMOTION_TYPES];
+export type PromotionView = "current" | "expired";
 
 export interface PromotionInput {
   name: string;

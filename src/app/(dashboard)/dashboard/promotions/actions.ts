@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPromotionDateRangeBounds } from "@/lib/promotions";
-import type { PromotionInput, PromotionRecord, PromotionType } from "./types";
+import type { PromotionInput, PromotionRecord, PromotionType, PromotionView } from "./types";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
@@ -121,7 +121,7 @@ function normalizeIds(ids: string[]): string[] {
   return [...new Set(ids.filter((id) => typeof id === "string" && id.trim()).map((id) => id.trim()))];
 }
 
-export async function getPromotions(): Promise<PromotionRecord[]> {
+export async function getPromotions(view: PromotionView = "current"): Promise<PromotionRecord[]> {
   await requireRole(["ADMIN", "MANAGER"]);
 
   const { dayStart } = getPromotionDateRangeBounds();
@@ -134,6 +134,9 @@ export async function getPromotions(): Promise<PromotionRecord[]> {
   });
 
   return prisma.promotion.findMany({
+    where: view === "expired"
+      ? { endDate: { lt: dayStart } }
+      : { OR: [{ endDate: null }, { endDate: { gte: dayStart } }] },
     orderBy: { createdAt: "desc" },
     include: {
       categories: { select: { id: true, name: true } },
