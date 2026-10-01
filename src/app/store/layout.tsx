@@ -4,6 +4,7 @@ import StoreFooter from "@/components/store/StoreFooter";
 import StoreHeader from "@/components/store/StoreHeader";
 import { StorefrontStateProvider } from "@/components/store/StorefrontStateProvider";
 import { getCachedStoreSettingsPublic, getCachedStoreCategories } from "@/lib/store/cached-queries";
+import { getActivePromotionsData } from "@/lib/promotions-data";
 import { Cairo } from "next/font/google";
 import "../store.css";
 
@@ -23,14 +24,15 @@ export default async function StoreLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [settings, categories] = await Promise.all([
+  const [settings, categories, activePromotions] = await Promise.all([
     getCachedStoreSettingsPublic(),
     getCachedStoreCategories(6),
+    getActivePromotionsData(),
   ]);
 
   return (
     <div className={`store-root store-layout ${cairo.variable} ${cairo.className} flex min-h-screen min-h-dvh flex-col bg-[#FDFBF7]`}>
-      <StorefrontStateProvider>
+      <StorefrontStateProvider activePromotions={activePromotions}>
         <Suspense fallback={<div className="h-16 border-b border-[var(--store-border)] bg-[var(--store-surface)]" />}>
           <StoreHeader settings={settings} categories={categories} />
         </Suspense>

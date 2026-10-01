@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { Promotion } from "@/lib/promotions";
 
 export type StoreFavoriteItem = {
   id: string;
@@ -21,6 +22,7 @@ export type StoreFavoriteItem = {
 export type StoreCartItem = {
   id: string;
   productId: string;
+  categoryId: string;
   variantId: string;
   name: string;
   href: string;
@@ -37,6 +39,7 @@ type StorefrontState = {
   favoriteItems: StoreFavoriteItem[];
   cartCount: number;
   favoritesCount: number;
+  activePromotions: Promotion[];
   addToCart: (item: Omit<StoreCartItem, "id" | "quantity">, quantity?: number) => void;
   updateCartQuantity: (id: string, quantity: number) => void;
   removeFromCart: (id: string) => void;
@@ -68,7 +71,13 @@ function getCartItemId(productId: string, variantId: string) {
   return `${productId}:${variantId}`;
 }
 
-export function StorefrontStateProvider({ children }: { children: ReactNode }) {
+export function StorefrontStateProvider({
+  children,
+  activePromotions,
+}: {
+  children: ReactNode;
+  activePromotions: Promotion[];
+}) {
   const [cartItems, setCartItems] = useState<StoreCartItem[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<StoreFavoriteItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -153,6 +162,7 @@ export function StorefrontStateProvider({ children }: { children: ReactNode }) {
     () => ({
       cartItems,
       favoriteItems,
+      activePromotions,
       cartCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
       favoritesCount: favoriteItems.length,
       addToCart,
@@ -168,6 +178,7 @@ export function StorefrontStateProvider({ children }: { children: ReactNode }) {
       cartItems,
       clearCart,
       favoriteItems,
+      activePromotions,
       isFavorite,
       removeFavorite,
       removeFromCart,

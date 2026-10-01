@@ -9,6 +9,7 @@ import { createCustomer, searchCustomers } from "@/lib/actions/customers";
 import { searchVariants } from "@/lib/actions/products";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency } from "@/lib/utils";
+import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
 import type { PaymentMethod } from "@prisma/client";
 import {
   Banknote,
@@ -65,6 +66,7 @@ interface POSClientProps {
   storePhone?: string;
   currencySymbol?: string;
   dailyDiscountPercent?: number;
+  activePromotions: Promotion[];
 }
 
 export default function POSClient({
@@ -72,6 +74,7 @@ export default function POSClient({
   storePhone,
   currencySymbol = "ج.م",
   dailyDiscountPercent = 0,
+  activePromotions,
 }: POSClientProps) {
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -104,7 +107,23 @@ export default function POSClient({
     0
   );
   const percentDiscount = (subtotal * discountPercent) / 100;
-  const totalDiscount = discountAmount + percentDiscount;
+  const promotionResult = calculateCartDiscounts(
+    cart.map((item) => ({
+      productId: item.variant.product.id,
+      variantId: item.variant.id,
+      categoryId: item.variant.product.categoryId,
+      unitPrice: Math.max(
+        0,
+        (item.unitPrice * item.quantity - item.discountAmount) / item.quantity,
+      ),
+      quantity: item.quantity,
+      name: item.variant.product.nameAr || item.variant.product.name,
+    })),
+    activePromotions,
+  );
+  const manualDiscount = discountAmount + percentDiscount;
+  const promotionDiscount = promotionResult.discountAmount;
+  const totalDiscount = manualDiscount + promotionDiscount;
   const totalAmount = Math.max(0, subtotal - totalDiscount);
   const paid = parseFloat(paidAmount) || 0;
   const splitPaymentEntries = Object.entries(splitPaymentAmounts)
@@ -342,7 +361,7 @@ export default function POSClient({
           item.unitPrice * item.quantity - item.discountAmount,
       })),
       subtotal,
-      discountAmount: totalDiscount,
+      manualDiscountAmount: discountAmount,
       discountPercent,
       totalAmount,
       paidAmount: splitPaymentEnabled ? totalAmount : paid,
@@ -361,7 +380,25 @@ export default function POSClient({
     if (result.success && result.data) {
       const customer = selectedCustomer;
       const invoiceNumber = result.data.invoiceNumber;
-      const saleTotal = totalAmount;
+      const saleTotal = result.data.totalAmount;
+      const savedAppliedPromotions = Array.isArray(result.data.appliedPromotions)
+        ? result.data.appliedPromotions.flatMap((entry) => {
+            if (!entry || typeof entry !== "object" || Array.isArray(entry)) return [];
+            const promotion = entry as Record<string, unknown>;
+            if (
+              typeof promotion.id !== "string" ||
+              typeof promotion.title !== "string" ||
+              typeof promotion.discountValue !== "number"
+            ) {
+              return [];
+            }
+            return [{
+              id: promotion.id,
+              title: promotion.title,
+              discountValue: promotion.discountValue,
+            }];
+          })
+        : [];
       const soldItems = [...cart];
       const receiptTimestamp = new Date();
 
@@ -390,11 +427,12 @@ export default function POSClient({
           totalPrice:
             item.unitPrice * item.quantity - item.discountAmount,
         })),
-        subtotal,
-        discountAmount: totalDiscount,
+        subtotal: result.data.subtotal,
+        discountAmount: result.data.discountAmount,
+        appliedPromotions: savedAppliedPromotions,
         totalAmount: saleTotal,
-        paidAmount: splitPaymentEnabled ? splitPaymentTotal : paid,
-        changeAmount: splitPaymentEnabled ? Math.max(0, splitPaymentTotal - totalAmount) : changeAmount,
+        paidAmount: result.data.paidAmount,
+        changeAmount: result.data.changeAmount,
         notes: notes || undefined,
       };
 
@@ -759,17 +797,23 @@ export default function POSClient({
             </div>
           )}
 
-          <div className="space-y-1 text-sm">
+          <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted">المجموع الفرعي</span>
               <span>{formatCurrency(subtotal)}</span>
             </div>
-            {totalDiscount > 0 && (
+            {manualDiscount > 0 && (
               <div className="flex justify-between text-danger">
-                <span>الخصم</span>
-                <span>- {formatCurrency(totalDiscount)}</span>
+                <span>الخصم الإضافي</span>
+                <span>- {formatCurrency(manualDiscount)}</span>
               </div>
             )}
+            {promotionResult.appliedPromotions.map((promotion) => (
+              <div key={promotion.id} className="flex items-center justify-between gap-3 rounded-md bg-green-50 px-2.5 py-2 text-green-800">
+                <span className="min-w-0 truncate font-medium">{promotion.title}</span>
+                <span className="shrink-0 font-semibold">- {formatCurrency(promotion.discountValue)}</span>
+              </div>
+            ))}
             <div className="flex justify-between text-lg font-bold text-brown pt-1 border-t border-border">
               <span>الإجمالي</span>
               <span className="text-gold">{formatCurrency(totalAmount)}</span>

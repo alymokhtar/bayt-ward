@@ -30,6 +30,7 @@ export type ReceiptData = {
   items: ReceiptItem[];
   subtotal: number;
   discountAmount: number;
+  appliedPromotions?: { id: string; title: string; discountValue: number }[];
   totalAmount: number;
   paidAmount: number;
   changeAmount: number;
@@ -158,6 +159,12 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
             <span dir="ltr">- {fmt(data.discountAmount)}</span>
           </div>
         )}
+        {data.appliedPromotions?.map((promotion) => (
+          <div key={promotion.id} className="flex justify-between gap-2 text-[10px]">
+            <span>{promotion.title}</span>
+            <span dir="ltr">- {fmt(promotion.discountValue)}</span>
+          </div>
+        ))}
         <div className="flex justify-between gap-2 text-sm font-bold">
           <span>الإجمالي</span>
           <span dir="ltr">{fmt(data.totalAmount)}</span>

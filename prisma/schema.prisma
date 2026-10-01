@@ -68,6 +68,12 @@ enum EmployeeAdjustmentType {
   ABSENCE
 }
 
+enum PromotionType {
+  BUY_X_GET_Y
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -101,7 +107,31 @@ model Category {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime @updatedAt
 
-  products Product[]
+  products    Product[]
+  promotions Promotion[]
+}
+
+model Promotion {
+  id              String        @id @default(cuid())
+  name            String
+  description     String?
+  type            PromotionType
+  buyQuantity     Int?
+  getQuantity     Int?
+  discountPercent Float?
+  discountAmount  Float?
+  minOrderAmount  Float?
+  startDate       DateTime?
+  endDate         DateTime?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  categories Category[]
+  products   Product[]
+
+  @@index([type, isActive])
+  @@index([startDate, endDate])
 }
 
 model Product {
@@ -117,10 +147,11 @@ model Product {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  category Category         @relation(fields: [categoryId], references: [id])
-  variants ProductVariant[]
-  colors   ProductColor[]
-  images   Image[]
+  category   Category         @relation(fields: [categoryId], references: [id])
+  variants   ProductVariant[]
+  colors     ProductColor[]
+  images     Image[]
+  promotions Promotion[]
 
   @@index([categoryId])
   @@index([publishToWebsite])
@@ -268,6 +299,7 @@ model Sale {
   subtotal        Float
   discountAmount  Float         @default(0)
   discountPercent Float         @default(0)
+  appliedPromotions Json        @default("[]")
   taxAmount       Float         @default(0)
   totalAmount     Float
   tenderedAmount  Float         @default(0)

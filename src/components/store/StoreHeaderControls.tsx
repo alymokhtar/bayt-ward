@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, type FormEvent } from "react";
+import React, { useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -19,6 +19,7 @@ import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/utils";
 import { appendProductQueryParams } from "@/lib/store/whatsapp";
+import { calculateCartDiscounts } from "@/lib/promotions";
 
 type Props = {
   settings: Record<string, string>;
@@ -28,6 +29,10 @@ type Props = {
   actionButtonClass: string;
   badgeClass: string;
 };
+
+const subscribeToNothing = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export default function StoreHeaderControls({
   settings,
@@ -39,14 +44,42 @@ export default function StoreHeaderControls({
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
-  const { cartItems, cartCount, favoritesCount, updateCartQuantity, removeFromCart, clearCart } =
-    useStorefrontState();
+  const {
+    cartItems,
+    cartCount,
+    favoritesCount,
+    activePromotions,
+    updateCartQuantity,
+    removeFromCart,
+    clearCart,
+  } = useStorefrontState();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    getClientSnapshot,
+    getServerSnapshot,
+  );
+  const promotionResult = useMemo(
+    () =>
+      calculateCartDiscounts(
+        cartItems.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          categoryId: item.categoryId,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          name: item.name,
+          image: item.imageUrl,
+        })),
+        activePromotions,
+      ),
+    [activePromotions, cartItems],
+  );
+  const cartSubtotal = promotionResult.originalTotal;
 
   // دالة مساعدة للتحقق من تطابق المسار بدقة
   const isPathActive = (linkHref: string, currentPath: string): boolean => {
@@ -69,24 +102,6 @@ export default function StoreHeaderControls({
       normalizedPath.startsWith(`${normalizedHref}/`)
     );
   };
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    function handleRouteChange() {
-      setMenuOpen(false);
-      setSearchOpen(false);
-      setCartOpen(false);
-    }
-
-    // close overlays on navigation
-    // next/navigation doesn't expose router events, so rely on mount/unmount or manual calls
-    return () => {
-      // noop
-    };
-  }, [router]);
 
   function handleSearchSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -125,7 +140,6 @@ export default function StoreHeaderControls({
       return productDetails.join("\n");
     });
 
-    const totalAmount = cartItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
     const currencySymbolForTotal = cartItems.length > 0 ? cartItems[0]!.currencySymbol : currencySymbol;
 
     const message = [
@@ -133,7 +147,15 @@ export default function StoreHeaderControls({
       "",
       ...productLines,
       "",
-      `الإجمالي: ${formatCurrency(totalAmount, currencySymbolForTotal)}`,
+      `المجموع الفرعي: ${formatCurrency(cartSubtotal, currencySymbolForTotal)}`,
+      ...promotionResult.appliedPromotions.flatMap((promotion) => [
+        `العرض: ${promotion.title}`,
+        `الخصم: - ${formatCurrency(promotion.discountValue, currencySymbolForTotal)}`,
+      ]),
+      ...(promotionResult.discountAmount > 0
+        ? [`إجمالي الخصم: - ${formatCurrency(promotionResult.discountAmount, currencySymbolForTotal)}`]
+        : []),
+      `الإجمالي بعد الخصم: ${formatCurrency(promotionResult.finalTotal, currencySymbolForTotal)}`,
     ].join("\n");
 
     const whatsappUrl = getWhatsAppUrl(whatsappNumber, message);
@@ -315,10 +337,26 @@ export default function StoreHeaderControls({
 
               <div className="border-t border-[var(--store-border)] bg-white px-5 py-4">
                 <div className="flex items-center justify-between text-sm text-[var(--store-muted)]">
-                  <span>الإجمالي</span>
-                  <span className="text-lg font-bold text-[var(--store-text)]" dir="ltr">{formatCurrency(cartItems.reduce((s, i) => s + i.unitPrice * i.quantity, 0), currencySymbol)}</span>
+                  <span>المجموع الفرعي</span>
+                  <span dir="ltr">{formatCurrency(cartSubtotal, cartItems[0]?.currencySymbol || currencySymbol)}</span>
                 </div>
-                <button type="button" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50" onClick={handleWhatsAppOrder} disabled={!settings.store_whatsapp && !settings.store_phone && cartItems.length === 0}>
+                {promotionResult.appliedPromotions.map((promotion) => (
+                  <div key={promotion.id} className="mt-2 flex items-center justify-between gap-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">
+                    <span className="min-w-0 truncate font-medium">{promotion.title}</span>
+                    <span className="shrink-0 font-semibold" dir="ltr">- {formatCurrency(promotion.discountValue, cartItems[0]?.currencySymbol || currencySymbol)}</span>
+                  </div>
+                ))}
+                {promotionResult.discountAmount > 0 && (
+                  <div className="mt-2 flex items-center justify-between border-t border-[var(--store-border)] pt-2 text-sm font-medium text-green-800">
+                    <span>إجمالي الخصم</span>
+                    <span dir="ltr">- {formatCurrency(promotionResult.discountAmount, cartItems[0]?.currencySymbol || currencySymbol)}</span>
+                  </div>
+                )}
+                <div className="mt-2 flex items-center justify-between text-sm font-bold text-[var(--store-text)]">
+                  <span>الإجمالي بعد الخصم</span>
+                  <span className="text-lg" dir="ltr">{formatCurrency(promotionResult.finalTotal, cartItems[0]?.currencySymbol || currencySymbol)}</span>
+                </div>
+                <button type="button" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50" onClick={handleWhatsAppOrder} disabled={cartItems.length === 0 || (!settings.store_whatsapp && !settings.store_phone)}>
                   <MessageCircle className="h-4 w-4" />
                   اطلبي عبر واتساب
                 </button>

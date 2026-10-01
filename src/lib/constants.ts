@@ -15,6 +15,7 @@ import {
   Store,
   Barcode,
   MessageCircle,
+  BadgePercent,
 } from "lucide-react";
 
 export const STORE_NAME = "Bayt Ward";
@@ -54,6 +55,12 @@ export const NAV_ITEMS = [
     title: "التصنيفات",
     href: "/categories",
     icon: Tags,
+    roles: ["ADMIN", "MANAGER"],
+  },
+  {
+    title: "العروض والخصومات",
+    href: "/dashboard/promotions",
+    icon: BadgePercent,
     roles: ["ADMIN", "MANAGER"],
   },
   {

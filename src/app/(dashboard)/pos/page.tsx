@@ -2,10 +2,14 @@ import POSClient from "@/app/(dashboard)/pos/POSClient";
 import { getStoreSettings } from "@/lib/actions/settings";
 import { getEgyptBusinessDateKey } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
+import { getActivePromotionsData } from "@/lib/promotions-data";
 import { Store } from "lucide-react";
 
 export default async function POSPage() {
-  const settings = await getStoreSettings();
+  const [settings, activePromotions] = await Promise.all([
+    getStoreSettings(),
+    getActivePromotionsData(),
+  ]);
 
   const todayKey = getEgyptBusinessDateKey();
   const discountDate = settings.daily_discount_date || "";
@@ -40,6 +44,7 @@ export default async function POSPage() {
         storePhone={settings.store_phone}
         currencySymbol={settings.currency_symbol || "ج.م"}
         dailyDiscountPercent={dailyDiscountActive ? discountPercent : 0}
+        activePromotions={activePromotions}
       />
     </div>
   );

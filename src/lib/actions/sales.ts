@@ -11,6 +11,8 @@ import { invalidateSalesData, revalidateInventoryCache } from "@/lib/revalidate-
 import { sendTelegramMessage } from "@/lib/telegram";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import { normalizeSalePayments } from "@/lib/sales-payment-utils";
+import { calculateCartDiscounts } from "@/lib/promotions";
+import { getActivePromotionsData } from "@/lib/promotions-data";
 import type { PaymentMethod } from "@prisma/client";
 
 type ActionResult<T = void> =
@@ -206,6 +208,7 @@ export async function createSale(data: {
   items: SaleItemInput[];
   subtotal: number;
   discountAmount?: number;
+  manualDiscountAmount?: number;
   discountPercent?: number;
   taxAmount?: number;
   totalAmount: number;
@@ -223,14 +226,83 @@ export async function createSale(data: {
       return { success: false, error: "يجب إضافة منتج واحد على الأقل" };
     }
 
-    if (data.totalAmount <= 0) {
+    if (data.items.some((item) =>
+      !item.variantId || !Number.isInteger(item.quantity) || item.quantity < 1
+    )) {
+      return { success: false, error: "عناصر السلة أو كمياتها غير صالحة" };
+    }
+
+    if (new Set(data.items.map((item) => item.variantId)).size !== data.items.length) {
+      return { success: false, error: "يوجد منتج مكرر في السلة" };
+    }
+
+    const variantIds = data.items.map((item) => item.variantId);
+    const variants = await prisma.productVariant.findMany({
+      where: { id: { in: variantIds } },
+      select: {
+        id: true,
+        isActive: true,
+        stockQuantity: true,
+        sellingPrice: true,
+        size: true,
+        color: true,
+        productId: true,
+        product: {
+          select: { id: true, categoryId: true, name: true, nameAr: true, isActive: true },
+        },
+      },
+    });
+    const variantMap = new Map(variants.map((variant) => [variant.id, variant]));
+
+    if (variants.length !== variantIds.length) {
+      return { success: false, error: "أحد المنتجات غير موجود أو غير نشط" };
+    }
+
+    const trustedItems = data.items.map((item) => {
+      const variant = variantMap.get(item.variantId);
+      if (!variant || !variant.isActive || !variant.product.isActive) {
+        throw new Error("أحد المنتجات غير موجود أو غير نشط");
+      }
+      if (variant.stockQuantity < item.quantity) {
+        throw new Error(
+          `الكمية غير كافية للمنتج ${variant.product.nameAr || variant.product.name} (${variant.size} - ${variant.color})`,
+        );
+      }
+      return {
+        variantId: variant.id,
+        productId: variant.product.id,
+        categoryId: variant.product.categoryId,
+        quantity: item.quantity,
+        unitPrice: variant.sellingPrice,
+        name: variant.product.nameAr || variant.product.name,
+      };
+    });
+    const subtotal = trustedItems.reduce(
+      (sum, item) => sum + item.unitPrice * item.quantity,
+      0,
+    );
+    const activePromotions = await getActivePromotionsData();
+    const promotionResult = calculateCartDiscounts(trustedItems, activePromotions);
+    const manualPercent = Number.isFinite(data.discountPercent)
+      ? Math.min(100, Math.max(0, data.discountPercent ?? 0))
+      : 0;
+    const manualFixed = Number.isFinite(data.manualDiscountAmount)
+      ? Math.max(0, data.manualDiscountAmount ?? 0)
+      : Number.isFinite(data.discountAmount)
+        ? Math.max(0, data.discountAmount ?? 0)
+        : 0;
+    const manualDiscount = subtotal * manualPercent / 100 + manualFixed;
+    const discountAmount = Math.min(subtotal, promotionResult.discountAmount + manualDiscount);
+    const totalAmount = Math.max(0, Math.round((subtotal - discountAmount + Number.EPSILON) * 100) / 100);
+
+    if (totalAmount <= 0) {
       return { success: false, error: "إجمالي الفاتورة يجب أن يكون أكبر من صفر" };
     }
 
     const { normalizedPayments, effectivePaidAmount } = normalizeSalePayments({
       payments: data.payments,
       paidAmount: data.paidAmount,
-      totalAmount: data.totalAmount,
+      totalAmount,
       paymentMethod: data.paymentMethod,
     });
 
@@ -242,21 +314,21 @@ export async function createSale(data: {
     const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
     const rawTenderedTotal = (data.payments ?? []).reduce(
       (sum, payment) => sum + Number(payment.amount ?? 0),
-      0
+      0,
     );
     const actualPaidAmount = effectivePaidAmount;
     const tenderedAmount = data.tenderedAmount !== undefined
       ? data.tenderedAmount
       : (data.payments?.length ? rawTenderedTotal : data.paidAmount);
     const resolvedChangeAmount = data.tenderedAmount !== undefined
-      ? Math.max(0, data.tenderedAmount - data.totalAmount)
-      : (data.changeAmount ?? Math.max(0, tenderedAmount - data.totalAmount));
+      ? Math.max(0, data.tenderedAmount - totalAmount)
+      : (data.changeAmount ?? Math.max(0, tenderedAmount - totalAmount));
 
     if (normalizedPayments.length > 1) {
-      if (Math.abs(paymentTotal - data.totalAmount) > 0.01) {
+      if (Math.abs(paymentTotal - totalAmount) > 0.01) {
         return { success: false, error: "مجموع المدفوعات المختلطة يجب أن يساوي الإجمالي" };
       }
-    } else if (data.paidAmount < data.totalAmount) {
+    } else if (data.paidAmount < totalAmount) {
       return { success: false, error: "المبلغ المدفوع أقل من الإجمالي" };
     }
 
@@ -270,27 +342,36 @@ export async function createSale(data: {
     }
 
     const sale = await prisma.$transaction(async (tx) => {
-      const variantIds = [...new Set(data.items.map((item) => item.variantId))];
-      const variants = await tx.productVariant.findMany({
+      const latestVariants = await tx.productVariant.findMany({
         where: { id: { in: variantIds } },
         select: {
           id: true,
           isActive: true,
           stockQuantity: true,
+          sellingPrice: true,
           size: true,
           color: true,
           product: {
-            select: { name: true, nameAr: true, isActive: true },
+            select: { id: true, categoryId: true, name: true, nameAr: true, isActive: true },
           },
         },
       });
-      const variantMap = new Map(variants.map((v) => [v.id, v]));
+      const latestVariantMap = new Map(latestVariants.map((variant) => [variant.id, variant]));
 
       for (const item of data.items) {
-        const variant = variantMap.get(item.variantId);
+        const variant = latestVariantMap.get(item.variantId);
 
         if (!variant || !variant.isActive || !variant.product.isActive) {
           throw new Error("أحد المنتجات غير موجود أو غير نشط");
+        }
+
+        const preparedVariant = variantMap.get(item.variantId);
+        if (
+          !preparedVariant ||
+          variant.sellingPrice !== preparedVariant.sellingPrice ||
+          variant.product.categoryId !== preparedVariant.product.categoryId
+        ) {
+          throw new Error("تغير سعر أحد المنتجات أثناء إتمام البيع. أعد المحاولة");
         }
 
         if (variant.stockQuantity < item.quantity) {
@@ -307,11 +388,16 @@ export async function createSale(data: {
           invoiceNumber,
           customerId: data.customerId,
           userId: user.id,
-          subtotal: data.subtotal,
-          discountAmount: data.discountAmount ?? 0,
-          discountPercent: data.discountPercent ?? 0,
+          subtotal,
+          discountAmount,
+          discountPercent: manualPercent,
+          appliedPromotions: promotionResult.appliedPromotions.map((promotion) => ({
+            id: promotion.id,
+            title: promotion.title,
+            discountValue: promotion.discountValue,
+          })),
           taxAmount: data.taxAmount ?? 0,
-          totalAmount: data.totalAmount,
+          totalAmount,
           tenderedAmount,
           paidAmount: actualPaidAmount,
           changeAmount: resolvedChangeAmount,
@@ -322,9 +408,9 @@ export async function createSale(data: {
             create: data.items.map((item) => ({
               variantId: item.variantId,
               quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              discountAmount: item.discountAmount ?? 0,
-              totalPrice: item.totalPrice,
+              unitPrice: variantMap.get(item.variantId)!.sellingPrice,
+              discountAmount: 0,
+              totalPrice: variantMap.get(item.variantId)!.sellingPrice * item.quantity,
             })),
           },
           payments: {
@@ -337,7 +423,12 @@ export async function createSale(data: {
         select: {
           id: true,
           invoiceNumber: true,
+          subtotal: true,
+          discountAmount: true,
           totalAmount: true,
+          paidAmount: true,
+          changeAmount: true,
+          appliedPromotions: true,
           items: {
             select: {
               id: true,
@@ -362,7 +453,7 @@ export async function createSale(data: {
       });
 
       for (const item of data.items) {
-        const variant = variantMap.get(item.variantId);
+        const variant = latestVariantMap.get(item.variantId);
 
         if (!variant) continue;
 
@@ -393,7 +484,7 @@ export async function createSale(data: {
         await tx.customer.update({
           where: { id: data.customerId },
           data: {
-            totalSpent: { increment: data.totalAmount },
+            totalSpent: { increment: totalAmount },
             visitCount: { increment: 1 },
           },
         });
@@ -407,9 +498,9 @@ export async function createSale(data: {
 
     revalidateSalePaths();
     // Immediate cache invalidation for stock & storefront products
-    sale.items.forEach((item) => {
+    if (sale.items.length > 0) {
       updateTag('products-list');
-    });
+    }
 
     void checkLowStockAndNotify(data.items.map((item) => item.variantId));
     void sendTelegramMessage(formatSaleTelegramMessage(sale));

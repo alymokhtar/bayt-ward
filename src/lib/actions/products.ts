@@ -677,6 +677,7 @@ export async function searchVariants(query: string) {
         id: variant.product.id,
         name: variant.product.name,
         nameAr: variant.product.nameAr,
+        categoryId: variant.product.categoryId,
       },
     }));
   }
@@ -735,7 +736,7 @@ const variantSearchSelect = {
   sellingPrice: true,
   stockQuantity: true,
   product: {
-    select: { id: true, name: true, nameAr: true },
+    select: { id: true, name: true, nameAr: true, categoryId: true },
   },
 } as const;
 

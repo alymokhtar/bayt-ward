@@ -174,6 +174,9 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
       ? row("الخصم", `- ${fmt(data.discountAmount)}`)
       : ""
   }
+  ${(data.appliedPromotions ?? [])
+    .map((promotion) => row(escapeHtml(promotion.title), `- ${fmt(promotion.discountValue)}`))
+    .join("")}
   ${row("الإجمالي", fmt(data.totalAmount), true)}
   ${row("المدفوع", fmt(data.paidAmount))}
   ${row("الباقي", fmt(data.changeAmount), true)}

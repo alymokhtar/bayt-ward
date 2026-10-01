@@ -14,6 +14,7 @@ export type ProductSearchRow = {
   id: string;
   name: string;
   nameAr: string | null;
+  categoryId: string;
   variants: ProductSearchVariant[];
 };
 
@@ -40,6 +41,7 @@ export function flattenProductSearchResults(products: ProductSearchRow[]) {
         id: product.id,
         name: product.name,
         nameAr: product.nameAr,
+        categoryId: product.categoryId,
       },
     }))
   );

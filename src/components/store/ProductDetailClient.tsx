@@ -400,6 +400,7 @@ export default function ProductDetailClient({
 
     addToCart({
       productId: product.id,
+      categoryId: product.categoryId,
       variantId: selectedVariant.variantId,
       name: displayName,
       href: productUrl,
