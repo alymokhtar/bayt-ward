@@ -4,6 +4,7 @@ import { PromotionType as PrismaPromotionType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getPromotionDateRangeBounds } from "@/lib/promotions";
 import type { PromotionInput, PromotionRecord, PromotionType } from "./types";
 
 type ActionResult = { success: true } | { success: false; error: string };
@@ -122,6 +123,15 @@ function normalizeIds(ids: string[]): string[] {
 
 export async function getPromotions(): Promise<PromotionRecord[]> {
   await requireRole(["ADMIN", "MANAGER"]);
+
+  const { dayStart } = getPromotionDateRangeBounds();
+  await prisma.promotion.updateMany({
+    where: {
+      isActive: true,
+      endDate: { lt: dayStart },
+    },
+    data: { isActive: false },
+  });
 
   return prisma.promotion.findMany({
     orderBy: { createdAt: "desc" },
