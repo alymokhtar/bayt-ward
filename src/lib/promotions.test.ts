@@ -69,6 +69,87 @@ test("defaults buy-X-get-Y to a full discount and counts repeated groups", () =>
   assert.equal(result.finalTotal, 120);
 });
 
+test("uses direct discount below the buy-X-get-Y quantity threshold", () => {
+  const result = calculateCartDiscounts(
+    [{ ...cartItems[0], quantity: 2 }],
+    [
+      promotion({
+        id: "quantity",
+        type: "BUY_X_GET_Y",
+        buyQuantity: 2,
+        getQuantity: 1,
+        categories: [{ id: "clothing" }],
+      }),
+      promotion({ id: "percentage", discountPercent: 10 }),
+    ],
+  );
+
+  assert.equal(result.discountAmount, 20);
+  assert.equal(result.finalTotal, 180);
+  assert.deepEqual(result.appliedPromotions.map(({ id }) => id), ["percentage"]);
+});
+
+test("gives a qualifying quantity promotion priority over a direct discount on the same product", () => {
+  const result = calculateCartDiscounts(
+    [{ ...cartItems[0], quantity: 3 }],
+    [
+      promotion({
+        id: "quantity",
+        type: "BUY_X_GET_Y",
+        buyQuantity: 2,
+        getQuantity: 1,
+        categories: [{ id: "clothing" }],
+      }),
+      promotion({ id: "percentage", discountPercent: 50 }),
+      promotion({ id: "fixed", type: "FIXED_AMOUNT", discountAmount: 50 }),
+    ],
+  );
+
+  assert.equal(result.discountAmount, 100);
+  assert.equal(result.finalTotal, 200);
+  assert.deepEqual(result.appliedPromotions, [
+    { id: "quantity", title: "Promotion", discountValue: 100 },
+  ]);
+});
+
+test("applies direct discounts only to products not reserved by a quantity promotion", () => {
+  const result = calculateCartDiscounts(
+    [{ ...cartItems[0], quantity: 3 }, cartItems[1]],
+    [
+      promotion({
+        id: "quantity",
+        type: "BUY_X_GET_Y",
+        buyQuantity: 2,
+        getQuantity: 1,
+        categories: [{ id: "clothing" }],
+      }),
+      promotion({ id: "percentage", discountPercent: 10 }),
+    ],
+  );
+
+  assert.equal(result.originalTotal, 330);
+  assert.equal(result.discountAmount, 103);
+  assert.equal(result.finalTotal, 227);
+  assert.deepEqual(result.appliedPromotions, [
+    { id: "quantity", title: "Promotion", discountValue: 100 },
+    { id: "percentage", title: "Promotion", discountValue: 3 },
+  ]);
+});
+
+test("does not stack overlapping direct promotions on the same product", () => {
+  const result = calculateCartDiscounts(
+    [{ ...cartItems[0], quantity: 2 }],
+    [
+      promotion({ id: "fixed", type: "FIXED_AMOUNT", discountAmount: 50 }),
+      promotion({ id: "percentage", discountPercent: 20 }),
+    ],
+  );
+
+  assert.equal(result.discountAmount, 50);
+  assert.equal(result.finalTotal, 150);
+  assert.deepEqual(result.appliedPromotions.map(({ id }) => id), ["fixed"]);
+});
+
 test("ignores inactive and out-of-date promotions", () => {
   const result = calculateCartDiscounts(
     cartItems,
@@ -84,11 +165,20 @@ test("ignores inactive and out-of-date promotions", () => {
   assert.deepEqual(result.appliedPromotions, []);
 });
 
-test("checks minimum order amount and caps stacked discounts at the cart total", () => {
+test("checks the cart minimum and caps independent promotions at their eligible item totals", () => {
   const result = calculateCartDiscounts(cartItems, [
     promotion({ id: "below-minimum", minOrderAmount: 231, discountAmount: 500 }),
-    promotion({ id: "fixed", type: "FIXED_AMOUNT", discountAmount: 100 }),
-    promotion({ id: "percentage", discountPercent: 100 }),
+    promotion({
+      id: "fixed",
+      type: "FIXED_AMOUNT",
+      discountAmount: 500,
+      products: [{ id: "dress" }],
+    }),
+    promotion({
+      id: "percentage",
+      discountPercent: 100,
+      products: [{ id: "scarf" }],
+    }),
   ]);
 
   assert.equal(result.originalTotal, 230);

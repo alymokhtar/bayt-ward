@@ -84,10 +84,15 @@ function matchesPromotion(item: CartItem, promotion: Promotion): boolean {
   );
 }
 
+interface BuyXGetYDiscount {
+  discountValue: number;
+  eligibleProductIds: Set<string>;
+}
+
 function calculateBuyXGetYDiscount(
   cartItems: CartItem[],
   promotion: Promotion,
-): number {
+): BuyXGetYDiscount {
   const buyQuantity = promotion.buyQuantity;
   const getQuantity = promotion.getQuantity;
 
@@ -97,7 +102,7 @@ function calculateBuyXGetYDiscount(
     buyQuantity! <= 0 ||
     getQuantity! <= 0
   ) {
-    return 0;
+    return { discountValue: 0, eligibleProductIds: new Set() };
   }
 
   const eligibleItems = cartItems
@@ -110,10 +115,12 @@ function calculateBuyXGetYDiscount(
   const groupSize = buyQuantity! + getQuantity!;
   const freeQuantity = Math.floor(eligibleQuantity / groupSize) * getQuantity!;
 
-  if (freeQuantity < 1) return 0;
+  if (freeQuantity < 1) return { discountValue: 0, eligibleProductIds: new Set() };
 
   const discountPercent = promotion.discountPercent ?? 100;
-  if (!Number.isFinite(discountPercent) || discountPercent <= 0) return 0;
+  if (!Number.isFinite(discountPercent) || discountPercent <= 0) {
+    return { discountValue: 0, eligibleProductIds: new Set() };
+  }
 
   let remainingFreeQuantity = freeQuantity;
   let discount = 0;
@@ -126,13 +133,20 @@ function calculateBuyXGetYDiscount(
     remainingFreeQuantity -= discountedQuantity;
   }
 
-  return roundMoney(discount * Math.min(discountPercent, 100) / 100);
+  const discountValue = roundMoney(discount * Math.min(discountPercent, 100) / 100);
+
+  return {
+    discountValue,
+    eligibleProductIds: discountValue > 0
+      ? new Set(eligibleItems.map((item) => item.productId))
+      : new Set(),
+  };
 }
 
 function calculateDirectDiscount(
   promotion: Promotion,
   originalTotal: number,
-  remainingTotal: number,
+  eligibleItems: CartItem[],
 ): number {
   if (promotion.minOrderAmount != null) {
     if (
@@ -143,17 +157,23 @@ function calculateDirectDiscount(
     }
   }
 
+  const eligibleTotal = eligibleItems.reduce(
+    (total, item) => total + item.unitPrice * item.quantity,
+    0,
+  );
+  if (eligibleTotal <= 0) return 0;
+
   if (promotion.type === "PERCENTAGE") {
     const discountPercent = promotion.discountPercent;
     if (!Number.isFinite(discountPercent) || discountPercent! <= 0) return 0;
 
-    return roundMoney(remainingTotal * Math.min(discountPercent!, 100) / 100);
+    return roundMoney(eligibleTotal * Math.min(discountPercent!, 100) / 100);
   }
 
   const discountAmount = promotion.discountAmount;
   if (!Number.isFinite(discountAmount) || discountAmount! <= 0) return 0;
 
-  return roundMoney(Math.min(discountAmount!, remainingTotal));
+  return roundMoney(Math.min(discountAmount!, eligibleTotal));
 }
 
 export function calculateCartDiscounts(
@@ -181,36 +201,82 @@ export function calculateCartDiscounts(
   const originalTotal = roundMoney(
     validCartItems.reduce((total, item) => total + item.unitPrice * item.quantity, 0),
   );
-  let remainingTotal = originalTotal;
-  const appliedPromotions: AppliedPromotion[] = [];
+  const appliedDiscounts = new Map<string, AppliedPromotion>();
 
   if (!Number.isFinite(nowTimestamp)) {
-    return { originalTotal, discountAmount: 0, finalTotal: originalTotal, appliedPromotions };
+    return {
+      originalTotal,
+      discountAmount: 0,
+      finalTotal: originalTotal,
+      appliedPromotions: [],
+    };
   }
 
-  for (const promotion of activePromotions) {
-    if (!isPromotionActive(promotion, nowTimestamp) || remainingTotal <= 0) continue;
+  const eligiblePromotions = activePromotions.filter((promotion) =>
+    isPromotionActive(promotion, nowTimestamp),
+  );
+  const quantityDiscountedProductIds = new Set<string>();
 
-    const proposedDiscount =
-      promotion.type === "BUY_X_GET_Y"
-        ? calculateBuyXGetYDiscount(validCartItems, promotion)
-        : calculateDirectDiscount(promotion, originalTotal, remainingTotal);
-    const discountValue = roundMoney(Math.min(proposedDiscount, remainingTotal));
+  for (const promotion of eligiblePromotions) {
+    if (promotion.type !== "BUY_X_GET_Y") continue;
+
+    const eligibleItems = validCartItems.filter(
+      (item) =>
+        !quantityDiscountedProductIds.has(item.productId) &&
+        matchesPromotion(item, promotion),
+    );
+    const result = calculateBuyXGetYDiscount(eligibleItems, promotion);
+
+    if (result.discountValue <= 0) continue;
+
+    for (const productId of result.eligibleProductIds) {
+      quantityDiscountedProductIds.add(productId);
+    }
+    appliedDiscounts.set(promotion.id, {
+      id: promotion.id,
+      title: promotion.title?.trim() || promotion.name,
+      discountValue: result.discountValue,
+    });
+  }
+
+  const exclusiveProductIds = new Set(quantityDiscountedProductIds);
+
+  for (const promotion of eligiblePromotions) {
+    if (promotion.type === "BUY_X_GET_Y") continue;
+
+    const eligibleItems = validCartItems.filter(
+      (item) =>
+        !exclusiveProductIds.has(item.productId) &&
+        matchesPromotion(item, promotion),
+    );
+    const discountValue = calculateDirectDiscount(
+      promotion,
+      originalTotal,
+      eligibleItems,
+    );
 
     if (discountValue <= 0) continue;
 
-    remainingTotal = roundMoney(Math.max(0, remainingTotal - discountValue));
-    appliedPromotions.push({
+    for (const item of eligibleItems) {
+      exclusiveProductIds.add(item.productId);
+    }
+    appliedDiscounts.set(promotion.id, {
       id: promotion.id,
       title: promotion.title?.trim() || promotion.name,
       discountValue,
     });
   }
 
+  const appliedPromotions = [...appliedDiscounts.values()];
+  const discountAmount = roundMoney(
+    Math.min(originalTotal, appliedPromotions.reduce((total, promotion) => total + promotion.discountValue, 0)),
+  );
+  const finalTotal = roundMoney(Math.max(0, originalTotal - discountAmount));
+
   return {
     originalTotal,
-    discountAmount: roundMoney(originalTotal - remainingTotal),
-    finalTotal: remainingTotal,
+    discountAmount,
+    finalTotal,
     appliedPromotions,
   };
 }
