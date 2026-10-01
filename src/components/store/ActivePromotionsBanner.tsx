@@ -23,20 +23,6 @@ function promotionOfferText(promotion: Promotion): string {
   return `خصم ${promotion.discountAmount ?? "—"} على السلة`;
 }
 
-function promotionHref(promotion: Promotion): string {
-  const productId = promotion.products?.[0];
-  if (productId) {
-    return `/store/product/${typeof productId === "string" ? productId : productId.id}`;
-  }
-
-  const categoryId = promotion.categories?.[0];
-  if (categoryId) {
-    return `/store/categories/${typeof categoryId === "string" ? categoryId : categoryId.id}`;
-  }
-
-  return "/store/products";
-}
-
 function getCairoDateParts(value: Date | string | null | undefined) {
   if (!value) return null;
 
@@ -144,7 +130,7 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
       </div>
 
       <Link
-        href={promotionHref(promotion)}
+        href={`/store/promotions/${promotion.id}`}
         className="mt-auto inline-flex min-h-10 items-center gap-2 self-start pt-4 text-sm font-bold text-[var(--store-text)] transition-colors hover:text-[var(--store-gold-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-gold)]"
       >
         تسوقي العرض
