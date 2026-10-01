@@ -15,6 +15,7 @@ export type PromotionTarget = string | { id: string };
 export interface Promotion {
   id: string;
   name: string;
+  description?: string | null;
   title?: string | null;
   type: PromotionType;
   isActive: boolean;

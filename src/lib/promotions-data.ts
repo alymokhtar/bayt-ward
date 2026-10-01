@@ -14,6 +14,7 @@ export async function getActivePromotionsData(now = new Date()): Promise<Promoti
     select: {
       id: true,
       name: true,
+      description: true,
       type: true,
       isActive: true,
       buyQuantity: true,

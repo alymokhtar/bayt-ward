@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
 import SectionHeading from "@/components/store/SectionHeading";
 import CategoryCard, { TrustSignals, WhatsAppCta } from "@/components/store/StoreSections";
+import ActivePromotionsBanner from "@/components/store/ActivePromotionsBanner";
 import { STORE_NAME_AR } from "@/lib/constants";
 import {
   getCachedFeaturedProducts,
@@ -272,6 +273,8 @@ export default async function StoreHomePage() {
           </button>
         </div>
       </section>
+
+      <ActivePromotionsBanner />
 
       <Suspense fallback={<SectionSkeleton className="h-52" />}>
         <StoreCategorySection categoriesWithCovers={categoriesWithCovers} />
