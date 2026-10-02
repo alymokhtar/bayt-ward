@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { getActivePromotionsData } from "@/lib/promotions-data";
 import type { Promotion } from "@/lib/promotions";
+import { formatPromotionValidity } from "@/lib/promotion-date";
 
 function promotionOfferText(promotion: Promotion): string {
   if (promotion.type === "BUY_X_GET_Y") {
@@ -21,68 +22,6 @@ function promotionOfferText(promotion: Promotion): string {
   }
 
   return `خصم ${promotion.discountAmount ?? "—"} على السلة`;
-}
-
-function getCairoDateParts(value: Date | string | null | undefined) {
-  if (!value) return null;
-
-  const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return null;
-
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Africa/Cairo",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  }).formatToParts(date);
-  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((part) => part.type === type)?.value);
-
-  return {
-    date,
-    year: getPart("year"),
-    month: getPart("month"),
-    day: getPart("day"),
-  };
-}
-
-function formatPromotionDate(value: Date | string): string | null {
-  const parts = getCairoDateParts(value);
-  if (!parts) return null;
-
-  const formatted = new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
-    timeZone: "Africa/Cairo",
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(parts.date);
-
-  return `يوم ${formatted}`;
-}
-
-function formatPromotionDateRange(
-  startDate: Date | string | null | undefined,
-  endDate: Date | string | null | undefined,
-): string {
-  const startParts = getCairoDateParts(startDate);
-  const endParts = getCairoDateParts(endDate);
-  const formattedStart = startDate ? formatPromotionDate(startDate) : null;
-  const formattedEnd = endDate ? formatPromotionDate(endDate) : null;
-
-  if (formattedStart && formattedEnd && startParts && endParts) {
-    const startKey = Date.UTC(startParts.year, startParts.month - 1, startParts.day);
-    const endKey = Date.UTC(endParts.year, endParts.month - 1, endParts.day);
-    const dayDifference = Math.round((endKey - startKey) / 86_400_000);
-
-    if (dayDifference === 0) return `ساري ${formattedStart}`;
-    if (dayDifference === 1) return `ساري من ${formattedStart} إلى ${formattedEnd}`;
-    return `ساري من ${formattedStart} حتى ${formattedEnd}`;
-  }
-
-  if (formattedStart) return `ساري من ${formattedStart}`;
-  if (formattedEnd) return `ساري حتى ${formattedEnd}`;
-  return "ساري حالياً";
 }
 
 function PromotionCard({ promotion }: { promotion: Promotion }) {
@@ -121,7 +60,7 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-[var(--store-border)] pt-3">
         <p className="inline-flex items-center gap-2 text-xs leading-5 text-[var(--store-muted)]">
           <CalendarDays className="h-4 w-4 shrink-0 text-[var(--store-gold-deep)]" aria-hidden="true" />
-          <span>{formatPromotionDateRange(promotion.startDate, promotion.endDate)}</span>
+          <span>{formatPromotionValidity(promotion.startDate, promotion.endDate)}</span>
         </p>
         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FDF5E6] px-2.5 py-1 text-[11px] font-semibold text-[var(--store-gold-deep)]">
           <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />

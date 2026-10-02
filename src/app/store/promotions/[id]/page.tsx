@@ -11,6 +11,7 @@ import { storeProductListSelect } from "@/lib/store/types";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { STORE_NAME_AR } from "@/lib/constants";
 import { isPromotionDateRangeActive } from "@/lib/promotions";
+import { formatPromotionValidity } from "@/lib/promotion-date";
 import type { StoreProductListItem } from "@/lib/store/types";
 
 type PromotionPageProps = {
@@ -71,48 +72,6 @@ function isPromotionCurrentlyActive(
     promotion.isActive &&
     isPromotionDateRangeActive(promotion.startDate, promotion.endDate, now)
   );
-}
-
-function formatPromotionDate(value: Date | string | null | undefined): string | null {
-  if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return null;
-
-  return new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
-    timeZone: "UTC",
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
-function getDateKey(value: Date | string): number | null {
-  const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return null;
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-}
-
-function formatPromotionDateRange(
-  startDate: Date | string | null | undefined,
-  endDate: Date | string | null | undefined,
-): string {
-  const start = formatPromotionDate(startDate);
-  const end = formatPromotionDate(endDate);
-
-  if (start && end && startDate && endDate) {
-    const startKey = getDateKey(startDate);
-    const endKey = getDateKey(endDate);
-    if (startKey == null || endKey == null) return "ساري حالياً";
-    const dayDifference = Math.round((endKey - startKey) / 86_400_000);
-    if (dayDifference === 0) return `ساري يوم ${start}`;
-    if (dayDifference === 1) return `ساري من يوم ${start} إلى يوم ${end}`;
-    return `ساري من يوم ${start} حتى يوم ${end}`;
-  }
-
-  if (start) return `ساري من يوم ${start}`;
-  if (end) return `ساري حتى يوم ${end}`;
-  return "ساري حالياً";
 }
 
 function getPromotionOffer(promotion: {
@@ -264,7 +223,7 @@ export default async function PromotionPage({ params }: PromotionPageProps) {
             <div className="flex shrink-0 flex-col items-start gap-2">
               <span className="inline-flex items-center gap-2 rounded-lg border border-[var(--store-border)] bg-white/80 px-3 py-2 text-sm text-[var(--store-text)]">
                 <CalendarDays className="h-4 w-4 text-[var(--store-gold-deep)]" aria-hidden="true" />
-                {formatPromotionDateRange(promotion.startDate, promotion.endDate)}
+                {formatPromotionValidity(promotion.startDate, promotion.endDate)}
               </span>
               <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1.5 text-xs font-semibold text-[var(--store-gold-deep)]">
                 <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />

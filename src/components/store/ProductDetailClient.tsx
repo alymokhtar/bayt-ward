@@ -8,6 +8,7 @@ import { Check, ShoppingBag, Share2 } from "lucide-react";
 import ProductGallery from "@/components/store/ProductGallery";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
+import { formatPromotionValidity } from "@/lib/promotion-date";
 import WhatsAppOrderButton from "@/components/store/WhatsAppOrderButton";
 import { optimizeCloudinaryUrl, STORE_IMAGE_SIZES } from "@/lib/store/images";
 import {
@@ -545,9 +546,7 @@ export default function ProductDetailClient({
                     </span>
                   </p>
                   <p className="pr-6 text-[11px] font-medium text-amber-800 md:text-xs">
-                    {promotion.endDate
-                      ? `ساري حتى ${formatPromotionEndDate(promotion.endDate)} | أو حتى نفاذ الكمية`
-                      : "أو حتى نفاذ الكمية"}
+                    {formatPromotionValidity(promotion.startDate, promotion.endDate)} | أو حتى نفاذ الكمية
                   </p>
                 </div>
               ))}
@@ -623,14 +622,3 @@ function promotionMatchesProduct(
   ) || matchesProduct || matchesCategory;
 }
 
-function formatPromotionEndDate(value: Date | string): string {
-  const date = value instanceof Date ? value : new Date(value);
-  if (!Number.isFinite(date.getTime())) return "نهاية فترة العرض";
-
-  return new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
-    timeZone: "Africa/Cairo",
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  }).format(date);
-}
