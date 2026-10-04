@@ -12,6 +12,51 @@ export interface ProfitMetricsResult {
   profitMargin: number;
 }
 
+export interface SalesReportMetricsInput {
+  grossSalesBeforeDiscount: number;
+  totalDiscount: number;
+  totalReturns: number;
+  accrualRevenue: number;
+  totalPayments: number;
+  salesCount: number;
+}
+
+export interface SalesReportMetricsResult {
+  grossSalesBeforeDiscount: number;
+  totalDiscount: number;
+  totalReturns: number;
+  accrualRevenue: number;
+  totalPayments: number;
+  netSales: number;
+  averageSale: number;
+}
+
+export function calculateSalesReportMetrics({
+  grossSalesBeforeDiscount,
+  totalDiscount,
+  totalReturns,
+  accrualRevenue,
+  totalPayments,
+  salesCount,
+}: SalesReportMetricsInput): SalesReportMetricsResult {
+  const grossSales = Number.isFinite(grossSalesBeforeDiscount) ? grossSalesBeforeDiscount : 0;
+  const discounts = Number.isFinite(totalDiscount) ? totalDiscount : 0;
+  const returns = Number.isFinite(totalReturns) ? totalReturns : 0;
+  const revenue = Number.isFinite(accrualRevenue) ? accrualRevenue : 0;
+  const payments = Number.isFinite(totalPayments) ? totalPayments : 0;
+  const count = Number.isFinite(salesCount) && salesCount > 0 ? salesCount : 0;
+
+  return {
+    grossSalesBeforeDiscount: grossSales,
+    totalDiscount: discounts,
+    totalReturns: returns,
+    accrualRevenue: revenue,
+    totalPayments: payments,
+    netSales: grossSales - discounts - returns,
+    averageSale: count > 0 ? revenue / count : 0,
+  };
+}
+
 export function calculateProfitMetrics({
   revenue,
   totalReturns,

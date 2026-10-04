@@ -1,6 +1,41 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateProfitMetrics } from "@/lib/report-math";
+import {
+  calculateProfitMetrics,
+  calculateSalesReportMetrics,
+} from "@/lib/report-math";
+
+test("calculates net sales from gross sales, discounts, and returns while keeping payments separate", () => {
+  const result = calculateSalesReportMetrics({
+    grossSalesBeforeDiscount: 1500,
+    totalDiscount: 100,
+    totalReturns: 50,
+    accrualRevenue: 1400,
+    totalPayments: 1350,
+    salesCount: 2,
+  });
+
+  assert.equal(result.netSales, 1350);
+  assert.equal(result.accrualRevenue, 1400);
+  assert.equal(result.totalPayments, 1350);
+  assert.equal(result.averageSale, 700);
+});
+
+test("returns zero AOV for empty sales and normalizes non-finite report values", () => {
+  const result = calculateSalesReportMetrics({
+    grossSalesBeforeDiscount: 0,
+    totalDiscount: Number.NaN,
+    totalReturns: 0,
+    accrualRevenue: Number.NaN,
+    totalPayments: Number.NaN,
+    salesCount: 0,
+  });
+
+  assert.equal(result.netSales, 0);
+  assert.equal(result.averageSale, 0);
+  assert.equal(result.accrualRevenue, 0);
+  assert.equal(result.totalPayments, 0);
+});
 
 test("deducts expenses from net profit using the full financial formula", () => {
   const result = calculateProfitMetrics({

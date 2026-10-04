@@ -10,7 +10,10 @@ import {
 import { prisma } from "@/lib/prisma";
 import { getSalesChannelWhere } from "@/lib/sales-analytics";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
-import { calculateProfitMetrics } from "@/lib/report-math";
+import {
+  calculateProfitMetrics,
+  calculateSalesReportMetrics,
+} from "@/lib/report-math";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 
 type KpiData = {
@@ -880,13 +883,15 @@ export const getCachedSalesReport = unstable_cache(
           taxAmount: true,
         },
         _count: true,
-        _avg: { totalAmount: true },
       }),
       // ✅ حساب إجمالي المبيعات من جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
       prisma.payment.aggregate({
         where: {
           createdAt: { gte: start, lt: end },
-          sale: completedSalesWhere,
+          sale: {
+            status: completedSalesWhere.status,
+            ...channelWhere,
+          },
         },
         _sum: { amount: true },
       }),
@@ -901,7 +906,7 @@ export const getCachedSalesReport = unstable_cache(
       }),
       prisma.expense.aggregate({
         where: {
-          createdAt: { gte: start, lt: end },
+          expenseDate: { gte: start, lt: end },
         },
         _sum: { amount: true },
       }),
@@ -925,19 +930,28 @@ export const getCachedSalesReport = unstable_cache(
       }),
     ]);
 
-    // ✅ استخدام Payment.amount بدلاً من Sale.totalAmount لضمان التطابق مع مراجعة الخزنة
-    const grossSales = payments._sum.amount ?? 0;
+    // Sale.totalAmount is accrual revenue; payment totals are reported separately.
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
+    const salesMetrics = calculateSalesReportMetrics({
+      grossSalesBeforeDiscount: sales._sum.subtotal ?? 0,
+      totalDiscount: sales._sum.discountAmount ?? 0,
+      totalReturns,
+      accrualRevenue: sales._sum.totalAmount ?? 0,
+      totalPayments: payments._sum.amount ?? 0,
+      salesCount: sales._count,
+    });
 
     return {
       period: { from: start, to: end },
-      totalSales: grossSales,
+      totalSales: salesMetrics.accrualRevenue,
+      grossSalesBeforeDiscount: salesMetrics.grossSalesBeforeDiscount,
+      totalPayments: salesMetrics.totalPayments,
       salesCount: sales._count,
-      averageSale: sales._avg.totalAmount ?? 0,
-      totalDiscount: sales._sum.discountAmount ?? 0,
+      averageSale: salesMetrics.averageSale,
+      totalDiscount: salesMetrics.totalDiscount,
       totalTax: sales._sum.taxAmount ?? 0,
-      netSales: grossSales - totalReturns - totalExpenses,
+      netSales: salesMetrics.netSales,
       returnsCount: returns._count,
       totalReturns,
       totalExpenses,
@@ -964,6 +978,8 @@ export const getCachedSalesReport = unstable_cache(
       return {
         period: { from: new Date(), to: new Date() },
         totalSales: 0,
+        grossSalesBeforeDiscount: 0,
+        totalPayments: 0,
         salesCount: 0,
         averageSale: 0,
         totalDiscount: 0,
@@ -1110,13 +1126,20 @@ export const getCachedProfitReport = unstable_cache(
         ...channelWhere,
       };
 
-    const [payments, cogsRows, returnedCogsRows, returns, expenses, purchases] =
+    const [salesAgg, payments, cogsRows, returnedCogsRows, returns, expenses, purchases] =
       await Promise.all([
-        // ✅ حساب إجمالي المبيعات من جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
+        prisma.sale.aggregate({
+          where: completedSalesWhere,
+          _sum: { totalAmount: true },
+        }),
+        // Cash collections stay separate from accrual revenue.
         prisma.payment.aggregate({
           where: {
             createdAt: { gte: start, lt: end },
-            sale: completedSalesWhere,
+            sale: {
+              status: completedSalesWhere.status,
+              ...channelWhere,
+            },
           },
           _sum: { amount: true },
         }),
@@ -1167,7 +1190,8 @@ export const getCachedProfitReport = unstable_cache(
       ]);
 
     // ✅ استخدام Payment.amount بدلاً من Sale.totalAmount لضمان التطابق مع مراجعة الخزنة
-    const revenue = payments._sum.amount ?? 0;
+    const revenue = salesAgg._sum.totalAmount ?? 0;
+    const totalPayments = payments._sum.amount ?? 0;
     const totalCogs = cogsRows[0]?.cogs ?? 0;
     const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
     const costOfGoodsSold = totalCogs - returnedCogs;
@@ -1183,6 +1207,7 @@ export const getCachedProfitReport = unstable_cache(
     return {
       period: { from: start, to: end },
       revenue,
+      totalPayments,
       netRevenue,
       costOfGoodsSold,
       grossProfit,
@@ -1203,6 +1228,7 @@ export const getCachedProfitReport = unstable_cache(
       return {
         period: { from: new Date(), to: new Date() },
         revenue: 0,
+        totalPayments: 0,
         netRevenue: 0,
         costOfGoodsSold: 0,
         grossProfit: 0,
