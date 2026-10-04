@@ -2,6 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import { getSalesExport } from "@/lib/actions/sales";
+import { buildSalesCsv } from "@/lib/sales-export";
 import type { SalesChannelFilter } from "@/lib/sales-analytics";
 import { formatDateTime, getPaymentDisplayLabel } from "@/lib/utils";
 import { Download } from "lucide-react";
@@ -32,21 +33,17 @@ export default function ReportsSalesExportButton({
     setError("");
     try {
       const rows = await getSalesExport({ from, to, channel });
-      const escapeCsv = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
-      const csv = [
-        ["رقم الفاتورة", "قناة البيع", "العميل", "الإجمالي", "الحالة", "طريقة الدفع", "التاريخ"],
-        ...rows.map((sale) => [
-          sale.invoiceNumber,
-          sale.channel === "ONLINE" ? "المتجر" : "الفرع",
-          sale.customer?.name || "نقدي",
-          sale.totalAmount,
-          STATUS_LABELS[sale.status] || sale.status,
-          getPaymentDisplayLabel(sale.paymentMethod),
-          formatDateTime(sale.createdAt),
-        ]),
-      ].map((row) => row.map(escapeCsv).join(",")).join("\r\n");
+      const csv = buildSalesCsv(rows.map((sale) => ({
+        invoiceNumber: sale.invoiceNumber,
+        channel: sale.channel,
+        customerName: sale.customer?.name || "نقدي",
+        totalAmount: sale.totalAmount,
+        status: STATUS_LABELS[sale.status] || sale.status,
+        paymentMethod: getPaymentDisplayLabel(sale.paymentMethod),
+        createdAt: formatDateTime(sale.createdAt),
+      })));
       const objectUrl = URL.createObjectURL(
-        new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }),
+        new Blob([csv], { type: "text/csv;charset=utf-8" }),
       );
       const anchor = document.createElement("a");
       anchor.href = objectUrl;

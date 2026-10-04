@@ -45,9 +45,11 @@ export default async function ReportsContentSection({
     ]);
     if (!salesReport) return null;
     const revenueMix = channelAnalytics.revenueMix.map((metric) =>
-      channel === "ALL" || metric.channel === channel
+      channel === "ALL"
         ? metric
-        : { ...metric, revenue: 0, orders: 0, averageOrderValue: 0, share: 0 },
+        : metric.channel === channel
+          ? { ...metric, share: metric.revenue > 0 ? 1 : 0 }
+          : { ...metric, revenue: 0, orders: 0, averageOrderValue: 0, share: 0 },
     );
 
     return (

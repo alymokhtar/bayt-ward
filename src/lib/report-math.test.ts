@@ -15,3 +15,21 @@ test("deducts expenses from net profit using the full financial formula", () => 
   assert.equal(result.netProfit, 550);
   assert.equal(result.profitMargin, 61.111111111111114);
 });
+
+test("returns a zero profit margin when revenue is zero or fully returned", () => {
+  const noRevenue = calculateProfitMetrics({
+    revenue: 0,
+    totalReturns: 0,
+    costOfGoodsSold: 0,
+    totalExpenses: 0,
+  });
+  const fullyReturned = calculateProfitMetrics({
+    revenue: 100,
+    totalReturns: 100,
+    costOfGoodsSold: 20,
+    totalExpenses: 5,
+  });
+
+  assert.equal(noRevenue.profitMargin, 0);
+  assert.equal(fullyReturned.profitMargin, 0);
+});
