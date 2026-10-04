@@ -121,6 +121,12 @@ export function getEgyptBusinessDateKey(date = new Date()) {
   return formatDateKey(year, month, day);
 }
 
+export function getEgyptBusinessDateStamp(date = new Date()) {
+  const { year, month, day } = getEgyptBusinessDateParts(date);
+
+  return `${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}`;
+}
+
 export function getEgyptCalendarDateStamp(date = new Date()) {
   const { year, month, day } = getEgyptCalendarDateParts(date);
 

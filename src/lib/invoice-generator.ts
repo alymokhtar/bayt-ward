@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getEgyptCalendarDateStamp } from "@/lib/business-day";
+import { getEgyptBusinessDateStamp } from "@/lib/business-day";
 
 /**
  * Generates a unique invoice number safely using database atomic operations.
@@ -13,7 +13,7 @@ import { getEgyptCalendarDateStamp } from "@/lib/business-day";
  * @throws Error if database operation fails
  */
 export async function generateInvoiceNumberSafe(prefix: string): Promise<string> {
-  const dateKey = getEgyptCalendarDateStamp();
+  const dateKey = getEgyptBusinessDateStamp();
   
   // Use database transaction to atomically increment the sequence
   // This ensures no two concurrent requests will get the same sequence number
@@ -49,7 +49,7 @@ export async function generateInvoiceNumberSafe(prefix: string): Promise<string>
  * @returns Invoice number
  */
 export function generateInvoiceNumberFallback(prefix: string): string {
-  const date = getEgyptCalendarDateStamp();
+  const date = getEgyptBusinessDateStamp();
   const random = Math.floor(Math.random() * 1000000)
     .toString()
     .padStart(6, "0");
