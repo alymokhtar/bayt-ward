@@ -20,6 +20,7 @@ import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/utils";
 import { appendProductQueryParams } from "@/lib/store/whatsapp";
 import { calculateCartDiscounts } from "@/lib/promotions";
+import { getStoreOnlyPromotionNotices } from "@/lib/promotion-format";
 
 type Props = {
   settings: Record<string, string>;
@@ -76,6 +77,7 @@ export default function StoreHeaderControls({
           image: item.imageUrl,
         })),
         activePromotions,
+        { channel: "ONLINE" },
       ),
     [activePromotions, cartItems],
   );
@@ -134,6 +136,7 @@ export default function StoreHeaderControls({
         ...(item.size ? [`المقاس: ${item.size}`] : []),
         `الكمية: ${item.quantity}`,
         `السعر: ${formatCurrency(itemTotal, item.currencySymbol)}`,
+        ...getStoreOnlyPromotionNotices(item, activePromotions),
         `الرابط: ${productUrl}`,
       ];
 

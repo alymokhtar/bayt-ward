@@ -122,6 +122,7 @@ export default function ProductDetailClient({
       name: displayName,
     }],
     productPromotions,
+    { channel: "ONLINE" },
   );
   const hasDirectDiscount = discountResult.discountAmount > 0;
   const appliedDirectPromotions = productPromotions.filter(
