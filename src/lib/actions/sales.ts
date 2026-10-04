@@ -285,8 +285,7 @@ export async function createSale(data: {
     const promotionResult = calculateCartDiscounts(
       trustedItems,
       activePromotions,
-      new Date(),
-      "pos",
+      { channel: "POS" },
     );
     const manualPercent = Number.isFinite(data.discountPercent)
       ? Math.min(100, Math.max(0, data.discountPercent ?? 0))

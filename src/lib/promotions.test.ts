@@ -48,7 +48,7 @@ test("applies buy-X-get-Y to the cheapest eligible items only", () => {
         products: [{ id: "scarf" }],
       }),
     ],
-    new Date("2026-10-01T12:00:00.000Z"),
+    { now: new Date("2026-10-01T12:00:00.000Z") },
   );
 
   assert.deepEqual(result, {
@@ -160,7 +160,7 @@ test("ignores inactive and out-of-date promotions", () => {
       promotion({ id: "future", startDate: "2026-10-02", discountPercent: 50 }),
       promotion({ id: "expired", endDate: "2026-09-30", discountPercent: 50 }),
     ],
-    new Date("2026-10-01T12:00:00.000Z"),
+    { now: new Date("2026-10-01T12:00:00.000Z") },
   );
 
   assert.equal(result.discountAmount, 0);
@@ -174,8 +174,14 @@ test("excludes store-only promotions online but applies them at POS", () => {
   });
   const now = new Date("2026-10-01T12:00:00.000Z");
 
-  const onlineResult = calculateCartDiscounts(cartItems, [storeOnlyPromotion], now);
-  const posResult = calculateCartDiscounts(cartItems, [storeOnlyPromotion], now, "pos");
+  const onlineResult = calculateCartDiscounts(cartItems, [storeOnlyPromotion], {
+    channel: "ONLINE",
+    now,
+  });
+  const posResult = calculateCartDiscounts(cartItems, [storeOnlyPromotion], {
+    channel: "POS",
+    now,
+  });
 
   assert.equal(onlineResult.discountAmount, 0);
   assert.deepEqual(onlineResult.appliedPromotions, []);

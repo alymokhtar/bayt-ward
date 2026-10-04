@@ -1,7 +1,12 @@
 import { getCairoDateString, parseCairoCalendarDate } from "@/lib/promotion-date";
 
 export type PromotionType = "BUY_X_GET_Y" | "PERCENTAGE" | "FIXED_AMOUNT";
-export type PromotionChannel = "online" | "pos";
+export type PromotionChannel = "ONLINE" | "POS";
+
+export interface PromotionCalculationOptions {
+  channel?: PromotionChannel;
+  now?: Date;
+}
 
 export interface CartItem {
   productId: string;
@@ -201,9 +206,11 @@ function calculateDirectDiscount(
 export function calculateCartDiscounts(
   cartItems: CartItem[],
   activePromotions: Promotion[],
-  now: Date = new Date(),
-  channel: PromotionChannel = "online",
+  options: PromotionCalculationOptions = {},
 ): DiscountResult {
+  const now = options.now ?? new Date();
+  const channel = options.channel ?? "ONLINE";
+
   const validCartItems = cartItems.flatMap((item) => {
     if (
       !Number.isFinite(item.unitPrice) ||
@@ -236,7 +243,7 @@ export function calculateCartDiscounts(
 
   const eligiblePromotions = activePromotions.filter((promotion) =>
     isPromotionActive(promotion, now) &&
-    (channel === "pos" || !promotion.isStoreOnly),
+    (channel === "POS" || !promotion.isStoreOnly),
   );
   const quantityDiscountedProductIds = new Set<string>();
 
