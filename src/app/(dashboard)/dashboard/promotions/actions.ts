@@ -4,6 +4,7 @@ import { PromotionType as PrismaPromotionType } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseCairoCalendarDate } from "@/lib/promotion-date";
 import { getPromotionDateRangeBounds } from "@/lib/promotions";
 import type { PromotionInput, PromotionRecord, PromotionType, PromotionView } from "./types";
 
@@ -23,25 +24,13 @@ function actionError(error: unknown, fallback: string): ActionResult {
   return { success: false, error: fallback };
 }
 
-function parseDate(value: string, endOfDay = false): Date | null {
-  if (!value) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-
-  const date = new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`);
-  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
-    return null;
-  }
-
-  return date;
-}
-
 function validatePromotionInput(input: PromotionInput): string | null {
   if (!input.name?.trim()) return "اسم العرض مطلوب";
   if (!PROMOTION_TYPES.includes(input.type)) return "نوع العرض غير صالح";
   if (typeof input.isActive !== "boolean") return "حالة العرض غير صالحة";
 
-  const startDate = input.startDate ? parseDate(input.startDate) : null;
-  const endDate = input.endDate ? parseDate(input.endDate, true) : null;
+  const startDate = input.startDate ? parseCairoCalendarDate(input.startDate) : null;
+  const endDate = input.endDate ? parseCairoCalendarDate(input.endDate, true) : null;
   if (input.startDate && !startDate) return "تاريخ البداية غير صالح";
   if (input.endDate && !endDate) return "تاريخ النهاية غير صالح";
   if (startDate && endDate && startDate > endDate) {
@@ -111,8 +100,8 @@ function toPromotionData(input: PromotionInput) {
         : null,
     discountAmount: input.type === PrismaPromotionType.FIXED_AMOUNT ? input.discountAmount : null,
     minOrderAmount: input.minOrderAmount,
-    startDate: input.startDate ? parseDate(input.startDate) : null,
-    endDate: input.endDate ? parseDate(input.endDate, true) : null,
+    startDate: input.startDate ? parseCairoCalendarDate(input.startDate) : null,
+    endDate: input.endDate ? parseCairoCalendarDate(input.endDate, true) : null,
     isActive: input.isActive,
   };
 }

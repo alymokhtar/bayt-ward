@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   calculateCartDiscounts,
+  getPromotionDateRangeBounds,
   isPromotionDateRangeActive,
   type CartItem,
   type Promotion,
@@ -168,15 +169,31 @@ test("ignores inactive and out-of-date promotions", () => {
 
 test("treats promotion date bounds as inclusive Cairo calendar days", () => {
   const shortlyAfterCairoMidnight = new Date("2026-10-01T21:05:00.000Z");
+  const shortlyBeforeCairoMidnight = new Date("2026-10-02T20:55:00.000Z");
 
   assert.equal(
-    isPromotionDateRangeActive("2026-10-02T00:00:00.000Z", "2026-10-02T00:00:00.000Z", shortlyAfterCairoMidnight),
+    isPromotionDateRangeActive("2026-10-01T21:00:00.000Z", "2026-10-02T20:59:59.999Z", shortlyAfterCairoMidnight),
     true,
   );
   assert.equal(
-    isPromotionDateRangeActive(null, "2026-10-01T23:59:59.999Z", shortlyAfterCairoMidnight),
+    isPromotionDateRangeActive(null, "2026-10-01T20:59:59.999Z", shortlyAfterCairoMidnight),
     false,
   );
+  assert.equal(
+    isPromotionDateRangeActive("2026-10-02T21:00:00.000Z", null, shortlyBeforeCairoMidnight),
+    false,
+  );
+  assert.equal(
+    isPromotionDateRangeActive(null, "2026-10-02T20:59:59.999Z", new Date("2026-10-02T21:00:00.000Z")),
+    false,
+  );
+});
+
+test("returns Cairo-local query bounds for each calendar day", () => {
+  const { dayStart, dayEnd } = getPromotionDateRangeBounds(new Date("2026-10-02T12:00:00.000Z"));
+
+  assert.equal(dayStart.toISOString(), "2026-10-01T21:00:00.000Z");
+  assert.equal(dayEnd.toISOString(), "2026-10-02T20:59:59.999Z");
 });
 
 test("checks the cart minimum and caps independent promotions at their eligible item totals", () => {

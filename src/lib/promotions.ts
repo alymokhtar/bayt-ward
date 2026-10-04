@@ -1,3 +1,5 @@
+import { getCairoDateString, parseCairoCalendarDate } from "@/lib/promotion-date";
+
 export type PromotionType = "BUY_X_GET_Y" | "PERCENTAGE" | "FIXED_AMOUNT";
 
 export interface CartItem {
@@ -47,38 +49,20 @@ function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function getCairoDateParts(date: Date) {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Africa/Cairo",
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  }).formatToParts(date);
-  const getPart = (type: Intl.DateTimeFormatPartTypes) =>
-    Number(parts.find((part) => part.type === type)?.value);
-
-  return {
-    year: getPart("year"),
-    month: getPart("month"),
-    day: getPart("day"),
-  };
-}
-
-function getCalendarDateKey(value: Date | string): number | null {
+function getCalendarDateKey(value: Date | string): string | null {
   const date = value instanceof Date ? value : new Date(value);
   if (!Number.isFinite(date.getTime())) return null;
 
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return getCairoDateString(date);
 }
 
 export function getPromotionDateRangeBounds(now = new Date()) {
-  const { year, month, day } = getCairoDateParts(now);
-  const dayStart = new Date(Date.UTC(year, month - 1, day));
+  const today = getCairoDateString(now);
+  const dayStart = parseCairoCalendarDate(today);
+  const dayEnd = parseCairoCalendarDate(today, true);
+  if (!dayStart || !dayEnd) throw new Error("Unable to resolve Cairo date bounds");
 
-  return {
-    dayStart,
-    dayEnd: new Date(dayStart.getTime() + 86_400_000 - 1),
-  };
+  return { dayStart, dayEnd };
 }
 
 export function isPromotionDateRangeActive(
@@ -86,8 +70,7 @@ export function isPromotionDateRangeActive(
   endDate: Date | string | null | undefined,
   now = new Date(),
 ): boolean {
-  const { year, month, day } = getCairoDateParts(now);
-  const todayKey = Date.UTC(year, month - 1, day);
+  const todayKey = getCairoDateString(now);
   const startKey = startDate == null ? null : getCalendarDateKey(startDate);
   const endKey = endDate == null ? null : getCalendarDateKey(endDate);
 

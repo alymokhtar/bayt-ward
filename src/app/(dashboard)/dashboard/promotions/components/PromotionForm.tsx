@@ -4,6 +4,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import Select from "@/components/ui/Select";
+import { getCairoDateString } from "@/lib/promotion-date";
 import { useState, type FormEvent } from "react";
 import { createPromotion, updatePromotion } from "../actions";
 import {
@@ -24,7 +25,7 @@ interface PromotionFormProps {
 
 function dateInputValue(value: Date | null | undefined): string {
   if (!value || !Number.isFinite(value.getTime())) return "";
-  return value.toISOString().slice(0, 10);
+  return getCairoDateString(value);
 }
 
 function numberValue(value: number | null | undefined): string {
