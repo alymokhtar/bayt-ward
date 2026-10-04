@@ -18,6 +18,7 @@ export type ReceiptItem = {
 
 export type ReceiptData = {
   invoiceNumber: string;
+  channel?: "POS" | "ONLINE";
   createdAt: Date;
   storeNameAr: string;
   storePhone?: string;
@@ -88,6 +89,7 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
       <div className="space-y-0.5 text-center">
         <p className="font-bold">فاتورة بيع</p>
         <p dir="ltr">{data.invoiceNumber}</p>
+        {data.channel && <p>{data.channel === "ONLINE" ? "طلب متجر / أونلاين" : "مبيعات الفرع"}</p>}
         <p>{cairoTime}</p>
       </div>
 

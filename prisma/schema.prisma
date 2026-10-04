@@ -31,6 +31,11 @@ enum SaleStatus {
   PARTIALLY_REFUNDED
 }
 
+enum SalesChannel {
+  POS
+  ONLINE
+}
+
 enum PurchaseStatus {
   PENDING
   RECEIVED
@@ -295,6 +300,7 @@ model Supplier {
 model Sale {
   id              String        @id @default(cuid())
   invoiceNumber   String        @unique
+  channel         SalesChannel  @default(POS)
   customerId      String?
   userId          String
   subtotal        Float

@@ -143,6 +143,7 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
   <div class="center-text">
     <div style="font-weight:700">فاتورة بيع</div>
     <div class="num">${escapeHtml(data.invoiceNumber)}</div>
+    ${data.channel ? `<div>${data.channel === "ONLINE" ? "طلب متجر / أونلاين" : "مبيعات الفرع"}</div>` : ""}
     <div>${cairoTime}</div>
   </div>
 

@@ -184,8 +184,10 @@ test("excludes store-only promotions online but applies them at POS", () => {
   });
 
   assert.equal(onlineResult.discountAmount, 0);
+  assert.equal(onlineResult.finalTotal, 230);
   assert.deepEqual(onlineResult.appliedPromotions, []);
   assert.equal(posResult.discountAmount, 57.5);
+  assert.equal(posResult.finalTotal, 172.5);
   assert.equal(posResult.appliedPromotions[0]?.id, storeOnlyPromotion.id);
 });
 

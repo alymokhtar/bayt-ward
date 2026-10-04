@@ -13,7 +13,7 @@ import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import { normalizeSalePayments } from "@/lib/sales-payment-utils";
 import { calculateCartDiscounts } from "@/lib/promotions";
 import { getActivePromotionsData } from "@/lib/promotions-data";
-import type { PaymentMethod } from "@prisma/client";
+import { SalesChannel, type PaymentMethod } from "@prisma/client";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -204,6 +204,7 @@ export async function getSale(id: string) {
 }
 
 export async function createSale(data: {
+  channel?: SalesChannel;
   customerId?: string;
   items: SaleItemInput[];
   subtotal: number;
@@ -221,6 +222,10 @@ export async function createSale(data: {
 }) {
   try {
     const user = await requireAuth();
+    const channel = data.channel ?? SalesChannel.POS;
+    if (!Object.values(SalesChannel).includes(channel)) {
+      return { success: false, error: "قناة البيع غير صالحة" };
+    }
 
     if (!data.items?.length) {
       return { success: false, error: "يجب إضافة منتج واحد على الأقل" };
@@ -285,7 +290,7 @@ export async function createSale(data: {
     const promotionResult = calculateCartDiscounts(
       trustedItems,
       activePromotions,
-      { channel: "POS" },
+      { channel },
     );
     const manualPercent = Number.isFinite(data.discountPercent)
       ? Math.min(100, Math.max(0, data.discountPercent ?? 0))
@@ -390,6 +395,7 @@ export async function createSale(data: {
       const createdSale = await tx.sale.create({
         data: {
           invoiceNumber,
+          channel,
           customerId: data.customerId,
           userId: user.id,
           subtotal,
@@ -427,6 +433,7 @@ export async function createSale(data: {
         select: {
           id: true,
           invoiceNumber: true,
+          channel: true,
           subtotal: true,
           discountAmount: true,
           totalAmount: true,

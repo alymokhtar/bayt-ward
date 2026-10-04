@@ -10,7 +10,7 @@ import { searchVariants } from "@/lib/actions/products";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency } from "@/lib/utils";
 import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
-import type { PaymentMethod } from "@prisma/client";
+import type { PaymentMethod, SalesChannel } from "@prisma/client";
 import {
   Banknote,
   CreditCard,
@@ -82,6 +82,7 @@ export default function POSClient({
   const [results, setResults] = useState<VariantResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [orderChannel, setOrderChannel] = useState<SalesChannel>("POS");
   const [discountPercent, setDiscountPercent] = useState(dailyDiscountPercent);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod | "">("");
@@ -120,7 +121,7 @@ export default function POSClient({
       name: item.variant.product.nameAr || item.variant.product.name,
     })),
     activePromotions,
-    { channel: "POS" },
+    { channel: orderChannel },
   );
   const manualDiscount = discountAmount + percentDiscount;
   const promotionDiscount = promotionResult.discountAmount;
@@ -352,6 +353,7 @@ export default function POSClient({
 
     setLoading(true);
     const result = await createSale({
+      channel: orderChannel,
       customerId: selectedCustomer?.id,
       items: cart.map((item) => ({
         variantId: item.variant.id,
@@ -405,6 +407,7 @@ export default function POSClient({
 
       const receiptData: ReceiptData = {
         invoiceNumber,
+        channel: result.data.channel,
         createdAt: receiptTimestamp,
         storeNameAr,
         storePhone,
@@ -533,6 +536,22 @@ export default function POSClient({
           <ShoppingCart className="h-5 w-5 text-gold" />
           <h2 className="font-semibold text-brown">سلة المشتريات</h2>
           <span className="ms-auto text-sm text-muted">{cart.length} منتج</span>
+        </div>
+
+        <div className="border-b border-border px-4 py-3">
+          <label htmlFor="pos-order-channel" className="block space-y-1.5">
+            <span className="text-xs font-medium text-muted">نوع الطلب / قناة البيع</span>
+            <select
+              id="pos-order-channel"
+              value={orderChannel}
+              onChange={(event) => setOrderChannel(event.target.value as SalesChannel)}
+              disabled={loading}
+              className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm text-brown focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30 disabled:opacity-60"
+            >
+              <option value="POS">مبيعات الفرع (Walk-in)</option>
+              <option value="ONLINE">طلب متجر / أونلاين (Online Order)</option>
+            </select>
+          </label>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
