@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildSalesChannelAnalytics, getSalesChannelWhere } from "./sales-analytics";
+import {
+  buildSalesChannelAnalytics,
+  buildSalesChannelTrend,
+  getSalesChannelWhere,
+} from "./sales-analytics";
 
 test("builds the matching sales query filter for ALL, POS, and ONLINE", () => {
   assert.deepEqual(getSalesChannelWhere("ALL"), {});
@@ -49,4 +53,21 @@ test("returns zero-valued metrics when a sales channel has no orders", () => {
     averageOrderValue: 0,
   });
   assert.equal(analytics.revenueMix[1]?.share, 0);
+});
+
+test("aggregates daily revenue per channel using Cairo business dates", () => {
+  const sales = [
+    { channel: "POS" as const, totalAmount: 100, createdAt: new Date("2026-10-03T23:30:00.000Z") },
+    { channel: "ONLINE" as const, totalAmount: 50, createdAt: new Date("2026-10-03T20:30:00.000Z") },
+    { channel: "ONLINE" as const, totalAmount: 80, createdAt: new Date("2026-10-04T20:30:00.000Z") },
+  ];
+
+  assert.deepEqual(buildSalesChannelTrend(sales, "ALL"), [
+    { date: "2026-10-03", POS: 100, ONLINE: 50 },
+    { date: "2026-10-04", POS: 0, ONLINE: 80 },
+  ]);
+  assert.deepEqual(buildSalesChannelTrend(sales, "ONLINE"), [
+    { date: "2026-10-03", POS: 0, ONLINE: 50 },
+    { date: "2026-10-04", POS: 0, ONLINE: 80 },
+  ]);
 });

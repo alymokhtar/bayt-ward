@@ -5,8 +5,9 @@ import {
   getReportPeriodRange,
   type ReportPeriod,
 } from "@/lib/business-day";
+import type { SalesChannelFilter } from "@/lib/sales-analytics";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 const tabs = [
   { id: "sales", label: "تقرير المبيعات" },
@@ -26,6 +27,7 @@ interface ReportsTabsClientProps {
   from: string;
   to: string;
   period: string;
+  channel: SalesChannelFilter;
 }
 
 export default function ReportsTabsClient({
@@ -33,19 +35,16 @@ export default function ReportsTabsClient({
   from,
   to,
   period,
+  channel,
 }: ReportsTabsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [dateFrom, setDateFrom] = useState(from);
   const [dateTo, setDateTo] = useState(to);
+  const [selectedChannel, setSelectedChannel] = useState(channel);
   const showPeriodPresets = activeTab === "sales" || activeTab === "profit";
   const showDateFilters = activeTab !== "inventory";
-
-  useEffect(() => {
-    setDateFrom(from);
-    setDateTo(to);
-  }, [from, to]);
 
   function navigate(params: URLSearchParams) {
     if (!params.get("tab")) params.set("tab", activeTab);
@@ -78,8 +77,34 @@ export default function ReportsTabsClient({
     navigate(params);
   }
 
+  function applyChannel(nextChannel: SalesChannelFilter) {
+    setSelectedChannel(nextChannel);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("channel", nextChannel);
+    navigate(params);
+  }
+
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <label htmlFor="reports-channel" className="text-sm font-medium text-brown">
+          قناة البيع
+        </label>
+        <select
+          id="reports-channel"
+          value={selectedChannel}
+          onChange={(event) => applyChannel(event.target.value as SalesChannelFilter)}
+          disabled={isPending}
+          className="h-10 min-w-52 rounded-lg border border-border bg-white px-3 text-sm text-brown"
+        >
+          <option value="ALL">الكل</option>
+          <option value="POS">مبيعات الفرع (POS)</option>
+          <option value="ONLINE">طلبات المتجر (ONLINE)</option>
+        </select>
+        <p className="text-xs text-muted">
+          المصروفات العامة والمخزون لا يرتبطان بقناة بيع.
+        </p>
+      </div>
       <div className="flex flex-wrap gap-2 border-b border-border pb-4">
         {tabs.map((tab) => (
           <button

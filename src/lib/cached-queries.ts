@@ -1,7 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { Prisma, type ExpenseCategory } from "@prisma/client";
 import {
-  BUSINESS_TIME_ZONE,
   getBusinessDayBoundsForDateKey,
   getBusinessDayBoundsFromDateKeys,
   getEgyptBusinessDayBounds,
@@ -853,16 +852,21 @@ export const getCachedSuppliersList = unstable_cache(
 export const getCachedSalesReport = unstable_cache(
   async (paramsJson: string) => {
     try {
-      const { from, to } = JSON.parse(paramsJson) as {
+      const { from, to, channel = "ALL" } = JSON.parse(paramsJson) as {
         from?: string;
         to?: string;
+        channel?: string;
       };
       const { start, end } = getReportDateRange(from, to);
+      const channelWhere = getSalesChannelWhere(
+        channel === "POS" || channel === "ONLINE" ? channel : "ALL",
+      );
 
       // ✅ توحيد الفلتر مع مراجعة الخزنة والـ KPI - فقط المبيعات المكتملة أو المرتجعة جزئياً
       const completedSalesWhere = {
         status: { in: ["COMPLETED" as const, "PARTIALLY_REFUNDED" as const, "REFUNDED" as const] },
         createdAt: { gte: start, lt: end },
+        ...channelWhere,
       };
 
       const [sales, payments, returns, expenses, salesList] = await Promise.all([
@@ -890,6 +894,7 @@ export const getCachedSalesReport = unstable_cache(
         where: {
           status: "APPROVED",
           createdAt: { gte: start, lt: end },
+          ...(channelWhere.channel ? { sale: channelWhere } : {}),
         },
         _sum: { refundAmount: true, totalAmount: true },
         _count: true,
@@ -905,6 +910,7 @@ export const getCachedSalesReport = unstable_cache(
         select: {
           id: true,
           invoiceNumber: true,
+          channel: true,
           totalAmount: true,
           status: true,
           paymentMethod: true,
@@ -940,6 +946,7 @@ export const getCachedSalesReport = unstable_cache(
         invoiceNumber: sale.invoiceNumber,
         customerName: sale.customer?.name || "نقدي",
         cashierName: sale.user.name,
+        channel: sale.channel,
         totalAmount: sale.totalAmount,
         status: sale.status,
         paymentMethod: sale.paymentMethod,
@@ -1088,29 +1095,28 @@ export const getCachedInventoryReport = unstable_cache(
 export const getCachedProfitReport = unstable_cache(
   async (paramsJson: string) => {
     try {
-      const { from, to } = JSON.parse(paramsJson) as {
+      const { from, to, channel = "ALL" } = JSON.parse(paramsJson) as {
         from?: string;
         to?: string;
+        channel?: string;
       };
       const { start, end } = getReportDateRange(from, to);
+      const channelWhere = getSalesChannelWhere(
+        channel === "POS" || channel === "ONLINE" ? channel : "ALL",
+      );
+      const completedSalesWhere = {
+        status: { in: ["COMPLETED" as const, "PARTIALLY_REFUNDED" as const, "REFUNDED" as const] },
+        createdAt: { gte: start, lt: end },
+        ...channelWhere,
+      };
 
-    const [revenueAgg, payments, cogsRows, returnedCogsRows, returns, expenses, purchases] =
+    const [payments, cogsRows, returnedCogsRows, returns, expenses, purchases] =
       await Promise.all([
-        prisma.sale.aggregate({
-          where: {
-            status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
-            createdAt: { gte: start, lt: end },
-          },
-          _sum: { totalAmount: true },
-        }),
         // ✅ حساب إجمالي المبيعات من جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
         prisma.payment.aggregate({
           where: {
             createdAt: { gte: start, lt: end },
-            sale: {
-              status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
-              createdAt: { gte: start, lt: end },
-            },
+            sale: completedSalesWhere,
           },
           _sum: { amount: true },
         }),
@@ -1122,20 +1128,24 @@ export const getCachedProfitReport = unstable_cache(
           WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND s."createdAt" >= ${start}
             AND s."createdAt" < ${end}
+            AND (${channel === "ALL"} OR s.channel::text = ${channel})
         `,
         prisma.$queryRaw<[{ returnedCogs: number }]>`
           SELECT COALESCE(SUM(ri.quantity * pv."costPrice"), 0)::float AS "returnedCogs"
           FROM "ReturnItem" ri
           INNER JOIN "Return" r ON ri."returnId" = r.id
+          INNER JOIN "Sale" s ON s.id = r."saleId"
           INNER JOIN "ProductVariant" pv ON ri."variantId" = pv.id
           WHERE r.status = 'APPROVED'
             AND r."createdAt" >= ${start}
             AND r."createdAt" < ${end}
+            AND (${channel === "ALL"} OR s.channel::text = ${channel})
         `,
         prisma.return.aggregate({
           where: {
             status: "APPROVED",
             createdAt: { gte: start, lt: end },
+            ...(channelWhere.channel ? { sale: channelWhere } : {}),
           },
           _sum: { refundAmount: true },
         }),
@@ -1221,12 +1231,14 @@ export const getCachedProfitReport = unstable_cache(
 
 export const getCachedTopProducts = unstable_cache(
   async (paramsJson: string) => {
-    const { from, to, limit = 10 } = JSON.parse(paramsJson) as {
+    const { from, to, limit = 10, channel = "ALL" } = JSON.parse(paramsJson) as {
       from?: string;
       to?: string;
       limit?: number;
+      channel?: string;
     };
     const { start, end } = getReportDateRange(from, to);
+    const selectedChannel = channel === "POS" || channel === "ONLINE" ? channel : "ALL";
 
     return prisma.$queryRaw<
       {
@@ -1250,6 +1262,7 @@ export const getCachedTopProducts = unstable_cache(
       WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED')
         AND s."createdAt" >= ${start}
         AND s."createdAt" < ${end}
+        AND (${selectedChannel === "ALL"} OR s.channel::text = ${selectedChannel})
       GROUP BY p.id, p."nameAr", p.name
       ORDER BY revenue DESC
       LIMIT ${limit}

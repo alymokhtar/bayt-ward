@@ -1,3 +1,5 @@
+import { getEgyptBusinessDateKey } from "@/lib/business-day";
+
 export type SalesChannelKey = "POS" | "ONLINE";
 export type SalesChannelFilter = "ALL" | SalesChannelKey;
 
@@ -51,4 +53,27 @@ export function buildSalesChannelAnalytics(
       share: revenue > 0 ? metric.revenue / revenue : 0,
     })),
   };
+}
+
+export interface SalesChannelTrendPoint {
+  date: string;
+  POS: number;
+  ONLINE: number;
+}
+
+export function buildSalesChannelTrend(
+  sales: Array<{ channel: SalesChannelKey; totalAmount: number; createdAt: Date }>,
+  channel: SalesChannelFilter,
+): SalesChannelTrendPoint[] {
+  const byDate = new Map<string, SalesChannelTrendPoint>();
+
+  for (const sale of sales) {
+    if (channel !== "ALL" && sale.channel !== channel) continue;
+    const date = getEgyptBusinessDateKey(sale.createdAt);
+    const point = byDate.get(date) ?? { date, POS: 0, ONLINE: 0 };
+    point[sale.channel] += sale.totalAmount;
+    byDate.set(date, point);
+  }
+
+  return [...byDate.values()].sort((first, second) => first.date.localeCompare(second.date));
 }

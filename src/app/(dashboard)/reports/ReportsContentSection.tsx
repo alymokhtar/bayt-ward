@@ -1,4 +1,7 @@
 import { formatCurrency, formatDateTime, getPaymentDisplayLabel, getSaleStatusLabel } from "@/lib/utils";
+import SalesChannelChart from "@/app/(dashboard)/sales/SalesChannelChart";
+import SalesChannelTrendChart from "@/app/(dashboard)/reports/SalesChannelTrendChart";
+import ReportsSalesExportButton from "@/app/(dashboard)/reports/ReportsSalesExportButton";
 import Badge from "@/components/ui/Badge";
 import LowStockReportPanel from "@/app/(dashboard)/reports/LowStockReportPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -14,32 +17,49 @@ import {
   getInventoryReport,
   getProfitReport,
   getSalesReport,
+  getSalesChannelTrend,
   getTopProducts,
 } from "@/lib/actions/reports";
+import { getSalesChannelAnalytics } from "@/lib/actions/sales";
+import type { SalesChannelFilter } from "@/lib/sales-analytics";
 import Link from "next/link";
 
 interface ReportsContentSectionProps {
   activeTab: string;
   from: string;
   to: string;
+  channel: SalesChannelFilter;
 }
 
 export default async function ReportsContentSection({
   activeTab,
   from,
   to,
+  channel,
 }: ReportsContentSectionProps) {
   if (activeTab === "sales") {
-    const salesReport = await getSalesReport(from, to);
+    const [salesReport, channelAnalytics, trend] = await Promise.all([
+      getSalesReport(from, to, channel),
+      getSalesChannelAnalytics(from, to),
+      getSalesChannelTrend(from, to, channel),
+    ]);
     if (!salesReport) return null;
+    const revenueMix = channelAnalytics.revenueMix.map((metric) =>
+      channel === "ALL" || metric.channel === channel
+        ? metric
+        : { ...metric, revenue: 0, orders: 0, averageOrderValue: 0, share: 0 },
+    );
 
     return (
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="إجمالي المبيعات"
+            title="إجمالي الإيرادات"
             value={formatCurrency(salesReport.totalSales)}
           />
+          <StatCard title="عدد الطلبات / الفواتير" value={salesReport.salesCount.toLocaleString("ar-EG-u-nu-latn")} />
+          <StatCard title="متوسط قيمة الفاتورة (AOV)" value={formatCurrency(salesReport.averageSale)} />
+          <StatCard title="إجمالي الخصومات" value={formatCurrency(salesReport.totalDiscount)} />
           <StatCard
             title="المرتجعات"
             value={formatCurrency(salesReport.totalReturns)}
@@ -52,24 +72,22 @@ export default async function ReportsContentSection({
             title="صافي المبيعات"
             value={formatCurrency(salesReport.netSales)}
           />
-          <StatCard
-            title="عدد الفواتير"
-            value={salesReport.salesCount.toString()}
-          />
-          <StatCard
-            title="متوسط الفاتورة"
-            value={formatCurrency(salesReport.averageSale)}
-          />
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <SalesChannelChart data={revenueMix} />
+          <SalesChannelTrendChart data={trend} channel={channel} />
         </div>
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>تفاصيل الفواتير</CardTitle>
+            <ReportsSalesExportButton from={from} to={to} channel={channel} />
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>رقم الفاتورة</TableHead>
+                  <TableHead>قناة البيع</TableHead>
                   <TableHead>العميل</TableHead>
                   <TableHead>طريقة الدفع</TableHead>
                   <TableHead>الإجمالي</TableHead>
@@ -84,6 +102,11 @@ export default async function ReportsContentSection({
                       <Link href={`/sales/${sale.id}`} className="text-gold hover:underline">
                         {sale.invoiceNumber}
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${sale.channel === "ONLINE" ? "bg-sky-100 text-sky-800" : "bg-gold/10 text-brown"}`}>
+                        {sale.channel === "ONLINE" ? "المتجر 🌐" : "الفرع 🏪"}
+                      </span>
                     </TableCell>
                     <TableCell>{sale.customerName}</TableCell>
                     <TableCell>{getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}</TableCell>
@@ -139,7 +162,7 @@ export default async function ReportsContentSection({
   }
 
   if (activeTab === "profit") {
-    const profitReport = await getProfitReport(from, to);
+    const profitReport = await getProfitReport(from, to, channel);
     if (!profitReport) return null;
 
     return (
@@ -162,7 +185,7 @@ export default async function ReportsContentSection({
           value={formatCurrency(profitReport.grossProfit)}
         />
         <StatCard
-          title="المصروفات"
+          title="المصروفات العامة (كل القنوات)"
           value={formatCurrency(profitReport.totalExpenses)}
         />
         <StatCard
@@ -179,7 +202,7 @@ export default async function ReportsContentSection({
   }
 
   if (activeTab === "top") {
-    const topProducts = await getTopProducts(from, to);
+    const topProducts = await getTopProducts(from, to, 10, channel);
     if (!topProducts) return null;
 
     return (

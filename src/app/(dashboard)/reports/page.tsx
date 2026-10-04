@@ -7,6 +7,7 @@ import {
   getReportPeriodRange,
 } from "@/lib/business-day";
 import { getSession } from "@/lib/auth";
+import type { SalesChannelFilter } from "@/lib/sales-analytics";
 import { redirect } from "next/navigation";
 
 interface ReportsPageProps {
@@ -15,6 +16,7 @@ interface ReportsPageProps {
     from?: string;
     to?: string;
     period?: string;
+    channel?: string;
   }>;
 }
 
@@ -39,6 +41,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   const params = await searchParams;
   const activeTab = params.tab || "sales";
+  const channel: SalesChannelFilter = params.channel === "POS" || params.channel === "ONLINE"
+    ? params.channel
+    : "ALL";
 
   const todayRange = getReportPeriodRange("today");
   const from = params.from || todayRange.from;
@@ -60,19 +65,22 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       <Card>
         <CardContent className="pt-6 space-y-6">
           <ReportsTabsClient
+            key={`${activeTab}-${from}-${to}-${channel}`}
             activeTab={activeTab}
             from={from}
             to={to}
             period={period}
+            channel={channel}
           />
           <Suspense
-            key={`${activeTab}-${from}-${to}`}
+            key={`${activeTab}-${from}-${to}-${channel}`}
             fallback={<ContentSkeleton />}
           >
             <ReportsContentSection
               activeTab={activeTab}
               from={from}
               to={to}
+              channel={channel}
             />
           </Suspense>
         </CardContent>
