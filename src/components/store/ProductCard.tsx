@@ -17,6 +17,7 @@ import {
 } from "@/lib/store/product-utils";
 import type { StoreProductListItem } from "@/lib/store/types";
 import { isPromotionDateRangeActive, type Promotion } from "@/lib/promotions";
+import { formatPromotionOfferText } from "@/lib/promotion-format";
 import { formatCurrency } from "@/lib/utils";
 
 type ProductCardProps = {
@@ -132,26 +133,15 @@ export default function ProductCard({
           {productPromotions.length > 0 && (
             <div className="flex flex-wrap justify-center gap-1.5">
               {productPromotions.map((promotion) => {
-                if (promotion.type === "BUY_X_GET_Y") {
-                  return (
-                    <span
-                      key={promotion.id}
-                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-[10px] font-semibold leading-4 text-amber-800"
-                    >
-                      <Gift className="h-3 w-3 shrink-0" aria-hidden="true" />
-                      عرض خاص: اشتري {promotion.buyQuantity ?? "—"} واحصلي على {promotion.getQuantity ?? "—"} مجاناً
-                    </span>
-                  );
-                }
-
                 return (
                   <span
                     key={promotion.id}
-                    className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold leading-4 text-emerald-700"
+                    className={`inline-flex max-w-full items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold leading-4 ${promotion.isStoreOnly ? "bg-rose-50 text-rose-800" : "bg-emerald-50 text-emerald-700"}`}
                   >
-                    {promotion.type === "PERCENTAGE"
-                      ? `خصم ${promotion.discountPercent ?? 0}%`
-                      : `خصم ${formatCurrency(promotion.discountAmount ?? 0, currencySymbol)}`}
+                    {promotion.type === "BUY_X_GET_Y" && (
+                      <Gift className="h-3 w-3 shrink-0" aria-hidden="true" />
+                    )}
+                    {formatPromotionOfferText(promotion)}
                   </span>
                 );
               })}

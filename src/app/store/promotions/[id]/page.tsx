@@ -11,7 +11,8 @@ import { storeProductListSelect } from "@/lib/store/types";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
 import { getShareUrl } from "@/lib/maps-utils";
 import { STORE_NAME_AR } from "@/lib/constants";
-import { isPromotionDateRangeActive } from "@/lib/promotions";
+import { isPromotionDateRangeActive, type Promotion } from "@/lib/promotions";
+import { formatPromotionOfferText } from "@/lib/promotion-format";
 import { formatPromotionValidity } from "@/lib/promotion-date";
 import type { StoreProductListItem } from "@/lib/store/types";
 
@@ -23,11 +24,12 @@ type CachedPromotion = {
   id: string;
   name: string;
   description: string | null;
-  type: string;
+  type: Promotion["type"];
   buyQuantity: number | null;
   getQuantity: number | null;
   discountPercent: number | null;
   discountAmount: number | null;
+  minOrderAmount: number | null;
   startDate: string | null;
   endDate: string | null;
   isActive: boolean;
@@ -51,6 +53,7 @@ const getCachedPromotion = unstable_cache(
         getQuantity: true,
         discountPercent: true,
         discountAmount: true,
+        minOrderAmount: true,
         startDate: true,
         endDate: true,
         isActive: true,
@@ -75,26 +78,6 @@ function isPromotionCurrentlyActive(
     promotion.isActive &&
     isPromotionDateRangeActive(promotion.startDate, promotion.endDate, now)
   );
-}
-
-function getPromotionOffer(promotion: {
-  type: string;
-  buyQuantity: number | null;
-  getQuantity: number | null;
-  discountPercent: number | null;
-  discountAmount: number | null;
-}) {
-  if (promotion.type === "BUY_X_GET_Y") {
-    const discount = promotion.discountPercent ?? 100;
-    const benefit = discount === 100 ? "مجاناً" : `بخصم ${discount}%`;
-    return `اشتري ${promotion.buyQuantity ?? "—"} واحصلي على ${promotion.getQuantity ?? "—"} ${benefit}`;
-  }
-
-  if (promotion.type === "PERCENTAGE") {
-    return `خصم ${promotion.discountPercent ?? "—"}% على السلة`;
-  }
-
-  return `خصم ${promotion.discountAmount ?? "—"} على السلة`;
 }
 
 export async function generateMetadata({ params }: PromotionPageProps): Promise<Metadata> {
@@ -228,7 +211,7 @@ export default async function PromotionPage({ params }: PromotionPageProps) {
                 </p>
               )}
               <p className="mt-4 text-lg font-bold text-[var(--store-gold-deep)]">
-                {getPromotionOffer(promotion)}
+                {formatPromotionOfferText(promotion)}
               </p>
               {promotion.isStoreOnly && (
                 <div className="mt-5 max-w-2xl rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-950">

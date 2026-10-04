@@ -1,24 +1,12 @@
 import Link from "next/link";
 import { ArrowLeft, BadgePercent, Gift, Sparkles } from "lucide-react";
 import { getActivePromotionsData } from "@/lib/promotions-data";
+import { formatPromotionOfferText } from "@/lib/promotion-format";
 import type { Promotion } from "@/lib/promotions";
 import { formatPromotionValidity } from "@/lib/promotion-date";
 import StoreOnlyPromotionBadge from "@/components/store/StoreOnlyPromotionBadge";
 
 export const revalidate = 60;
-
-function offerDescription(promotion: Promotion): string {
-  if (promotion.type === "BUY_X_GET_Y") {
-    const benefit = promotion.discountPercent === 100
-      ? "مجاناً"
-      : `بخصم ${promotion.discountPercent ?? 100}%`;
-    return `اشتري ${promotion.buyQuantity ?? "—"} واحصلي على ${promotion.getQuantity ?? "—"} ${benefit}`;
-  }
-  if (promotion.type === "PERCENTAGE") {
-    return `خصم ${promotion.discountPercent ?? "—"}% على السلة`;
-  }
-  return `خصم ${promotion.discountAmount ?? "—"} على السلة`;
-}
 
 function PromotionIndexCard({ promotion }: { promotion: Promotion }) {
   return (
@@ -40,7 +28,7 @@ function PromotionIndexCard({ promotion }: { promotion: Promotion }) {
       {promotion.description && (
         <p className="mt-1 text-sm leading-6 text-[var(--store-muted)]">{promotion.description}</p>
       )}
-      <p className="mt-3 font-semibold text-[var(--store-gold-deep)]">{offerDescription(promotion)}</p>
+      <p className="mt-3 font-semibold text-[var(--store-gold-deep)]">{formatPromotionOfferText(promotion)}</p>
       {promotion.isStoreOnly && (
         <div className="mt-3">
           <StoreOnlyPromotionBadge />

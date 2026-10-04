@@ -8,22 +8,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getActivePromotionsData } from "@/lib/promotions-data";
+import { formatPromotionOfferText } from "@/lib/promotion-format";
 import type { Promotion } from "@/lib/promotions";
 import { formatPromotionValidity } from "@/lib/promotion-date";
 import StoreOnlyPromotionBadge from "@/components/store/StoreOnlyPromotionBadge";
-
-function promotionOfferText(promotion: Promotion): string {
-  if (promotion.type === "BUY_X_GET_Y") {
-    const gift = promotion.discountPercent === 100 ? "مجاناً" : `بخصم ${promotion.discountPercent ?? 100}%`;
-    return `اشتري ${promotion.buyQuantity ?? "—"} واحصلي على ${promotion.getQuantity ?? "—"} ${gift}`;
-  }
-
-  if (promotion.type === "PERCENTAGE") {
-    return `خصم ${promotion.discountPercent ?? "—"}% على السلة`;
-  }
-
-  return `خصم ${promotion.discountAmount ?? "—"} على السلة`;
-}
 
 function PromotionCard({ promotion }: { promotion: Promotion }) {
   return (
@@ -55,7 +43,7 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
         </p>
       )}
       <p className="mt-3 text-sm font-bold leading-6 text-[var(--store-gold-deep)]">
-        {promotionOfferText(promotion)}
+        {formatPromotionOfferText(promotion)}
       </p>
       {promotion.isStoreOnly && (
         <div className="mt-3">
