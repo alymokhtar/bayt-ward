@@ -282,7 +282,12 @@ export async function createSale(data: {
       0,
     );
     const activePromotions = await getActivePromotionsData();
-    const promotionResult = calculateCartDiscounts(trustedItems, activePromotions);
+    const promotionResult = calculateCartDiscounts(
+      trustedItems,
+      activePromotions,
+      new Date(),
+      "pos",
+    );
     const manualPercent = Number.isFinite(data.discountPercent)
       ? Math.min(100, Math.max(0, data.discountPercent ?? 0))
       : 0;

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Gift } from "lucide-react";
 import FavoriteButton from "@/components/store/FavoriteButton";
+import StoreOnlyPromotionBadge from "@/components/store/StoreOnlyPromotionBadge";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import { optimizeCloudinaryUrl, STORE_IMAGE_SIZES } from "@/lib/store/images";
 import {
@@ -123,6 +124,11 @@ export default function ProductCard({
               {priceLabel}
             </p>
           )}
+          {productPromotions.some((promotion) => promotion.isStoreOnly) && (
+            <div className="flex justify-center">
+              <StoreOnlyPromotionBadge />
+            </div>
+          )}
           {productPromotions.length > 0 && (
             <div className="flex flex-wrap justify-center gap-1.5">
               {productPromotions.map((promotion) => {
@@ -188,6 +194,7 @@ function getDiscountedPriceRange(
 
   const directPromotions = promotions.filter(
     (promotion) =>
+      !promotion.isStoreOnly &&
       (promotion.type === "PERCENTAGE" &&
         Number.isFinite(promotion.discountPercent) &&
         (promotion.discountPercent ?? 0) > 0) ||

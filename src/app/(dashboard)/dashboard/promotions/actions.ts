@@ -1,7 +1,7 @@
 "use server";
 
 import { PromotionType as PrismaPromotionType } from "@prisma/client";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseCairoCalendarDate } from "@/lib/promotion-date";
@@ -11,6 +11,12 @@ import type { PromotionInput, PromotionRecord, PromotionType, PromotionView } fr
 type ActionResult = { success: true } | { success: false; error: string };
 
 const PROMOTION_TYPES: PromotionType[] = Object.values(PrismaPromotionType);
+
+function revalidatePromotionViews() {
+  revalidatePath("/dashboard/promotions");
+  revalidatePath("/store", "layout");
+  updateTag("store-promotions");
+}
 
 function actionError(error: unknown, fallback: string): ActionResult {
   if (error instanceof Error && error.message === "UNAUTHORIZED") {
@@ -28,6 +34,7 @@ function validatePromotionInput(input: PromotionInput): string | null {
   if (!input.name?.trim()) return "اسم العرض مطلوب";
   if (!PROMOTION_TYPES.includes(input.type)) return "نوع العرض غير صالح";
   if (typeof input.isActive !== "boolean") return "حالة العرض غير صالحة";
+  if (typeof input.isStoreOnly !== "boolean") return "حالة توفر العرض داخل المحل غير صالحة";
 
   const startDate = input.startDate ? parseCairoCalendarDate(input.startDate) : null;
   const endDate = input.endDate ? parseCairoCalendarDate(input.endDate, true) : null;
@@ -103,6 +110,7 @@ function toPromotionData(input: PromotionInput) {
     startDate: input.startDate ? parseCairoCalendarDate(input.startDate) : null,
     endDate: input.endDate ? parseCairoCalendarDate(input.endDate, true) : null,
     isActive: input.isActive,
+    isStoreOnly: input.isStoreOnly,
   };
 }
 
@@ -180,7 +188,7 @@ export async function createPromotion(input: PromotionInput): Promise<ActionResu
       },
     });
 
-    revalidatePath("/dashboard/promotions");
+    revalidatePromotionViews();
     return { success: true };
   } catch (error) {
     return actionError(error, "تعذر إنشاء العرض");
@@ -207,7 +215,7 @@ export async function updatePromotion(
       },
     });
 
-    revalidatePath("/dashboard/promotions");
+    revalidatePromotionViews();
     return { success: true };
   } catch (error) {
     return actionError(error, "تعذر حفظ تعديلات العرض");
@@ -228,7 +236,7 @@ export async function togglePromotionStatus(id: string): Promise<ActionResult> {
       data: { isActive: !promotion.isActive },
     });
 
-    revalidatePath("/dashboard/promotions");
+    revalidatePromotionViews();
     return { success: true };
   } catch (error) {
     return actionError(error, "تعذر تغيير حالة العرض");
@@ -241,7 +249,7 @@ export async function deletePromotion(id: string): Promise<ActionResult> {
     if (!id?.trim()) return { success: false, error: "معرّف العرض غير صالح" };
 
     await prisma.promotion.delete({ where: { id } });
-    revalidatePath("/dashboard/promotions");
+    revalidatePromotionViews();
     return { success: true };
   } catch (error) {
     return actionError(error, "تعذر حذف العرض");

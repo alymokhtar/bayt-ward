@@ -167,6 +167,22 @@ test("ignores inactive and out-of-date promotions", () => {
   assert.deepEqual(result.appliedPromotions, []);
 });
 
+test("excludes store-only promotions online but applies them at POS", () => {
+  const storeOnlyPromotion = promotion({
+    isStoreOnly: true,
+    discountPercent: 25,
+  });
+  const now = new Date("2026-10-01T12:00:00.000Z");
+
+  const onlineResult = calculateCartDiscounts(cartItems, [storeOnlyPromotion], now);
+  const posResult = calculateCartDiscounts(cartItems, [storeOnlyPromotion], now, "pos");
+
+  assert.equal(onlineResult.discountAmount, 0);
+  assert.deepEqual(onlineResult.appliedPromotions, []);
+  assert.equal(posResult.discountAmount, 57.5);
+  assert.equal(posResult.appliedPromotions[0]?.id, storeOnlyPromotion.id);
+});
+
 test("treats promotion date bounds as inclusive Cairo calendar days", () => {
   const shortlyAfterCairoMidnight = new Date("2026-10-01T21:05:00.000Z");
   const shortlyBeforeCairoMidnight = new Date("2026-10-02T20:55:00.000Z");

@@ -19,6 +19,7 @@ export interface PromotionInput {
   startDate: string;
   endDate: string;
   isActive: boolean;
+  isStoreOnly: boolean;
   categoryIds: string[];
   productIds: string[];
 }
@@ -36,6 +37,7 @@ export interface PromotionRecord {
   startDate: Date | null;
   endDate: Date | null;
   isActive: boolean;
+  isStoreOnly: boolean;
   createdAt: Date;
   updatedAt: Date;
   categories: { id: string; name: string }[];

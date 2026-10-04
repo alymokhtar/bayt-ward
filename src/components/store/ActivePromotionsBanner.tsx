@@ -10,6 +10,7 @@ import {
 import { getActivePromotionsData } from "@/lib/promotions-data";
 import type { Promotion } from "@/lib/promotions";
 import { formatPromotionValidity } from "@/lib/promotion-date";
+import StoreOnlyPromotionBadge from "@/components/store/StoreOnlyPromotionBadge";
 
 function promotionOfferText(promotion: Promotion): string {
   if (promotion.type === "BUY_X_GET_Y") {
@@ -56,6 +57,11 @@ function PromotionCard({ promotion }: { promotion: Promotion }) {
       <p className="mt-3 text-sm font-bold leading-6 text-[var(--store-gold-deep)]">
         {promotionOfferText(promotion)}
       </p>
+      {promotion.isStoreOnly && (
+        <div className="mt-3">
+          <StoreOnlyPromotionBadge />
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-[var(--store-border)] pt-3">
         <p className="inline-flex items-center gap-2 text-xs leading-5 text-[var(--store-muted)]">

@@ -120,6 +120,8 @@ export default function POSClient({
       name: item.variant.product.nameAr || item.variant.product.name,
     })),
     activePromotions,
+    new Date(),
+    "pos",
   );
   const manualDiscount = discountAmount + percentDiscount;
   const promotionDiscount = promotionResult.discountAmount;

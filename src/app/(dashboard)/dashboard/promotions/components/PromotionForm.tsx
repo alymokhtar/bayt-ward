@@ -57,6 +57,7 @@ export default function PromotionForm({
   const [minOrderAmount, setMinOrderAmount] = useState(numberValue(promotion?.minOrderAmount));
   const [startDate, setStartDate] = useState(dateInputValue(promotion?.startDate));
   const [endDate, setEndDate] = useState(dateInputValue(promotion?.endDate));
+  const [isStoreOnly, setIsStoreOnly] = useState(promotion?.isStoreOnly ?? false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(
     promotion?.categories.map(({ id }) => id) ?? [],
   );
@@ -118,6 +119,7 @@ export default function PromotionForm({
       startDate,
       endDate,
       isActive: promotion?.isActive ?? true,
+      isStoreOnly,
       categoryIds: selectedCategoryIds,
       productIds: selectedProductIds,
     };
@@ -297,6 +299,16 @@ export default function PromotionForm({
             onChange={(event) => setEndDate(event.target.value)}
           />
         </div>
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-gold/40 bg-gold/5 p-4 text-sm text-brown">
+          <input
+            type="checkbox"
+            checked={isStoreOnly}
+            onChange={(event) => setIsStoreOnly(event.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-gold focus:ring-gold"
+          />
+          <span className="font-medium">العرض متوفر حصرياً داخل المحل فقط</span>
+        </label>
 
         <div className="grid gap-5 sm:grid-cols-2">
           <fieldset className="min-w-0 space-y-3 rounded-lg border border-border p-4">

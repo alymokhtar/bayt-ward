@@ -1,0 +1,2 @@
+ALTER TABLE "Promotion"
+ADD COLUMN "isStoreOnly" BOOLEAN NOT NULL DEFAULT false;

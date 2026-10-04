@@ -20,6 +20,7 @@ export async function getActivePromotionsData(now = new Date()): Promise<Promoti
       description: true,
       type: true,
       isActive: true,
+      isStoreOnly: true,
       buyQuantity: true,
       getQuantity: true,
       discountPercent: true,

@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { unstable_cache } from "next/cache";
-import { ArrowRight, BadgePercent, CalendarDays, Clock3, Gift, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, BadgePercent, CalendarDays, Clock3, Gift, MapPin, Sparkles } from "lucide-react";
 import ProductCard from "@/components/store/ProductCard";
 import SectionHeading from "@/components/store/SectionHeading";
 import { prisma } from "@/lib/prisma";
 import { PUBLISHED_PRODUCT_WHERE } from "@/lib/store/constants";
 import { storeProductListSelect } from "@/lib/store/types";
 import { getCachedStoreSettingsPublic } from "@/lib/store/cached-queries";
+import { getShareUrl } from "@/lib/maps-utils";
 import { STORE_NAME_AR } from "@/lib/constants";
 import { isPromotionDateRangeActive } from "@/lib/promotions";
 import { formatPromotionValidity } from "@/lib/promotion-date";
@@ -30,6 +31,7 @@ type CachedPromotion = {
   startDate: string | null;
   endDate: string | null;
   isActive: boolean;
+  isStoreOnly: boolean;
   categories: { id: string; name: string; nameAr: string | null }[];
   products: { id: string }[];
 };
@@ -52,6 +54,7 @@ const getCachedPromotion = unstable_cache(
         startDate: true,
         endDate: true,
         isActive: true,
+        isStoreOnly: true,
         categories: { select: { id: true, name: true, nameAr: true } },
         products: { select: { id: true } },
       },
@@ -119,6 +122,8 @@ export default async function PromotionPage({ params }: PromotionPageProps) {
   const now = new Date();
   let promotion: CachedPromotion | null;
   let currencySymbol = "MRU";
+  let storeAddress = "";
+  let googleMapsEmbedUrl = "";
   let sanitizedProducts: StoreProductListItem[] = [];
 
   try {
@@ -140,6 +145,8 @@ export default async function PromotionPage({ params }: PromotionPageProps) {
 
     promotion = promotionData;
     currencySymbol = settings.currency_symbol || "MRU";
+    storeAddress = settings.store_address || "";
+    googleMapsEmbedUrl = settings.google_maps_embed_url || "";
 
     if (promotionData) {
       const hasTargets =
@@ -179,6 +186,11 @@ export default async function PromotionPage({ params }: PromotionPageProps) {
 
   const categories = promotion.categories ?? [];
   const productsPage = sanitizedProducts ?? [];
+  const storeLocationHref = getShareUrl(googleMapsEmbedUrl) ||
+    (storeAddress
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(storeAddress)}`
+      : "/store/contact");
+  const isExternalLocationLink = storeLocationHref.startsWith("http");
   const categoryNames = categories
     .map((category) => category.nameAr?.trim() || category.name)
     .join("، ");
@@ -218,6 +230,30 @@ export default async function PromotionPage({ params }: PromotionPageProps) {
               <p className="mt-4 text-lg font-bold text-[var(--store-gold-deep)]">
                 {getPromotionOffer(promotion)}
               </p>
+              {promotion.isStoreOnly && (
+                <div className="mt-5 max-w-2xl rounded-lg border border-rose-200 bg-rose-50 p-4 text-rose-950">
+                  <div className="flex items-start gap-3">
+                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-rose-700" aria-hidden="true" />
+                    <div>
+                      <p className="font-bold">
+                        هذا العرض متوفر عند الشراء من الفرع فقط - تفضل بزيارتنا للاستفادة منه
+                      </p>
+                      {storeAddress && (
+                        <p className="mt-1 text-sm leading-6">{storeAddress}</p>
+                      )}
+                      <Link
+                        href={storeLocationHref}
+                        target={isExternalLocationLink ? "_blank" : undefined}
+                        rel={isExternalLocationLink ? "noopener noreferrer" : undefined}
+                        className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-md bg-rose-800 px-3 py-2 text-sm font-bold text-white transition hover:bg-rose-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                      >
+                        موقع وعنوان الفرع
+                        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex shrink-0 flex-col items-start gap-2">

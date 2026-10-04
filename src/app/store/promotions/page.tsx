@@ -3,6 +3,7 @@ import { ArrowLeft, BadgePercent, Gift, Sparkles } from "lucide-react";
 import { getActivePromotionsData } from "@/lib/promotions-data";
 import type { Promotion } from "@/lib/promotions";
 import { formatPromotionValidity } from "@/lib/promotion-date";
+import StoreOnlyPromotionBadge from "@/components/store/StoreOnlyPromotionBadge";
 
 export const revalidate = 60;
 
@@ -40,6 +41,11 @@ function PromotionIndexCard({ promotion }: { promotion: Promotion }) {
         <p className="mt-1 text-sm leading-6 text-[var(--store-muted)]">{promotion.description}</p>
       )}
       <p className="mt-3 font-semibold text-[var(--store-gold-deep)]">{offerDescription(promotion)}</p>
+      {promotion.isStoreOnly && (
+        <div className="mt-3">
+          <StoreOnlyPromotionBadge />
+        </div>
+      )}
       <p className="mt-2 text-xs leading-5 text-[var(--store-muted)]">
         {formatPromotionValidity(promotion.startDate, promotion.endDate)}
       </p>
