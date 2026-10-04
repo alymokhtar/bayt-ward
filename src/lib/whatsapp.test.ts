@@ -25,7 +25,7 @@ test("includes a full product link in the direct order WhatsApp message", () => 
     productId: "prod-123",
   });
 
-  assert.match(message, /مرحبا بيت ورد/);
+  assert.match(message, /مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذا المنتج:/);
   assert.match(message, /الرابط:/);
   assert.match(message, /\/store\/product\/prod-123/);
 });
