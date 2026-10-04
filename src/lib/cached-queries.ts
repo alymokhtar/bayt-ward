@@ -873,7 +873,7 @@ export const getCachedSalesReport = unstable_cache(
         ...channelWhere,
       };
 
-      const [sales, payments, returns, expenses, salesList] = await Promise.all([
+      const [sales, returns, expenses, salesList] = await Promise.all([
       // ✅ استخدام نفس الفلتر المستخدم في مراجعة الخزنة
       prisma.sale.aggregate({
         where: completedSalesWhere,
@@ -884,17 +884,6 @@ export const getCachedSalesReport = unstable_cache(
           taxAmount: true,
         },
         _count: true,
-      }),
-      // ✅ حساب إجمالي المبيعات من جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
-      prisma.payment.aggregate({
-        where: {
-          createdAt: { gte: start, lt: end },
-          sale: {
-            status: completedSalesWhere.status,
-            ...channelWhere,
-          },
-        },
-        _sum: { amount: true },
       }),
       prisma.return.aggregate({
         where: {
@@ -931,7 +920,6 @@ export const getCachedSalesReport = unstable_cache(
       }),
     ]);
 
-    // Sale.totalAmount is accrual revenue; payment totals are reported separately.
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
     const salesMetrics = calculateSalesReportMetrics({
@@ -939,7 +927,6 @@ export const getCachedSalesReport = unstable_cache(
       totalDiscount: sales._sum.discountAmount ?? 0,
       totalReturns,
       accrualRevenue: sales._sum.totalAmount ?? 0,
-      totalPayments: payments._sum.amount ?? 0,
       salesCount: sales._count,
     });
 
@@ -947,7 +934,6 @@ export const getCachedSalesReport = unstable_cache(
       period: { from: start, to: end },
       totalSales: salesMetrics.accrualRevenue,
       grossSalesBeforeDiscount: salesMetrics.grossSalesBeforeDiscount,
-      totalPayments: salesMetrics.totalPayments,
       salesCount: sales._count,
       averageSale: salesMetrics.averageSale,
       totalDiscount: salesMetrics.totalDiscount,
@@ -980,7 +966,6 @@ export const getCachedSalesReport = unstable_cache(
         period: { from: new Date(), to: new Date() },
         totalSales: 0,
         grossSalesBeforeDiscount: 0,
-        totalPayments: 0,
         salesCount: 0,
         averageSale: 0,
         totalDiscount: 0,
@@ -1127,22 +1112,11 @@ export const getCachedProfitReport = unstable_cache(
         ...channelWhere,
       };
 
-    const [salesAgg, payments, cogsRows, returnedCogsRows, returns, expenses, purchases] =
+    const [salesAgg, cogsRows, returnedCogsRows, returns, expenses, purchases] =
       await Promise.all([
         prisma.sale.aggregate({
           where: completedSalesWhere,
           _sum: { totalAmount: true },
-        }),
-        // Cash collections stay separate from accrual revenue.
-        prisma.payment.aggregate({
-          where: {
-            createdAt: { gte: start, lt: end },
-            sale: {
-              status: completedSalesWhere.status,
-              ...channelWhere,
-            },
-          },
-          _sum: { amount: true },
         }),
         prisma.$queryRaw<[{ cogs: number }]>`
           SELECT COALESCE(SUM(si.quantity * si."costPrice"), 0)::float AS cogs
@@ -1188,9 +1162,7 @@ export const getCachedProfitReport = unstable_cache(
         }),
       ]);
 
-    // ✅ استخدام Payment.amount بدلاً من Sale.totalAmount لضمان التطابق مع مراجعة الخزنة
     const revenue = salesAgg._sum.totalAmount ?? 0;
-    const totalPayments = payments._sum.amount ?? 0;
     const totalCogs = cogsRows[0]?.cogs ?? 0;
     const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
     const costOfGoodsSold = calculateCostOfGoodsSoldFromSnapshots(totalCogs, returnedCogs);
@@ -1206,7 +1178,6 @@ export const getCachedProfitReport = unstable_cache(
     return {
       period: { from: start, to: end },
       revenue,
-      totalPayments,
       netRevenue,
       costOfGoodsSold,
       grossProfit,
@@ -1227,7 +1198,6 @@ export const getCachedProfitReport = unstable_cache(
       return {
         period: { from: new Date(), to: new Date() },
         revenue: 0,
-        totalPayments: 0,
         netRevenue: 0,
         costOfGoodsSold: 0,
         grossProfit: 0,

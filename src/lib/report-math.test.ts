@@ -6,19 +6,17 @@ import {
   calculateSalesReportMetrics,
 } from "@/lib/report-math";
 
-test("calculates net sales from gross sales, discounts, and returns while keeping payments separate", () => {
+test("calculates net sales from gross sales, discounts, and returns using accrual revenue for AOV", () => {
   const result = calculateSalesReportMetrics({
     grossSalesBeforeDiscount: 1500,
     totalDiscount: 100,
     totalReturns: 50,
     accrualRevenue: 1400,
-    totalPayments: 1350,
     salesCount: 2,
   });
 
   assert.equal(result.netSales, 1350);
   assert.equal(result.accrualRevenue, 1400);
-  assert.equal(result.totalPayments, 1350);
   assert.equal(result.averageSale, 700);
 });
 
@@ -28,14 +26,12 @@ test("returns zero AOV for empty sales and normalizes non-finite report values",
     totalDiscount: Number.NaN,
     totalReturns: 0,
     accrualRevenue: Number.NaN,
-    totalPayments: Number.NaN,
     salesCount: 0,
   });
 
   assert.equal(result.netSales, 0);
   assert.equal(result.averageSale, 0);
   assert.equal(result.accrualRevenue, 0);
-  assert.equal(result.totalPayments, 0);
 });
 
 test("keeps historical COGS tied to sale and return snapshots, not current variant cost", () => {

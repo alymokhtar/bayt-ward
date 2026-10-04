@@ -56,31 +56,27 @@ export default async function ReportsContentSection({
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="إيرادات المبيعات (استحقاق)"
-            value={formatCurrency(salesReport.totalSales)}
-          />
-          <StatCard
             title="المبيعات قبل الخصم"
             value={formatCurrency(salesReport.grossSalesBeforeDiscount)}
           />
-          <StatCard
-            title="المقبوضات المسجلة (Payment)"
-            value={formatCurrency(salesReport.totalPayments)}
-          />
-          <StatCard title="عدد الطلبات / الفواتير" value={salesReport.salesCount.toLocaleString("ar-EG-u-nu-latn")} />
-          <StatCard title="متوسط قيمة الفاتورة (AOV)" value={formatCurrency(salesReport.averageSale)} />
           <StatCard title="إجمالي الخصومات" value={formatCurrency(salesReport.totalDiscount)} />
+          <StatCard
+            title="إيرادات المبيعات / بعد الخصم"
+            value={formatCurrency(salesReport.totalSales)}
+          />
           <StatCard
             title="المرتجعات"
             value={formatCurrency(salesReport.totalReturns)}
           />
           <StatCard
-            title="المصروفات العامة (تاريخ المصروف)"
-            value={formatCurrency(salesReport.totalExpenses)}
-          />
-          <StatCard
             title="صافي المبيعات"
             value={formatCurrency(salesReport.netSales)}
+          />
+          <StatCard title="متوسط قيمة الفاتورة (AOV)" value={formatCurrency(salesReport.averageSale)} />
+          <StatCard title="عدد الطلبات / الفواتير" value={salesReport.salesCount.toLocaleString("ar-EG-u-nu-latn")} />
+          <StatCard
+            title="المصروفات العامة (تاريخ المصروف)"
+            value={formatCurrency(salesReport.totalExpenses)}
           />
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
@@ -178,7 +174,6 @@ export default async function ReportsContentSection({
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard title="إجمالي الإيرادات" value={formatCurrency(profitReport.revenue)} />
-        <StatCard title="المقبوضات المسجلة (للمقارنة)" value={formatCurrency(profitReport.totalPayments)} />
         <StatCard
           title="المرتجعات"
           value={formatCurrency(profitReport.totalReturns)}

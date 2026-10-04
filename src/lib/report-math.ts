@@ -17,7 +17,6 @@ export interface SalesReportMetricsInput {
   totalDiscount: number;
   totalReturns: number;
   accrualRevenue: number;
-  totalPayments: number;
   salesCount: number;
 }
 
@@ -26,7 +25,6 @@ export interface SalesReportMetricsResult {
   totalDiscount: number;
   totalReturns: number;
   accrualRevenue: number;
-  totalPayments: number;
   netSales: number;
   averageSale: number;
 }
@@ -46,14 +44,12 @@ export function calculateSalesReportMetrics({
   totalDiscount,
   totalReturns,
   accrualRevenue,
-  totalPayments,
   salesCount,
 }: SalesReportMetricsInput): SalesReportMetricsResult {
   const grossSales = Number.isFinite(grossSalesBeforeDiscount) ? grossSalesBeforeDiscount : 0;
   const discounts = Number.isFinite(totalDiscount) ? totalDiscount : 0;
   const returns = Number.isFinite(totalReturns) ? totalReturns : 0;
   const revenue = Number.isFinite(accrualRevenue) ? accrualRevenue : 0;
-  const payments = Number.isFinite(totalPayments) ? totalPayments : 0;
   const count = Number.isFinite(salesCount) && salesCount > 0 ? salesCount : 0;
 
   return {
@@ -61,7 +57,6 @@ export function calculateSalesReportMetrics({
     totalDiscount: discounts,
     totalReturns: returns,
     accrualRevenue: revenue,
-    totalPayments: payments,
     netSales: grossSales - discounts - returns,
     averageSale: count > 0 ? revenue / count : 0,
   };
