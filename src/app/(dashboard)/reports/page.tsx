@@ -65,7 +65,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       <Card>
         <CardContent className="pt-6 space-y-6">
           <ReportsTabsClient
-            key={`${activeTab}-${from}-${to}-${channel}`}
             activeTab={activeTab}
             from={from}
             to={to}
@@ -73,7 +72,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
             channel={channel}
           />
           <Suspense
-            key={`${activeTab}-${from}-${to}-${channel}`}
             fallback={<ContentSkeleton />}
           >
             <ReportsContentSection

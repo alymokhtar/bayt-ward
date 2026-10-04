@@ -22,6 +22,8 @@ const periodPresets = [
   { id: "month", label: "الشهر" },
 ] as const;
 
+type DateDraft = { base: string; value: string } | null;
+
 interface ReportsTabsClientProps {
   activeTab: string;
   from: string;
@@ -40,15 +42,23 @@ export default function ReportsTabsClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [dateFrom, setDateFrom] = useState(from);
-  const [dateTo, setDateTo] = useState(to);
-  const [selectedChannel, setSelectedChannel] = useState(channel);
+  const [dateFromDraft, setDateFromDraft] = useState<DateDraft>(null);
+  const [dateToDraft, setDateToDraft] = useState<DateDraft>(null);
+  const appliedFrom = searchParams.get("from") || from;
+  const appliedTo = searchParams.get("to") || to;
+  const dateFrom = dateFromDraft?.base === appliedFrom ? dateFromDraft.value : appliedFrom;
+  const dateTo = dateToDraft?.base === appliedTo ? dateToDraft.value : appliedTo;
+  const queryChannel = searchParams.get("channel");
+  const selectedChannel: SalesChannelFilter =
+    queryChannel === "POS" || queryChannel === "ONLINE" || queryChannel === "ALL"
+      ? queryChannel
+      : channel;
   const showPeriodPresets = activeTab === "sales" || activeTab === "profit";
   const showDateFilters = activeTab !== "inventory";
 
   function navigate(params: URLSearchParams) {
     if (!params.get("tab")) params.set("tab", activeTab);
-    startTransition(() => router.push(`/reports?${params.toString()}`));
+    startTransition(() => router.replace(`/reports?${params.toString()}`, { scroll: false }));
   }
 
   function setTab(tab: string) {
@@ -59,8 +69,8 @@ export default function ReportsTabsClient({
 
   function applyPreset(preset: Exclude<ReportPeriod, "custom">) {
     const range = getReportPeriodRange(preset);
-    setDateFrom(range.from);
-    setDateTo(range.to);
+    setDateFromDraft({ base: range.from, value: range.from });
+    setDateToDraft({ base: range.to, value: range.to });
 
     const params = new URLSearchParams(searchParams.toString());
     params.set("from", range.from);
@@ -74,11 +84,12 @@ export default function ReportsTabsClient({
     params.set("from", dateFrom);
     params.set("to", dateTo);
     params.set("period", "custom");
+    setDateFromDraft({ base: dateFrom, value: dateFrom });
+    setDateToDraft({ base: dateTo, value: dateTo });
     navigate(params);
   }
 
   function applyChannel(nextChannel: SalesChannelFilter) {
-    setSelectedChannel(nextChannel);
     const params = new URLSearchParams(searchParams.toString());
     params.set("channel", nextChannel);
     navigate(params);
@@ -150,7 +161,7 @@ export default function ReportsTabsClient({
               <input
                 type="date"
                 value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
+                onChange={(e) => setDateFromDraft({ base: appliedFrom, value: e.target.value })}
                 className="h-10 w-full rounded-lg border border-border px-3 text-sm"
               />
             </div>
@@ -159,7 +170,7 @@ export default function ReportsTabsClient({
               <input
                 type="date"
                 value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
+                onChange={(e) => setDateToDraft({ base: appliedTo, value: e.target.value })}
                 className="h-10 w-full rounded-lg border border-border px-3 text-sm"
               />
             </div>
