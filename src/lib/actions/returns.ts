@@ -204,6 +204,7 @@ export async function createReturn(data: {
               variantId: item.variantId,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
+              costPrice: sale.items.find((saleItem) => saleItem.variantId === item.variantId)!.costPrice,
               totalPrice: item.totalPrice,
             })),
           },

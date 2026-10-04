@@ -11,6 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { getSalesChannelWhere } from "@/lib/sales-analytics";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
 import {
+  calculateCostOfGoodsSoldFromSnapshots,
   calculateProfitMetrics,
   calculateSalesReportMetrics,
 } from "@/lib/report-math";
@@ -1144,21 +1145,19 @@ export const getCachedProfitReport = unstable_cache(
           _sum: { amount: true },
         }),
         prisma.$queryRaw<[{ cogs: number }]>`
-          SELECT COALESCE(SUM(si.quantity * pv."costPrice"), 0)::float AS cogs
+          SELECT COALESCE(SUM(si.quantity * si."costPrice"), 0)::float AS cogs
           FROM "SaleItem" si
           INNER JOIN "Sale" s ON si."saleId" = s.id
-          INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
           WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND s."createdAt" >= ${start}
             AND s."createdAt" < ${end}
             AND (${channel === "ALL"} OR s.channel::text = ${channel})
         `,
         prisma.$queryRaw<[{ returnedCogs: number }]>`
-          SELECT COALESCE(SUM(ri.quantity * pv."costPrice"), 0)::float AS "returnedCogs"
+          SELECT COALESCE(SUM(ri.quantity * ri."costPrice"), 0)::float AS "returnedCogs"
           FROM "ReturnItem" ri
           INNER JOIN "Return" r ON ri."returnId" = r.id
           INNER JOIN "Sale" s ON s.id = r."saleId"
-          INNER JOIN "ProductVariant" pv ON ri."variantId" = pv.id
           WHERE r.status = 'APPROVED'
             AND r."createdAt" >= ${start}
             AND r."createdAt" < ${end}
@@ -1194,7 +1193,7 @@ export const getCachedProfitReport = unstable_cache(
     const totalPayments = payments._sum.amount ?? 0;
     const totalCogs = cogsRows[0]?.cogs ?? 0;
     const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
-    const costOfGoodsSold = totalCogs - returnedCogs;
+    const costOfGoodsSold = calculateCostOfGoodsSoldFromSnapshots(totalCogs, returnedCogs);
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
     const { netRevenue, grossProfit, netProfit, profitMargin } = calculateProfitMetrics({
@@ -1280,7 +1279,7 @@ export const getCachedTopProducts = unstable_cache(
         COALESCE(p."nameAr", p.name) AS "productName",
         SUM(si.quantity)::int AS "quantitySold",
         SUM(si."totalPrice")::float AS revenue,
-        SUM((si."unitPrice" - pv."costPrice") * si.quantity - si."discountAmount")::float AS profit
+        SUM((si."unitPrice" - si."costPrice") * si.quantity - si."discountAmount")::float AS profit
       FROM "SaleItem" si
       INNER JOIN "Sale" s ON si."saleId" = s.id
       INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id

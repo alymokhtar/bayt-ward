@@ -313,15 +313,23 @@ export async function restoreBackupSnapshot(
     createdAt: toDate(row.createdAt),
   }));
 
-  const saleItems = data.saleItems.map((row) => ({
-    id: String(row.id),
-    saleId: String(row.saleId),
-    variantId: String(row.variantId),
-    quantity: Number(row.quantity ?? 0),
-    unitPrice: Number(row.unitPrice ?? 0),
-    discountAmount: Number(row.discountAmount ?? 0),
-    totalPrice: Number(row.totalPrice ?? 0),
-  }));
+  const variantCostById = new Map(productVariants.map((variant) => [variant.id, variant.costPrice]));
+  const saleItems = data.saleItems.map((row) => {
+    const variantId = String(row.variantId);
+    return {
+      id: String(row.id),
+      saleId: String(row.saleId),
+      variantId,
+      quantity: Number(row.quantity ?? 0),
+      unitPrice: Number(row.unitPrice ?? 0),
+      costPrice: toNullableNumber(row.costPrice) ?? variantCostById.get(variantId) ?? 0,
+      discountAmount: Number(row.discountAmount ?? 0),
+      totalPrice: Number(row.totalPrice ?? 0),
+    };
+  });
+  const saleItemCostBySaleVariant = new Map(
+    saleItems.map((item) => [`${item.saleId}:${item.variantId}`, item.costPrice]),
+  );
 
   const purchases = data.purchases.map((row) => ({
     id: String(row.id),
@@ -360,14 +368,25 @@ export async function restoreBackupSnapshot(
     createdAt: toDate(row.createdAt),
   }));
 
-  const returnItems = data.returnItems.map((row) => ({
-    id: String(row.id),
-    returnId: String(row.returnId),
-    variantId: String(row.variantId),
-    quantity: Number(row.quantity ?? 0),
-    unitPrice: Number(row.unitPrice ?? 0),
-    totalPrice: Number(row.totalPrice ?? 0),
-  }));
+  const saleIdByReturnId = new Map(returns.map((returnRecord) => [returnRecord.id, returnRecord.saleId]));
+  const returnItems = data.returnItems.map((row) => {
+    const returnId = String(row.returnId);
+    const variantId = String(row.variantId);
+    const saleId = saleIdByReturnId.get(returnId);
+    const originalSaleCost = saleId
+      ? saleItemCostBySaleVariant.get(`${saleId}:${variantId}`)
+      : undefined;
+
+    return {
+      id: String(row.id),
+      returnId,
+      variantId,
+      quantity: Number(row.quantity ?? 0),
+      unitPrice: Number(row.unitPrice ?? 0),
+      costPrice: toNullableNumber(row.costPrice) ?? originalSaleCost ?? variantCostById.get(variantId) ?? 0,
+      totalPrice: Number(row.totalPrice ?? 0),
+    };
+  });
 
   const stockMovements = data.stockMovements.map((row) => ({
     id: String(row.id),

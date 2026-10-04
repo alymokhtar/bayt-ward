@@ -350,6 +350,7 @@ model SaleItem {
   variantId        String
   quantity         Int
   unitPrice        Float
+  costPrice        Float  @default(0)
   discountAmount   Float  @default(0)
   totalPrice       Float
 
@@ -432,6 +433,7 @@ model ReturnItem {
   variantId  String
   quantity   Int
   unitPrice  Float
+  costPrice  Float  @default(0)
   totalPrice Float
 
   return  Return         @relation(fields: [returnId], references: [id], onDelete: Cascade)

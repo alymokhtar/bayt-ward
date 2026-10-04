@@ -31,6 +31,16 @@ export interface SalesReportMetricsResult {
   averageSale: number;
 }
 
+export function calculateCostOfGoodsSoldFromSnapshots(
+  soldItemCostSnapshots: number,
+  returnedItemCostSnapshots: number,
+): number {
+  const soldCost = Number.isFinite(soldItemCostSnapshots) ? soldItemCostSnapshots : 0;
+  const returnedCost = Number.isFinite(returnedItemCostSnapshots) ? returnedItemCostSnapshots : 0;
+
+  return soldCost - returnedCost;
+}
+
 export function calculateSalesReportMetrics({
   grossSalesBeforeDiscount,
   totalDiscount,

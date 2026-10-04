@@ -4,6 +4,7 @@ import {
   getEgyptBusinessDayBounds,
 } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
+import { calculateCostOfGoodsSoldFromSnapshots } from "@/lib/report-math";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 export async function getDailySummary() {
@@ -40,19 +41,17 @@ export async function getDailySummary() {
         _count: true,
       }),
       prisma.$queryRaw<[{ costOfGoodsSold: number }]>`
-      SELECT COALESCE(SUM(si.quantity * pv."costPrice"), 0)::float AS "costOfGoodsSold"
+      SELECT COALESCE(SUM(si.quantity * si."costPrice"), 0)::float AS "costOfGoodsSold"
       FROM "SaleItem" si
       INNER JOIN "Sale" s ON si."saleId" = s.id
-      INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
       WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
         AND s."createdAt" >= ${start}
         AND s."createdAt" < ${end}
     `,
       prisma.$queryRaw<[{ returnedCogs: number }]>`
-      SELECT COALESCE(SUM(ri.quantity * pv."costPrice"), 0)::float AS "returnedCogs"
+      SELECT COALESCE(SUM(ri.quantity * ri."costPrice"), 0)::float AS "returnedCogs"
       FROM "ReturnItem" ri
       INNER JOIN "Return" r ON ri."returnId" = r.id
-      INNER JOIN "ProductVariant" pv ON ri."variantId" = pv.id
       WHERE r.status = 'APPROVED'
         AND r."createdAt" >= ${start}
         AND r."createdAt" < ${end}
@@ -72,7 +71,7 @@ export async function getDailySummary() {
   const totalExpenses = expensesAgg._sum.amount ?? 0;
   const totalCogs = costOfGoodsSoldRows[0]?.costOfGoodsSold ?? 0;
   const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
-  const costOfGoodsSold = totalCogs - returnedCogs;
+  const costOfGoodsSold = calculateCostOfGoodsSoldFromSnapshots(totalCogs, returnedCogs);
   const netRevenue = totalSales - totalReturns;
   const grossProfit = netRevenue - costOfGoodsSold;
 

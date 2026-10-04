@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  calculateCostOfGoodsSoldFromSnapshots,
   calculateProfitMetrics,
   calculateSalesReportMetrics,
 } from "@/lib/report-math";
@@ -35,6 +36,20 @@ test("returns zero AOV for empty sales and normalizes non-finite report values",
   assert.equal(result.averageSale, 0);
   assert.equal(result.accrualRevenue, 0);
   assert.equal(result.totalPayments, 0);
+});
+
+test("keeps historical COGS tied to sale and return snapshots, not current variant cost", () => {
+  const historicalSaleCostSnapshot = 2 * 40;
+  const historicalReturnCostSnapshot = 1 * 40;
+  const currentVariantCost = 125;
+
+  const cogs = calculateCostOfGoodsSoldFromSnapshots(
+    historicalSaleCostSnapshot,
+    historicalReturnCostSnapshot,
+  );
+
+  assert.equal(cogs, 40);
+  assert.notEqual(cogs, 2 * currentVariantCost - currentVariantCost);
 });
 
 test("deducts expenses from net profit using the full financial formula", () => {

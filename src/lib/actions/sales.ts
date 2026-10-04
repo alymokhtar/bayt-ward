@@ -438,6 +438,7 @@ export async function createSale(data: {
           isActive: true,
           stockQuantity: true,
           sellingPrice: true,
+          costPrice: true,
           size: true,
           color: true,
           product: {
@@ -499,6 +500,7 @@ export async function createSale(data: {
               variantId: item.variantId,
               quantity: item.quantity,
               unitPrice: variantMap.get(item.variantId)!.sellingPrice,
+              costPrice: latestVariantMap.get(item.variantId)!.costPrice,
               discountAmount: 0,
               totalPrice: variantMap.get(item.variantId)!.sellingPrice * item.quantity,
             })),
