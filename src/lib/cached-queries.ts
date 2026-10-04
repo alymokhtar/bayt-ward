@@ -9,6 +9,7 @@ import {
   getReportPeriodRange,
 } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
+import { getSalesChannelWhere } from "@/lib/sales-analytics";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
 import { calculateProfitMetrics } from "@/lib/report-math";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
@@ -486,6 +487,7 @@ export const getCachedSalesPage = unstable_cache(
     const options = JSON.parse(paramsJson) as {
       search?: string;
       status?: string;
+      channel?: string;
       from?: string;
       to?: string;
       page?: number;
@@ -494,6 +496,7 @@ export const getCachedSalesPage = unstable_cache(
 
     const where: Record<string, unknown> = {};
     if (options.status) where.status = options.status;
+    Object.assign(where, getSalesChannelWhere(options.channel === "POS" || options.channel === "ONLINE" ? options.channel : "ALL"));
 
     if (options.from || options.to) {
       const { start, end } = getBusinessDayBoundsFromDateKeys(
@@ -524,6 +527,7 @@ export const getCachedSalesPage = unstable_cache(
         select: {
           id: true,
           invoiceNumber: true,
+          channel: true,
           totalAmount: true,
           paymentMethod: true,
           status: true,

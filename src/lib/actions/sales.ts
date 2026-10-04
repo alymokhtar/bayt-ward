@@ -13,7 +13,13 @@ import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import { normalizeSalePayments } from "@/lib/sales-payment-utils";
 import { calculateCartDiscounts } from "@/lib/promotions";
 import { getActivePromotionsData } from "@/lib/promotions-data";
-import { SalesChannel, type PaymentMethod } from "@prisma/client";
+import { Prisma, SaleStatus, SalesChannel, type PaymentMethod } from "@prisma/client";
+import { getBusinessDayBoundsFromDateKeys } from "@/lib/business-day";
+import {
+  buildSalesChannelAnalytics,
+  getSalesChannelWhere,
+  type SalesChannelFilter,
+} from "@/lib/sales-analytics";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -102,6 +108,7 @@ export async function sendVaultReconciliationTelegram(data: {
 export async function getSales(options?: {
   search?: string;
   status?: string;
+  channel?: SalesChannelFilter;
   from?: string;
   to?: string;
   limit?: number;
@@ -120,6 +127,79 @@ export async function getSales(options?: {
       pageSize: pageSize ?? limit ?? 50,
     })
   );
+}
+
+export async function getSalesChannelAnalytics(from?: string, to?: string) {
+  await requireAuth();
+
+  const where: Prisma.SaleWhereInput = {
+    status: {
+      in: [SaleStatus.COMPLETED, SaleStatus.PARTIALLY_REFUNDED, SaleStatus.REFUNDED],
+    },
+  };
+  if (from || to) {
+    const { start, end } = getBusinessDayBoundsFromDateKeys(from, to);
+    where.createdAt = { gte: start, lt: end };
+  }
+
+  const groups = await prisma.sale.groupBy({
+    by: ["channel"],
+    where,
+    _sum: { totalAmount: true },
+    _count: { _all: true },
+  });
+
+  return buildSalesChannelAnalytics(groups.map((group) => ({
+    channel: group.channel,
+    revenue: group._sum.totalAmount,
+    orders: group._count._all,
+  })));
+}
+
+export async function getSalesExport(options?: {
+  search?: string;
+  status?: string;
+  channel?: SalesChannelFilter;
+  from?: string;
+  to?: string;
+}) {
+  await requireAuth();
+
+  const filters = options ?? {};
+  const where: Prisma.SaleWhereInput = getSalesChannelWhere(
+    filters.channel === SalesChannel.POS || filters.channel === SalesChannel.ONLINE
+      ? filters.channel
+      : "ALL",
+  );
+  if (filters.status && Object.values(SaleStatus).includes(filters.status as SaleStatus)) {
+    where.status = filters.status as SaleStatus;
+  }
+  if (filters.from || filters.to) {
+    const { start, end } = getBusinessDayBoundsFromDateKeys(filters.from, filters.to);
+    where.createdAt = { gte: start, lt: end };
+  }
+  if (filters.search?.trim()) {
+    const search = filters.search.trim();
+    where.OR = [
+      { invoiceNumber: { contains: search, mode: "insensitive" } },
+      { customer: { is: { name: { contains: search, mode: "insensitive" } } } },
+      { customer: { is: { phone: { contains: search, mode: "insensitive" } } } },
+    ];
+  }
+
+  return prisma.sale.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    select: {
+      invoiceNumber: true,
+      channel: true,
+      totalAmount: true,
+      status: true,
+      paymentMethod: true,
+      createdAt: true,
+      customer: { select: { name: true } },
+    },
+  });
 }
 
 export async function getCashRegisterReview(from?: string, to?: string) {

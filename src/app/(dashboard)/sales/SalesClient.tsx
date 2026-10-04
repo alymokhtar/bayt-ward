@@ -5,6 +5,9 @@ import Button from "@/components/ui/Button";
 import PaginationNav from "@/components/ui/PaginationNav";
 import FilterForm from "@/components/ui/FilterForm";
 import SaleDetailsModal from "@/app/(dashboard)/sales/SaleDetailsModal";
+import SalesChannelChart from "@/app/(dashboard)/sales/SalesChannelChart";
+import { getSalesExport } from "@/lib/actions/sales";
+import type { SalesChannelAnalytics, SalesChannelFilter } from "@/lib/sales-analytics";
 import {
   Table,
   TableBody,
@@ -18,7 +21,7 @@ import {
   formatDateTime,
   getPaymentDisplayLabel,
 } from "@/lib/utils";
-import { Search, Wallet } from "lucide-react";
+import { Download, Search, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -33,6 +36,7 @@ const statusLabels: Record<string, string> = {
 type SaleItem = {
   id: string;
   invoiceNumber: string;
+  channel: "POS" | "ONLINE";
   totalAmount: number;
   status: string;
   paymentMethod: string | null;
@@ -47,11 +51,13 @@ interface SalesClientProps {
   total: number;
   page: number;
   totalPages: number;
+  channelAnalytics: SalesChannelAnalytics;
   params: {
     search?: string;
     status?: string;
     from?: string;
     to?: string;
+    channel: SalesChannelFilter;
   };
 }
 
@@ -60,9 +66,46 @@ export default function SalesClient({
   total,
   page,
   totalPages,
+  channelAnalytics,
   params,
 }: SalesClientProps) {
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const selectedMetrics = params.channel === "ALL"
+    ? channelAnalytics.total
+    : channelAnalytics.channels[params.channel];
+
+  async function exportFilteredSales() {
+    setExporting(true);
+    setExportError("");
+    try {
+      const rows = await getSalesExport(params);
+      const csvCell = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+      const data = [
+        ["رقم الفاتورة", "قناة البيع", "العميل", "الإجمالي", "الحالة", "طريقة الدفع", "التاريخ"],
+        ...rows.map((sale) => [
+          sale.invoiceNumber,
+          sale.channel === "ONLINE" ? "المتجر" : "الفرع",
+          sale.customer?.name || "نقدي",
+          sale.totalAmount,
+          statusLabels[sale.status] || sale.status,
+          getPaymentDisplayLabel(sale.paymentMethod),
+          formatDateTime(sale.createdAt),
+        ]),
+      ].map((row) => row.map(csvCell).join(",")).join("\r\n");
+      const url = URL.createObjectURL(new Blob(["\uFEFF", data], { type: "text/csv;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `sales-${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError("تعذر تصدير المبيعات. حاول مرة أخرى");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -71,13 +114,28 @@ export default function SalesClient({
           <h1 className="text-2xl font-bold text-brown">المبيعات</h1>
           <p className="text-sm text-muted mt-1">{total} فاتورة</p>
         </div>
-        <Link href="/sales/cash-register">
-          <Button variant="secondary" className="gap-2">
-            <Wallet className="h-4 w-4" />
-            مراجعة الخزنة
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="gap-2" onClick={exportFilteredSales} disabled={exporting}>
+            <Download className="h-4 w-4" />
+            {exporting ? "جارٍ التصدير" : "تصدير CSV"}
           </Button>
-        </Link>
+          <Link href="/sales/cash-register">
+            <Button variant="secondary" className="gap-2">
+              <Wallet className="h-4 w-4" />
+              مراجعة الخزنة
+            </Button>
+          </Link>
+        </div>
       </div>
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]" aria-label="تحليلات المبيعات حسب القناة">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <MetricCard title="إجمالي الإيرادات" value={formatCurrency(selectedMetrics.revenue)} />
+          <MetricCard title="عدد الفواتير / الطلبات" value={selectedMetrics.orders.toLocaleString("ar-EG-u-nu-latn")} />
+          <MetricCard title="متوسط قيمة السلة (AOV)" value={formatCurrency(selectedMetrics.averageOrderValue)} />
+        </div>
+        <SalesChannelChart data={channelAnalytics.revenueMix} />
+      </section>
 
       <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm">
         <div className="p-2 md:p-6 pt-0">
@@ -102,6 +160,16 @@ export default function SalesClient({
               <option value="REFUNDED">مستردة</option>
               <option value="PARTIALLY_REFUNDED">جزئي</option>
             </select>
+            <select
+              name="channel"
+              defaultValue={params.channel}
+              aria-label="قناة البيع"
+              className="h-10 rounded-lg border border-border bg-white px-3 text-sm"
+            >
+              <option value="ALL">كل القنوات</option>
+              <option value="POS">مبيعات الفرع (POS)</option>
+              <option value="ONLINE">طلبات المتجر (Online)</option>
+            </select>
             <input
               type="date"
               name="from"
@@ -115,11 +183,13 @@ export default function SalesClient({
               className="h-10 rounded-lg border border-border bg-white px-3 text-sm"
             />
           </FilterForm>
+          {exportError && <p role="alert" className="mb-3 text-sm text-danger">{exportError}</p>}
 
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>رقم الفاتورة</TableHead>
+                <TableHead>قناة البيع</TableHead>
                 <TableHead>العميل</TableHead>
                 <TableHead>الكاشير</TableHead>
                 <TableHead>الدفع</TableHead>
@@ -139,6 +209,11 @@ export default function SalesClient({
                     >
                       {sale.invoiceNumber}
                     </button>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${sale.channel === "ONLINE" ? "bg-sky-100 text-sky-800" : "bg-gold/10 text-brown"}`}>
+                      {sale.channel === "ONLINE" ? "المتجر 🌐" : "الفرع 🏪"}
+                    </span>
                   </TableCell>
                   <TableCell>
                     {sale.customer?.name || (
@@ -173,6 +248,7 @@ export default function SalesClient({
               status: params.status,
               from: params.from,
               to: params.to,
+              channel: params.channel,
             }}
           />
         </div>
@@ -182,6 +258,15 @@ export default function SalesClient({
         saleId={selectedSaleId}
         onClose={() => setSelectedSaleId(null)}
       />
+    </div>
+  );
+}
+
+function MetricCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+      <p className="text-sm text-muted">{title}</p>
+      <p className="mt-2 text-2xl font-bold text-brown">{value}</p>
     </div>
   );
 }
