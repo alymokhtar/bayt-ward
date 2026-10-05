@@ -24,7 +24,10 @@ import { useState } from "react";
 import { calculateReturnRefundAmount } from "@/lib/return-pricing";
 import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
 import { allocateInvoiceDiscount } from "@/lib/sale-pricing";
-import { calculateExchangeSettlementBalance } from "@/lib/exchange-pricing";
+import {
+  applyEqualProductExchangePricing,
+  calculateExchangeSettlementBalance,
+} from "@/lib/exchange-pricing";
 
 type VariantResult = Awaited<ReturnType<typeof searchVariants>>[number];
 
@@ -52,7 +55,7 @@ type SaleItem = {
     id: string;
     size: string;
     color: string;
-    product: { name: string; nameAr: string | null };
+    product: { id: string; name: string; nameAr: string | null };
   };
 };
 
@@ -156,10 +159,10 @@ export default function ReturnsClient({
         })
     : [];
 
-  const refundAmount = sale
-    ? sale.items.reduce((sum, item) => {
+  const pricedReturnItems = sale
+    ? sale.items.flatMap((item) => {
         const quantity = selectedItems[item.variantId] ?? 0;
-        if (quantity === 0) return sum;
+        if (quantity === 0) return [];
 
         const previousReturns = sale.returns
           .filter((returnRecord) => returnRecord.status === "APPROVED")
@@ -169,14 +172,24 @@ export default function ReturnsClient({
             (!returnedItem.saleItemId && returnedItem.variant.id === item.variantId)
           );
 
-        return sum + calculateReturnRefundAmount(
+        const calculation = calculateReturnRefundAmount(
           item,
           quantity,
           previousReturns.reduce((total, returnedItem) => total + returnedItem.quantity, 0),
           previousReturns.reduce((total, returnedItem) => total + returnedItem.totalPrice, 0),
-        ).refundAmount;
-      }, 0)
-    : 0;
+        );
+        return [{
+          productId: item.variant.product.id,
+          variantId: item.variantId,
+          quantity,
+          refundAmount: calculation.refundAmount,
+        }];
+      })
+    : [];
+  const refundAmount = pricedReturnItems.reduce(
+    (sum, item) => sum + item.refundAmount,
+    0,
+  );
 
   function getAvailableQuantity(item: SaleItem) {
     const returnedQuantity = sale?.returns
@@ -206,13 +219,23 @@ export default function ReturnsClient({
     activePromotions,
     { channel: "POS" },
   );
-  const replacementPricing = allocateInvoiceDiscount(
+  const baseReplacementPricing = allocateInvoiceDiscount(
     replacementCart.map(({ variant, quantity }) => ({
       key: variant.id,
       unitPrice: variant.sellingPrice,
       quantity,
     })),
     replacementPromotions.discountAmount,
+  );
+  const replacementPricing = applyEqualProductExchangePricing(
+    pricedReturnItems,
+    baseReplacementPricing.lines.map((line) => {
+      const cartItem = replacementCart.find(({ variant }) => variant.id === line.key);
+      if (!cartItem) {
+        throw new Error("تعذر العثور على منتج بديل لتسعيره");
+      }
+      return { ...line, productId: cartItem.variant.product.id };
+    }),
   );
   const settlementBalance = calculateExchangeSettlementBalance(
     replacementPricing.totalAmount,

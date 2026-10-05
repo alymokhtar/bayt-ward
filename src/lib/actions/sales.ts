@@ -238,7 +238,7 @@ export async function getSale(id: string) {
               id: true,
               size: true,
               color: true,
-              product: { select: { name: true, nameAr: true } },
+              product: { select: { id: true, name: true, nameAr: true } },
             },
           },
         },

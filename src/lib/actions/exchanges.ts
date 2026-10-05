@@ -12,6 +12,7 @@ import { getActivePromotionsData } from "@/lib/promotions-data";
 import { allocateInvoiceDiscount } from "@/lib/sale-pricing";
 import { calculateReturnRefundAmount } from "@/lib/return-pricing";
 import {
+  applyEqualProductExchangePricing,
   calculateExchangeSettlementBalance,
   calculateExchangeStockChanges,
 } from "@/lib/exchange-pricing";
@@ -96,7 +97,13 @@ export async function createExchange(data: {
     const exchange = await prisma.$transaction(async (tx) => {
       const originalSale = await tx.sale.findUnique({
         where: { id: data.originalSaleId },
-        include: { items: true },
+        include: {
+          items: {
+            include: {
+              variant: { select: { productId: true } },
+            },
+          },
+        },
       });
       if (!originalSale) {
         throw new Error("فاتورة البيع الأصلية غير موجودة");
@@ -241,11 +248,31 @@ export async function createExchange(data: {
         })),
         requestedDiscount,
       );
-      if (salePricing.totalAmount <= 0) {
+      const saleLinePricing = new Map(
+        salePricing.lines.map((line) => [line.key, line]),
+      );
+      const exchangePricing = applyEqualProductExchangePricing(
+        pricedReturnItems.map((item) => ({
+          productId: item.saleItem.variant.productId,
+          quantity: item.quantity,
+          refundAmount: item.totalPrice,
+        })),
+        trustedReplacementItems.map((item) => {
+          const pricing = saleLinePricing.get(item.variantId);
+          if (!pricing) {
+            throw new Error("تعذر احتساب أسعار المنتجات البديلة");
+          }
+          return { ...pricing, productId: item.productId };
+        }),
+      );
+      const exchangeLinePricing = new Map(
+        exchangePricing.lines.map((line) => [line.key, line]),
+      );
+      if (exchangePricing.totalAmount <= 0) {
         throw new Error("إجمالي الفاتورة البديلة يجب أن يكون أكبر من صفر");
       }
       const settlementBalance = calculateExchangeSettlementBalance(
-        salePricing.totalAmount,
+        exchangePricing.totalAmount,
         refundAmount,
       );
       if (
@@ -300,10 +327,7 @@ export async function createExchange(data: {
       const returnNumber = await generateInvoiceNumberSafe("RET");
       const invoiceNumber = await generateInvoiceNumberSafe("INV");
       const exchangeNumber = await generateInvoiceNumberSafe("EXC");
-      const saleLinePricing = new Map(
-        salePricing.lines.map((line) => [line.key, line]),
-      );
-      const replacementTotal = salePricing.totalAmount;
+      const replacementTotal = exchangePricing.totalAmount;
 
       const createdReturn = await tx.return.create({
         data: {
@@ -331,14 +355,14 @@ export async function createExchange(data: {
 
       const saleItemsForCreate = trustedReplacementItems.map((item) => {
         const variant = replacementVariantMap.get(item.variantId);
-        const pricing = saleLinePricing.get(item.variantId);
+        const pricing = exchangeLinePricing.get(item.variantId);
         if (!variant || !pricing) {
           throw new Error("تعذر احتساب أسعار المنتجات البديلة");
         }
         return {
           variantId: item.variantId,
           quantity: item.quantity,
-          unitPrice: item.unitPrice,
+          unitPrice: pricing.unitPrice,
           costPrice: variant.costPrice,
           discountAmount: pricing.discountAmount,
           totalPrice: pricing.netAmount,
@@ -351,14 +375,23 @@ export async function createExchange(data: {
           channel: SalesChannel.POS,
           customerId: originalSale.customerId,
           userId: user.id,
-          subtotal: salePricing.subtotal,
-          discountAmount: salePricing.discountAmount,
+          subtotal: exchangePricing.subtotal,
+          discountAmount: exchangePricing.discountAmount,
           discountPercent: manualPercent,
-          appliedPromotions: promotionResult.appliedPromotions.map((promotion) => ({
-            id: promotion.id,
-            title: promotion.title,
-            discountValue: promotion.discountValue,
-          })),
+          appliedPromotions: [
+            ...promotionResult.appliedPromotions.map((promotion) => ({
+              id: promotion.id,
+              title: promotion.title,
+              discountValue: promotion.discountValue,
+            })),
+            ...(exchangePricing.exchangeDiscountAmount > 0
+              ? [{
+                  id: "EXCHANGE_DISCOUNT",
+                  title: "خصم استبدال متكافئ",
+                  discountValue: exchangePricing.exchangeDiscountAmount,
+                }]
+              : []),
+          ],
           taxAmount: 0,
           totalAmount: replacementTotal,
           tenderedAmount: replacementTotal,
