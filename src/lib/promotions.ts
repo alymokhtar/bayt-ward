@@ -172,23 +172,28 @@ function calculateBuyXGetYDiscount(
 
 function calculateDirectDiscount(
   promotion: Promotion,
-  originalTotal: number,
+  cartSubtotal: number,
   eligibleItems: CartItem[],
 ): number {
-  if (promotion.minOrderAmount != null) {
-    if (
-      !Number.isFinite(promotion.minOrderAmount) ||
-      originalTotal < promotion.minOrderAmount
-    ) {
-      return 0;
-    }
-  }
-
   const eligibleTotal = eligibleItems.reduce(
     (total, item) => total + item.unitPrice * item.quantity,
     0,
   );
   if (eligibleTotal <= 0) return 0;
+
+  if (promotion.minOrderAmount != null) {
+    const hasSpecificTargets =
+      (promotion.products?.length ?? 0) > 0 ||
+      (promotion.categories?.length ?? 0) > 0;
+    const minimumOrderSubtotal = hasSpecificTargets ? eligibleTotal : cartSubtotal;
+
+    if (
+      !Number.isFinite(promotion.minOrderAmount) ||
+      minimumOrderSubtotal < promotion.minOrderAmount
+    ) {
+      return 0;
+    }
+  }
 
   if (promotion.type === "PERCENTAGE") {
     const discountPercent = promotion.discountPercent;

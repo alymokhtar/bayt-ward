@@ -270,6 +270,34 @@ test("checks the cart minimum and caps independent promotions at their eligible 
   assert.deepEqual(result.appliedPromotions.map(({ id }) => id), ["fixed", "percentage"]);
 });
 
+test("checks a targeted promotion minimum against only matching cart items", () => {
+  const result = calculateCartDiscounts(
+    [
+      { ...cartItems[0], unitPrice: 200, quantity: 1 },
+      {
+        productId: "other-product",
+        categoryId: "other-category",
+        unitPrice: 400,
+        quantity: 1,
+        name: "Other product",
+      },
+    ],
+    [
+      promotion({
+        id: "targeted-minimum",
+        discountPercent: 10,
+        minOrderAmount: 500,
+        categories: [{ id: "clothing" }],
+      }),
+    ],
+  );
+
+  assert.equal(result.originalTotal, 600);
+  assert.equal(result.discountAmount, 0);
+  assert.equal(result.finalTotal, 600);
+  assert.deepEqual(result.appliedPromotions, []);
+});
+
 test("returns a zero result for empty carts and ignores malformed cart rows", () => {
   const result = calculateCartDiscounts(
     [
