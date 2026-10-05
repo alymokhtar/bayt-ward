@@ -13,13 +13,20 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { createReturn } from "@/lib/actions/returns";
+import { createExchange } from "@/lib/actions/exchanges";
 import ReturnDetailsModal from "@/app/(dashboard)/returns/ReturnDetailsModal";
 import { getSale } from "@/lib/actions/sales";
+import { searchVariants } from "@/lib/actions/products";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { calculateReturnRefundAmount } from "@/lib/return-pricing";
+import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
+import { allocateInvoiceDiscount } from "@/lib/sale-pricing";
+import { calculateExchangeSettlementBalance } from "@/lib/exchange-pricing";
+
+type VariantResult = Awaited<ReturnType<typeof searchVariants>>[number];
 
 type ReturnRecord = {
   id: string;
@@ -68,9 +75,13 @@ type SaleData = {
 
 interface ReturnsClientProps {
   returns: ReturnRecord[];
+  activePromotions: Promotion[];
 }
 
-export default function ReturnsClient({ returns: initial }: ReturnsClientProps) {
+export default function ReturnsClient({
+  returns: initial,
+  activePromotions,
+}: ReturnsClientProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [invoiceSearch, setInvoiceSearch] = useState("");
@@ -81,6 +92,12 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [refundMethod, setRefundMethod] = useState<"CASH" | "INSTAPAY" | "WALLET">("CASH");
+  const [isExchange, setIsExchange] = useState(false);
+  const [replacementSearch, setReplacementSearch] = useState("");
+  const [replacementVariants, setReplacementVariants] = useState<VariantResult[]>([]);
+  const [replacementItems, setReplacementItems] = useState<Record<string, number>>({});
+  const [settlementMethod, setSettlementMethod] = useState<"CASH" | "CARD" | "WALLET">("CASH");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedReturnId, setSelectedReturnId] = useState<string | null>(null);
@@ -173,27 +190,142 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
     return Math.max(0, item.quantity - returnedQuantity);
   }
 
+  const replacementCart = Object.entries(replacementItems).flatMap(([variantId, quantity]) => {
+    const variant = replacementVariants.find((item) => item.id === variantId);
+    return variant && quantity > 0 ? [{ variant, quantity }] : [];
+  });
+  const replacementPromotions = calculateCartDiscounts(
+    replacementCart.map(({ variant, quantity }) => ({
+      productId: variant.product.id,
+      variantId: variant.id,
+      categoryId: variant.product.categoryId,
+      unitPrice: variant.sellingPrice,
+      quantity,
+      name: variant.product.nameAr || variant.product.name,
+    })),
+    activePromotions,
+    { channel: "POS" },
+  );
+  const replacementPricing = allocateInvoiceDiscount(
+    replacementCart.map(({ variant, quantity }) => ({
+      key: variant.id,
+      unitPrice: variant.sellingPrice,
+      quantity,
+    })),
+    replacementPromotions.discountAmount,
+  );
+  const settlementBalance = calculateExchangeSettlementBalance(
+    replacementPricing.totalAmount,
+    refundAmount,
+  );
+
+  async function searchReplacementVariants() {
+    if (!replacementSearch.trim()) {
+      setReplacementVariants([]);
+      return;
+    }
+    setError("");
+    try {
+      setReplacementVariants(await searchVariants(replacementSearch.trim()));
+    } catch {
+      setError("تعذر البحث عن المنتجات البديلة");
+    }
+  }
+
+  function getMaxReplacementQuantity(variant: VariantResult) {
+    const returnedQuantity = returnItems
+      .filter((item) => item.variantId === variant.id)
+      .reduce((sum, item) => sum + item.quantity, 0);
+    return variant.stockQuantity + returnedQuantity;
+  }
+
+  function addReplacementVariant(variant: VariantResult) {
+    const maxQuantity = getMaxReplacementQuantity(variant);
+    if (maxQuantity <= 0) return;
+    setReplacementItems((previous) => ({
+      ...previous,
+      [variant.id]: Math.min(previous[variant.id] ?? 1, maxQuantity),
+    }));
+  }
+
+  function updateReplacementQuantity(variant: VariantResult, quantity: number) {
+    const maxQuantity = getMaxReplacementQuantity(variant);
+    setReplacementItems((previous) => {
+      if (maxQuantity <= 0) {
+        const next = { ...previous };
+        delete next[variant.id];
+        return next;
+      }
+      return {
+        ...previous,
+        [variant.id]: Math.min(Math.max(1, quantity), maxQuantity),
+      };
+    });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!sale || returnItems.length === 0) {
-      setError("اختر منتجات للإرجاع");
+      setError(isExchange ? "اختر المنتجات المرتجعة والبديلة" : "اختر منتجات للإرجاع");
+      return;
+    }
+    if (isExchange && replacementCart.length === 0) {
+      setError("اختر منتجًا بديلاً واحدًا على الأقل");
+      return;
+    }
+    if (isExchange && replacementCart.some(
+      ({ variant, quantity }) => quantity > getMaxReplacementQuantity(variant),
+    )) {
+      setError("الكمية البديلة تتجاوز المخزون المتاح بعد المرتجع");
+      return;
+    }
+    if (isExchange && settlementBalance !== 0 && !settlementMethod) {
+      setError("اختر طريقة دفع أو رد الفرق");
       return;
     }
 
     setLoading(true);
-    const result = await createReturn({
-      saleId: sale.id,
-      items: returnItems,
-      refundMethod,
-      reason: reason || undefined,
-      notes: notes || undefined,
-    });
+    const result = isExchange
+      ? await createExchange({
+          originalSaleId: sale.id,
+          returnItems,
+          replacementItems: replacementCart.map(({ variant, quantity }) => ({
+            variantId: variant.id,
+            quantity,
+          })),
+          settlementMethod: settlementBalance === 0 ? undefined : settlementMethod,
+          expectedSettlementBalance: settlementBalance,
+          reason: reason || undefined,
+          notes: notes || undefined,
+        })
+      : await createReturn({
+          saleId: sale.id,
+          items: returnItems,
+          refundMethod,
+          reason: reason || undefined,
+          notes: notes || undefined,
+        });
     setLoading(false);
 
     if (result.success) {
+      if (isExchange && result.data && "settlementBalance" in result.data) {
+        setSuccess(
+          result.data.settlementBalance > 0
+            ? `تم الاستبدال وتحصيل ${formatCurrency(result.data.settlementBalance)}`
+            : result.data.settlementBalance < 0
+              ? `تم الاستبدال ورد ${formatCurrency(Math.abs(result.data.settlementBalance))}`
+              : "تم الاستبدال دون فرق مالي",
+        );
+      } else {
+        setSuccess("تم تسجيل المرتجع بنجاح");
+      }
       setModalOpen(false);
       setSale(null);
       setInvoiceSearch("");
+      setIsExchange(false);
+      setReplacementItems({});
+      setReplacementVariants([]);
+      setSelectedItems({});
       router.refresh();
     } else {
       setError(result.error ?? "حدث خطأ");
@@ -202,8 +334,21 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
 
   return (
     <>
+      {success && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {success}
+        </div>
+      )}
       <div className="flex justify-end mb-4">
-        <Button onClick={() => { setModalOpen(true); setError(""); setSale(null); }}>
+        <Button onClick={() => {
+          setModalOpen(true);
+          setError("");
+          setSale(null);
+          setSuccess("");
+          setIsExchange(false);
+          setReplacementItems({});
+          setReplacementVariants([]);
+        }}>
           <Plus className="h-4 w-4" />
           مرتجع جديد
         </Button>
@@ -253,15 +398,27 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="معالجة مرتجع"
+        title={isExchange ? "معالجة استبدال" : "معالجة مرتجع"}
         size="xl"
         footer={
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
               إلغاء
             </Button>
-            <Button type="submit" form="modal-form-return" loading={loading} disabled={!sale}>
-              تأكيد المرتجع
+            <Button
+              type="submit"
+              form="modal-form-return"
+              loading={loading}
+              disabled={
+                !sale ||
+                (isExchange &&
+                  (replacementCart.length === 0 ||
+                    replacementCart.some(
+                      ({ variant, quantity }) => quantity > getMaxReplacementQuantity(variant),
+                    )))
+              }
+            >
+              {isExchange ? "تأكيد الاستبدال" : "تأكيد المرتجع"}
             </Button>
           </div>
         }
@@ -293,6 +450,17 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
               <p className="text-sm font-medium text-brown">
                 فاتورة: {sale.invoiceNumber}
               </p>
+              <label className="flex items-center gap-2 text-sm font-medium text-brown">
+                <input
+                  type="checkbox"
+                  checked={isExchange}
+                  onChange={(event) => {
+                    setIsExchange(event.target.checked);
+                    setError("");
+                  }}
+                />
+                تنفيذ استبدال بمنتجات أخرى
+              </label>
               {sale.items.map((item) => {
                 const availableQuantity = getAvailableQuantity(item);
                 return (
@@ -343,23 +511,143 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
               })}
               {refundAmount > 0 && (
                 <p className="font-semibold text-brown">
-                  مبلغ الاسترداد: {formatCurrency(refundAmount)}
+                  {isExchange ? "صافي قيمة المنتجات المرتجعة" : "مبلغ الاسترداد"}:{" "}
+                  {formatCurrency(refundAmount)}
                 </p>
               )}
-              <div>
-                <label className="text-sm font-medium text-brown block mb-1.5">
-                  طريقة الاسترجاع
-                </label>
-                <select
-                  value={refundMethod}
-                  onChange={(e) => setRefundMethod(e.target.value as "CASH" | "INSTAPAY" | "WALLET")}
-                  className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm"
-                >
-                  <option value="CASH">كاش</option>
-                  <option value="INSTAPAY">إنستاباي</option>
-                  <option value="WALLET">محفظة</option>
-                </select>
-              </div>
+              {isExchange ? (
+                <div className="space-y-3 rounded-lg border border-gold/30 bg-cream/40 p-3">
+                  <div className="flex gap-2">
+                    <Input
+                      label="ابحث عن المنتج البديل"
+                      value={replacementSearch}
+                      onChange={(event) => setReplacementSearch(event.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="mt-6"
+                      onClick={searchReplacementVariants}
+                    >
+                      بحث
+                    </Button>
+                  </div>
+                  {replacementVariants.map((variant) => {
+                    const selected = replacementItems[variant.id] ?? 0;
+                    const maxQuantity = getMaxReplacementQuantity(variant);
+                    return (
+                      <div key={variant.id} className="flex items-center gap-3 rounded-lg border border-border bg-white p-3">
+                        <div className="flex-1 text-sm">
+                          <p className="font-medium">
+                            {variant.product.nameAr || variant.product.name}
+                          </p>
+                          <p className="text-muted">
+                            {variant.size}/{variant.color} — المخزون المتاح: {maxQuantity}
+                          </p>
+                        </div>
+                        <span className="text-sm text-gold">
+                          {formatCurrency(variant.sellingPrice)}
+                        </span>
+                        {selected > 0 ? (
+                          <>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={maxQuantity}
+                              value={selected}
+                              onChange={(event) =>
+                                updateReplacementQuantity(
+                                  variant,
+                                  parseInt(event.target.value, 10) || 1,
+                                )
+                              }
+                              className="w-20"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() =>
+                                setReplacementItems((previous) => {
+                                  const next = { ...previous };
+                                  delete next[variant.id];
+                                  return next;
+                                })
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={maxQuantity <= 0}
+                            onClick={() => addReplacementVariant(variant)}
+                          >
+                            إضافة
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {replacementCart.length > 0 && (
+                    <>
+                      <div className="space-y-1 border-t border-border pt-3 text-sm">
+                        <p>
+                          صافي المنتجات البديلة بعد العروض:{" "}
+                          <strong>{formatCurrency(replacementPricing.totalAmount)}</strong>
+                        </p>
+                        <p>
+                          صافي المرتجع: <strong>{formatCurrency(refundAmount)}</strong>
+                        </p>
+                        <p className="font-semibold text-brown">
+                          {settlementBalance > 0
+                            ? `المطلوب تحصيله: ${formatCurrency(settlementBalance)}`
+                            : settlementBalance < 0
+                              ? `المطلوب رده: ${formatCurrency(Math.abs(settlementBalance))}`
+                              : "لا يوجد فرق مالي"}
+                        </p>
+                      </div>
+                      {settlementBalance !== 0 && (
+                        <div>
+                          <label className="mb-1.5 block text-sm font-medium text-brown">
+                            طريقة تسوية الفرق
+                          </label>
+                          <select
+                            value={settlementMethod}
+                            onChange={(event) =>
+                              setSettlementMethod(event.target.value as "CASH" | "CARD" | "WALLET")
+                            }
+                            className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
+                          >
+                            <option value="CASH">كاش</option>
+                            <option value="CARD">بطاقة</option>
+                            <option value="WALLET">محفظة</option>
+                          </select>
+                        </div>
+                      )}
+                      <p className="text-xs text-muted">
+                        يعاد التحقق من الأسعار والعروض والمخزون على الخادم قبل اعتماد العملية.
+                      </p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="text-sm font-medium text-brown block mb-1.5">
+                    طريقة الاسترجاع
+                  </label>
+                  <select
+                    value={refundMethod}
+                    onChange={(e) => setRefundMethod(e.target.value as "CASH" | "INSTAPAY" | "WALLET")}
+                    className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm"
+                  >
+                    <option value="CASH">كاش</option>
+                    <option value="INSTAPAY">إنستاباي</option>
+                    <option value="WALLET">محفظة</option>
+                  </select>
+                </div>
+              )}
             </div>
           )}
 

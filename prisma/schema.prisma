@@ -48,6 +48,11 @@ enum ReturnStatus {
   REJECTED
 }
 
+enum ExchangeSettlementDirection {
+  COLLECTION
+  REFUND
+}
+
 enum StockMovementType {
   PURCHASE
   SALE
@@ -80,39 +85,39 @@ enum PromotionType {
 }
 
 model User {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  email     String   @unique
+  email     String    @unique
   password  String
   phone     String?
-  role      UserRole @default(CASHIER)
-  salary    Float    @default(0)
+  role      UserRole  @default(CASHIER)
+  salary    Float     @default(0)
   startDate DateTime?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
-  sales                Sale[]
-  purchases            Purchase[]
-  returns              Return[]
-  stockMovements       StockMovement[]
-  expenses             Expense[]            @relation("RecordedExpenses")
-  salaryExpenses       Expense[]            @relation("SalaryExpenses")
-  employeeAdjustments  EmployeeAdjustment[] @relation("EmployeeAdjustments")
-  adjustmentsCreated   EmployeeAdjustment[] @relation("AdjustmentsCreated")
+  sales               Sale[]
+  purchases           Purchase[]
+  returns             Return[]
+  stockMovements      StockMovement[]
+  expenses            Expense[]            @relation("RecordedExpenses")
+  salaryExpenses      Expense[]            @relation("SalaryExpenses")
+  employeeAdjustments EmployeeAdjustment[] @relation("EmployeeAdjustments")
+  adjustmentsCreated  EmployeeAdjustment[] @relation("AdjustmentsCreated")
 }
 
 model Category {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   nameAr      String?
   description String?
   imageUrl    String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  products    Product[]
+  products   Product[]
   promotions Promotion[]
 }
 
@@ -165,25 +170,25 @@ model Product {
 }
 
 model GlobalColor {
-  id        String         @id @default(cuid())
-  name      String         @unique
+  id        String   @id @default(cuid())
+  name      String   @unique
   hexCode   String
-  createdAt DateTime       @default(now())
+  createdAt DateTime @default(now())
 
   productColors   ProductColor[]
   productVariants ProductVariant[]
 }
 
 model ProductColor {
-  id            String       @id @default(cuid())
+  id            String   @id @default(cuid())
   productId     String
   color         String
   colorHex      String?
   globalColorId String?
-  sortOrder     Int          @default(0)
-  isActive      Boolean      @default(true)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  sortOrder     Int      @default(0)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   product     Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
   globalColor GlobalColor?   @relation(fields: [globalColorId], references: [id], onDelete: Restrict)
@@ -268,16 +273,16 @@ model Image {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String   @unique
-  email     String?
-  address   String?
-  notes     String?
-  totalSpent Float   @default(0)
-  visitCount Int     @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  name       String
+  phone      String   @unique
+  email      String?
+  address    String?
+  notes      String?
+  totalSpent Float    @default(0)
+  visitCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   sales   Sale[]
   returns Return[]
@@ -298,31 +303,33 @@ model Supplier {
 }
 
 model Sale {
-  id              String        @id @default(cuid())
-  invoiceNumber   String        @unique
-  channel         SalesChannel  @default(POS)
-  customerId      String?
-  userId          String
-  subtotal        Float
-  discountAmount  Float         @default(0)
-  discountPercent Float         @default(0)
-  appliedPromotions Json        @default("[]")
-  taxAmount       Float         @default(0)
-  totalAmount     Float
-  tenderedAmount  Float         @default(0)
-  paidAmount      Float
-  changeAmount    Float         @default(0)
-  paymentMethod   PaymentMethod? @default(CASH)
-  status          SaleStatus    @default(COMPLETED)
-  notes           String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                String         @id @default(cuid())
+  invoiceNumber     String         @unique
+  channel           SalesChannel   @default(POS)
+  customerId        String?
+  userId            String
+  subtotal          Float
+  discountAmount    Float          @default(0)
+  discountPercent   Float          @default(0)
+  appliedPromotions Json           @default("[]")
+  taxAmount         Float          @default(0)
+  totalAmount       Float
+  tenderedAmount    Float          @default(0)
+  paidAmount        Float
+  changeAmount      Float          @default(0)
+  paymentMethod     PaymentMethod? @default(CASH)
+  status            SaleStatus     @default(COMPLETED)
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
-  customer Customer?  @relation(fields: [customerId], references: [id])
-  user     User       @relation(fields: [userId], references: [id])
-  items    SaleItem[]
-  returns  Return[]
-  payments Payment[]
+  customer              Customer?  @relation(fields: [customerId], references: [id])
+  user                  User       @relation(fields: [userId], references: [id])
+  items                 SaleItem[]
+  returns               Return[]
+  payments              Payment[]
+  exchangesAsOriginal   Exchange[] @relation("ExchangeOriginalSale")
+  exchangeAsReplacement Exchange?  @relation("ExchangeReplacementSale")
 
   @@index([customerId])
   @@index([userId])
@@ -332,11 +339,11 @@ model Sale {
 }
 
 model Payment {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   orderId   String
   amount    Float
   method    PaymentMethod
-  createdAt DateTime @default(now())
+  createdAt DateTime      @default(now())
 
   sale Sale @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
@@ -345,17 +352,17 @@ model Payment {
 }
 
 model SaleItem {
-  id               String @id @default(cuid())
-  saleId           String
-  variantId        String
-  quantity         Int
-  unitPrice        Float
-  costPrice        Float  @default(0)
-  discountAmount   Float  @default(0)
-  totalPrice       Float
+  id             String @id @default(cuid())
+  saleId         String
+  variantId      String
+  quantity       Int
+  unitPrice      Float
+  costPrice      Float  @default(0)
+  discountAmount Float  @default(0)
+  totalPrice     Float
 
-  sale    Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  variant ProductVariant @relation(fields: [variantId], references: [id])
+  sale        Sale           @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  variant     ProductVariant @relation(fields: [variantId], references: [id])
   returnItems ReturnItem[]
 
   @@index([saleId])
@@ -403,24 +410,25 @@ model PurchaseItem {
 }
 
 model Return {
-  id            String         @id @default(cuid())
-  returnNumber  String         @unique
-  saleId        String
-  customerId    String?
-  userId        String
-  totalAmount   Float
-  refundAmount  Float
-  refundMethod  PaymentMethod?
-  reason        String?
-  status        ReturnStatus   @default(APPROVED)
-  notes         String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id           String         @id @default(cuid())
+  returnNumber String         @unique
+  saleId       String
+  customerId   String?
+  userId       String
+  totalAmount  Float
+  refundAmount Float
+  refundMethod PaymentMethod?
+  reason       String?
+  status       ReturnStatus   @default(APPROVED)
+  notes        String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   sale     Sale         @relation(fields: [saleId], references: [id])
   customer Customer?    @relation(fields: [customerId], references: [id])
   user     User         @relation(fields: [userId], references: [id])
   items    ReturnItem[]
+  exchange Exchange?
 
   @@index([saleId])
   @@index([customerId])
@@ -429,22 +437,54 @@ model Return {
 }
 
 model ReturnItem {
-  id         String @id @default(cuid())
+  id         String  @id @default(cuid())
   returnId   String
   variantId  String
   saleItemId String?
   quantity   Int
   unitPrice  Float
-  costPrice  Float  @default(0)
+  costPrice  Float   @default(0)
   totalPrice Float
 
-  return  Return         @relation(fields: [returnId], references: [id], onDelete: Cascade)
-  variant ProductVariant @relation(fields: [variantId], references: [id])
-  saleItem SaleItem?     @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
+  return   Return         @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  variant  ProductVariant @relation(fields: [variantId], references: [id])
+  saleItem SaleItem?      @relation(fields: [saleItemId], references: [id], onDelete: SetNull)
 
   @@index([returnId])
   @@index([variantId])
   @@index([saleItemId])
+}
+
+model Exchange {
+  id                String   @id @default(cuid())
+  exchangeNumber    String   @unique
+  originalSaleId    String
+  returnId          String   @unique
+  replacementSaleId String   @unique
+  settlementBalance Float
+  createdAt         DateTime @default(now())
+
+  originalSale    Sale                 @relation("ExchangeOriginalSale", fields: [originalSaleId], references: [id])
+  return          Return               @relation(fields: [returnId], references: [id])
+  replacementSale Sale                 @relation("ExchangeReplacementSale", fields: [replacementSaleId], references: [id])
+  settlements     ExchangeSettlement[]
+
+  @@index([originalSaleId])
+  @@index([createdAt])
+}
+
+model ExchangeSettlement {
+  id         String                      @id @default(cuid())
+  exchangeId String
+  direction  ExchangeSettlementDirection
+  amount     Float
+  method     PaymentMethod
+  createdAt  DateTime                    @default(now())
+
+  exchange Exchange @relation(fields: [exchangeId], references: [id], onDelete: Cascade)
+
+  @@index([exchangeId])
+  @@index([method, createdAt])
 }
 
 model StockMovement {
@@ -516,10 +556,10 @@ model EmployeeAdjustment {
 }
 
 model InvoiceSequence {
-  id        String @id @default(cuid())
+  id        String   @id @default(cuid())
   prefix    String // INV, PUR, RET
   dateKey   String // YYYYMMDD format (e.g., 20260814)
-  sequence  Int    @default(0) // Auto-incrementing counter per day per prefix
+  sequence  Int      @default(0) // Auto-incrementing counter per day per prefix
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -70,6 +70,13 @@ type SaleReturn = {
   items: ReturnItem[];
 };
 
+type SaleExchange = {
+  id: string;
+  exchangeNumber: string;
+  settlementBalance: number;
+  replacementSale: { invoiceNumber: string };
+};
+
 type SalePayment = {
   method: string;
   amount: number;
@@ -90,6 +97,13 @@ type SaleData = {
   createdAt: Date;
   paymentMethod: string | null;
   payments: SalePayment[];
+  exchangesAsOriginal: SaleExchange[];
+  exchangeAsReplacement: {
+    id: string;
+    exchangeNumber: string;
+    settlementBalance: number;
+    originalSale: { invoiceNumber: string };
+  } | null;
   customer: { name: string; phone: string | null } | null;
   user: { name: string };
   items: SaleItem[];
@@ -190,7 +204,9 @@ export default function SaleDetailsModal({
       calculatedRemaining: historicalRemaining,
     });
   }
-  const paymentSummaryText = salePaymentSummary
+  const paymentSummaryText = sale?.exchangeAsReplacement
+    ? "تسوية استبدال"
+    : salePaymentSummary
     ? salePaymentSummary.normalizedPayments.length > 1
       ? salePaymentSummary.normalizedPayments
           .map(
@@ -432,7 +448,46 @@ export default function SaleDetailsModal({
                             </table>
                           </div>
                         </div>
-                      ))}
+                      )                      )}
+
+                      {(sale.exchangesAsOriginal.length > 0 || sale.exchangeAsReplacement) && (
+                        <div className="mt-6 border-t border-border pt-6">
+                          <h3 className="text-lg font-semibold text-brown mb-4">
+                            سجل الاستبدال
+                          </h3>
+                          <div className="space-y-3">
+                            {sale.exchangesAsOriginal.map((exchange) => (
+                              <div key={exchange.id} className="rounded-lg border border-gold/30 bg-cream/50 p-4">
+                                <p className="font-medium text-brown">
+                                  {exchange.exchangeNumber} — فاتورة بديلة: {exchange.replacementSale.invoiceNumber}
+                                </p>
+                                <p className="mt-1 text-sm text-muted">
+                                  {exchange.settlementBalance > 0
+                                    ? `تم تحصيل ${formatCurrency(exchange.settlementBalance)}`
+                                    : exchange.settlementBalance < 0
+                                      ? `تم رد ${formatCurrency(Math.abs(exchange.settlementBalance))}`
+                                      : "تم الاستبدال دون فرق مالي"}
+                                </p>
+                              </div>
+                            ))}
+                            {sale.exchangeAsReplacement && (
+                              <div className="rounded-lg border border-gold/30 bg-cream/50 p-4">
+                                <p className="font-medium text-brown">
+                                  {sale.exchangeAsReplacement.exchangeNumber} — الفاتورة الأصلية: {sale.exchangeAsReplacement.originalSale.invoiceNumber}
+                                </p>
+                                <p className="mt-1 text-sm text-muted">
+                                  {sale.exchangeAsReplacement.settlementBalance > 0
+                                    ? `تم تحصيل ${formatCurrency(sale.exchangeAsReplacement.settlementBalance)}`
+                                    : sale.exchangeAsReplacement.settlementBalance < 0
+                                      ? `تم رد ${formatCurrency(Math.abs(sale.exchangeAsReplacement.settlementBalance))}`
+                                      : "تم الاستبدال دون فرق مالي"}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                   </div>
                 </div>
               )}

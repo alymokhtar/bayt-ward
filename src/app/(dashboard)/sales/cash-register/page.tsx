@@ -396,7 +396,7 @@ export default function CashRegisterPage() {
                       <div key={item.method} className="space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="text-muted">
-                            {getPaymentMethodLabel(item.method)} ({item.count} فاتورة)
+                            {getPaymentMethodLabel(item.method)} ({item.count} حركة)
                           </span>
                           <span className="font-medium">
                             {formatCurrency(item.net)}

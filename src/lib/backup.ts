@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export const BACKUP_VERSION = 2 as const;
+export const BACKUP_VERSION = 3 as const;
 
 type BackupRow = Record<string, unknown>;
 
@@ -23,6 +23,8 @@ export interface BackupPayload {
     purchaseItems: BackupRow[];
     returns: BackupRow[];
     returnItems: BackupRow[];
+    exchanges: BackupRow[];
+    exchangeSettlements: BackupRow[];
     stockMovements: BackupRow[];
     expenses: BackupRow[];
     employeeAdjustments: BackupRow[];
@@ -51,6 +53,8 @@ export interface BackupRestoreCounts {
   purchaseItems: number;
   returns: number;
   returnItems: number;
+  exchanges: number;
+  exchangeSettlements: number;
   stockMovements: number;
   expenses: number;
   employeeAdjustments: number;
@@ -102,6 +106,8 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
     purchaseItems,
     returns,
     returnItems,
+    exchanges,
+    exchangeSettlements,
     stockMovements,
     expenses,
     employeeAdjustments,
@@ -121,6 +127,8 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
     prisma.purchaseItem.findMany({ orderBy: { id: "asc" } }),
     prisma.return.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.returnItem.findMany({ orderBy: { id: "asc" } }),
+    prisma.exchange.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.exchangeSettlement.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.stockMovement.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.expense.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.employeeAdjustment.findMany({ orderBy: { createdAt: "asc" } }),
@@ -145,6 +153,8 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
       purchaseItems: cloneRecords(purchaseItems),
       returns: cloneRecords(returns),
       returnItems: cloneRecords(returnItems),
+      exchanges: cloneRecords(exchanges),
+      exchangeSettlements: cloneRecords(exchangeSettlements),
       stockMovements: cloneRecords(stockMovements),
       expenses: cloneRecords(expenses),
       employeeAdjustments: cloneRecords(employeeAdjustments),
@@ -154,7 +164,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
 
 function normalizeBackupPayload(payload: BackupPayload | BackupPayloadLike): BackupPayload["data"] {
   const version = Number(payload.version ?? 0);
-  if (version !== BACKUP_VERSION && version !== 1) {
+  if (version !== BACKUP_VERSION && version !== 2 && version !== 1) {
     throw new Error("UNSUPPORTED_BACKUP_VERSION");
   }
 
@@ -180,6 +190,10 @@ function normalizeBackupPayload(payload: BackupPayload | BackupPayloadLike): Bac
     purchaseItems: Array.isArray(data.purchaseItems) ? data.purchaseItems : [],
     returns: Array.isArray(data.returns) ? data.returns : [],
     returnItems: Array.isArray(data.returnItems) ? data.returnItems : [],
+    exchanges: Array.isArray(data.exchanges) ? data.exchanges : [],
+    exchangeSettlements: Array.isArray(data.exchangeSettlements)
+      ? data.exchangeSettlements
+      : [],
     stockMovements: Array.isArray(data.stockMovements) ? data.stockMovements : [],
     expenses: Array.isArray(data.expenses) ? data.expenses : [],
     employeeAdjustments: Array.isArray(data.employeeAdjustments)
@@ -381,12 +395,32 @@ export async function restoreBackupSnapshot(
       id: String(row.id),
       returnId,
       variantId,
+      saleItemId: toNullableString(row.saleItemId),
       quantity: Number(row.quantity ?? 0),
       unitPrice: Number(row.unitPrice ?? 0),
       costPrice: toNullableNumber(row.costPrice) ?? originalSaleCost ?? variantCostById.get(variantId) ?? 0,
       totalPrice: Number(row.totalPrice ?? 0),
     };
   });
+
+  const exchanges = data.exchanges.map((row) => ({
+    id: String(row.id),
+    exchangeNumber: String(row.exchangeNumber),
+    originalSaleId: String(row.originalSaleId),
+    returnId: String(row.returnId),
+    replacementSaleId: String(row.replacementSaleId),
+    settlementBalance: Number(row.settlementBalance ?? 0),
+    createdAt: toDate(row.createdAt),
+  }));
+
+  const exchangeSettlements = data.exchangeSettlements.map((row) => ({
+    id: String(row.id),
+    exchangeId: String(row.exchangeId),
+    direction: row.direction as "COLLECTION" | "REFUND",
+    amount: Number(row.amount ?? 0),
+    method: row.method as "CASH" | "CARD" | "WALLET",
+    createdAt: toDate(row.createdAt),
+  }));
 
   const stockMovements = data.stockMovements.map((row) => ({
     id: String(row.id),
@@ -444,6 +478,8 @@ export async function restoreBackupSnapshot(
   }));
 
   await prisma.$transaction(async (tx) => {
+    await tx.exchangeSettlement.deleteMany();
+    await tx.exchange.deleteMany();
     await tx.returnItem.deleteMany();
     await tx.purchaseItem.deleteMany();
     await tx.saleItem.deleteMany();
@@ -480,6 +516,8 @@ export async function restoreBackupSnapshot(
     await tx.saleItem.createMany({ data: saleItems as never[] });
     await tx.purchaseItem.createMany({ data: purchaseItems as never[] });
     await tx.returnItem.createMany({ data: returnItems as never[] });
+    await tx.exchange.createMany({ data: exchanges as never[] });
+    await tx.exchangeSettlement.createMany({ data: exchangeSettlements as never[] });
     await tx.stockMovement.createMany({ data: stockMovements as never[] });
   });
 
@@ -499,6 +537,8 @@ export async function restoreBackupSnapshot(
     purchaseItems: purchaseItems.length,
     returns: returns.length,
     returnItems: returnItems.length,
+    exchanges: exchanges.length,
+    exchangeSettlements: exchangeSettlements.length,
     stockMovements: stockMovements.length,
     expenses: expenses.length,
     employeeAdjustments: employeeAdjustments.length,

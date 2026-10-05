@@ -272,6 +272,23 @@ export async function getSale(id: string) {
           },
         },
       },
+      exchangesAsOriginal: {
+        select: {
+          id: true,
+          exchangeNumber: true,
+          settlementBalance: true,
+          replacementSale: { select: { id: true, invoiceNumber: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      exchangeAsReplacement: {
+        select: {
+          id: true,
+          exchangeNumber: true,
+          settlementBalance: true,
+          originalSale: { select: { id: true, invoiceNumber: true } },
+        },
+      },
     },
   });
 
