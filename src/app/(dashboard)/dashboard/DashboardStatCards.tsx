@@ -1,8 +1,9 @@
 import { Card, CardContent } from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
 import { getDashboardKpis } from "@/lib/actions/dashboard";
 import { getSession } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
-import { Package, Receipt, RotateCcw, ShoppingCart, TrendingUp, Users, Wallet } from "lucide-react";
+import { Package, Receipt, RotateCcw, ShoppingCart, TrendingUp, Users, Wallet, type LucideIcon } from "lucide-react";
 
 export default async function DashboardStatCards() {
   const [kpis, session] = await Promise.all([
@@ -11,7 +12,14 @@ export default async function DashboardStatCards() {
   ]);
   const isCashier = session?.role === "CASHIER";
 
-  const statCards = [
+  const statCards: {
+    title: string;
+    value: string;
+    sub: string;
+    icon: LucideIcon;
+    color: string;
+    isPrimary?: boolean;
+  }[] = [
     {
       title: "إجمالي مبيعات اليوم",
       value: formatCurrency(kpis.todayGrossSales),
@@ -39,6 +47,7 @@ export default async function DashboardStatCards() {
       sub: "بعد خصم المرتجعات والمصروفات",
       icon: Wallet,
       color: "bg-green-100 text-green-700",
+      isPrimary: true,
     },
     ...(!isCashier
       ? [
@@ -72,18 +81,31 @@ export default async function DashboardStatCards() {
       {statCards.map((card) => {
         const Icon = card.icon;
         return (
-          <Card key={card.title}>
+          <Card
+            key={card.title}
+            className={card.isPrimary
+              ? "border-2 border-gold/40 bg-gradient-to-br from-gold/15 via-card to-brown/5 shadow-md shadow-gold/10"
+              : undefined}
+          >
             <CardContent className="pt-6">
               <div className="flex items-start justify-between">
-                <div>
+                <div className="min-w-0">
+                  {card.isPrimary && (
+                    <Badge variant="gold" className="mb-2 gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      المؤشر الرئيسي
+                    </Badge>
+                  )}
                   <p className="text-sm text-muted">{card.title}</p>
-                  <p className="text-2xl font-bold text-brown mt-1">
+                  <p className={`mt-1 break-words font-black text-brown ${
+                    card.isPrimary ? "text-2xl sm:text-3xl" : "text-2xl"
+                  }`}>
                     {card.value}
                   </p>
                   <p className="text-xs text-muted mt-1">{card.sub}</p>
                 </div>
                 <div
-                  className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.color}`}
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${card.color}`}
                 >
                   <Icon className="h-5 w-5" />
                 </div>

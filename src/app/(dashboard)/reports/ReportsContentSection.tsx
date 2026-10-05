@@ -13,6 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
+import { TrendingUp } from "lucide-react";
 import {
   getInventoryReport,
   getProfitReport,
@@ -71,6 +72,7 @@ export default async function ReportsContentSection({
           <StatCard
             title="صافي المبيعات"
             value={formatCurrency(salesReport.netSales)}
+            isPrimary
           />
           <StatCard title="متوسط قيمة الفاتورة (AOV)" value={formatCurrency(salesReport.averageSale)} />
           <StatCard title="عدد الطلبات / الفواتير" value={salesReport.salesCount.toLocaleString("ar-EG-u-nu-latn")} />
@@ -253,18 +255,32 @@ function StatCard({
   title,
   value,
   highlight,
+  isPrimary,
 }: {
   title: string;
   value: string;
   highlight?: boolean;
+  isPrimary?: boolean;
 }) {
   return (
-    <Card>
+    <Card
+      className={isPrimary
+        ? "border-2 border-gold/40 bg-gradient-to-br from-gold/15 via-card to-brown/5 shadow-md shadow-gold/10"
+        : undefined}
+    >
       <CardContent className="pt-6">
+        {isPrimary && (
+          <span className="mb-2 inline-flex items-center gap-1 rounded-full border border-gold/30 bg-gold/15 px-2.5 py-0.5 text-xs font-medium text-gold-dark">
+            <TrendingUp className="h-3 w-3" />
+            المؤشر الرئيسي
+          </span>
+        )}
         <p className="text-sm text-muted">{title}</p>
         <p
-          className={`text-2xl font-bold mt-1 ${
-            highlight ? "text-gold" : "text-brown"
+          className={`mt-1 break-words ${
+            isPrimary ? "text-2xl font-black sm:text-3xl" : "text-2xl font-bold"
+          } ${
+            highlight && !isPrimary ? "text-gold" : "text-brown"
           }`}
         >
           {value}
