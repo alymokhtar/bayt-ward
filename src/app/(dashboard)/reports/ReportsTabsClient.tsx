@@ -2,6 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import {
+  normalizeBusinessDateRange,
   getReportPeriodRange,
   type ReportPeriod,
 } from "@/lib/business-day";
@@ -44,8 +45,12 @@ export default function ReportsTabsClient({
   const [isPending, startTransition] = useTransition();
   const [dateFromDraft, setDateFromDraft] = useState<DateDraft>(null);
   const [dateToDraft, setDateToDraft] = useState<DateDraft>(null);
-  const appliedFrom = searchParams.get("from") || from;
-  const appliedTo = searchParams.get("to") || to;
+  const appliedRange = normalizeBusinessDateRange(
+    searchParams.get("from") ?? from,
+    searchParams.get("to") ?? to,
+  );
+  const appliedFrom = appliedRange.from ?? from;
+  const appliedTo = appliedRange.to ?? to;
   const dateFrom = dateFromDraft?.base === appliedFrom ? dateFromDraft.value : appliedFrom;
   const dateTo = dateToDraft?.base === appliedTo ? dateToDraft.value : appliedTo;
   const queryChannel = searchParams.get("channel");
@@ -80,12 +85,15 @@ export default function ReportsTabsClient({
   }
 
   function applyDates() {
+    const normalizedRange = normalizeBusinessDateRange(dateFrom, dateTo);
+    const nextFrom = normalizedRange.from ?? from;
+    const nextTo = normalizedRange.to ?? to;
     const params = new URLSearchParams(searchParams.toString());
-    params.set("from", dateFrom);
-    params.set("to", dateTo);
+    params.set("from", nextFrom);
+    params.set("to", nextTo);
     params.set("period", "custom");
-    setDateFromDraft({ base: dateFrom, value: dateFrom });
-    setDateToDraft({ base: dateTo, value: dateTo });
+    setDateFromDraft({ base: nextFrom, value: nextFrom });
+    setDateToDraft({ base: nextTo, value: nextTo });
     navigate(params);
   }
 

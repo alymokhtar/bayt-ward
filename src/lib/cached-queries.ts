@@ -966,25 +966,10 @@ export const getCachedSalesReport = unstable_cache(
     };
     } catch (error) {
       console.error("❌ Error in getCachedSalesReport:", {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        error,
         paramsJson,
       });
-      // إرجاع بيانات فارغة بدلاً من انهيار الصفحة
-      return {
-        period: { from: new Date(), to: new Date() },
-        totalSales: 0,
-        grossSalesBeforeDiscount: 0,
-        salesCount: 0,
-        averageSale: 0,
-        totalDiscount: 0,
-        totalTax: 0,
-        netSales: 0,
-        returnsCount: 0,
-        totalReturns: 0,
-        totalExpenses: 0,
-        salesList: [],
-      };
+      throw error;
     }
   },
   ["sales-report"],
@@ -1200,24 +1185,10 @@ export const getCachedProfitReport = unstable_cache(
     };
     } catch (error) {
       console.error("❌ Error in getCachedProfitReport:", {
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        error,
         paramsJson,
       });
-      return {
-        period: { from: new Date(), to: new Date() },
-        revenue: 0,
-        netRevenue: 0,
-        costOfGoodsSold: 0,
-        grossProfit: 0,
-        totalReturns: 0,
-        totalExpenses: 0,
-        expensesCount: 0,
-        netProfit: 0,
-        profitMargin: 0,
-        purchasesTotal: 0,
-        purchasesCount: 0,
-      };
+      throw error;
     }
   },
   ["profit-report"],

@@ -96,3 +96,43 @@ test("returns a zero profit margin when revenue is zero or fully returned", () =
   assert.equal(noRevenue.profitMargin, 0);
   assert.equal(fullyReturned.profitMargin, 0);
 });
+
+test("sanitizes non-finite profit inputs and outputs independently", () => {
+  const invalidRevenue = calculateProfitMetrics({
+    revenue: Number.NaN,
+    totalReturns: 10,
+    costOfGoodsSold: 5,
+    totalExpenses: 2,
+  });
+  const invalidCogs = calculateProfitMetrics({
+    revenue: 100,
+    totalReturns: 10,
+    costOfGoodsSold: Number.POSITIVE_INFINITY,
+    totalExpenses: 5,
+  });
+  const overflow = calculateProfitMetrics({
+    revenue: Number.MAX_VALUE,
+    totalReturns: -Number.MAX_VALUE,
+    costOfGoodsSold: 0,
+    totalExpenses: 0,
+  });
+
+  assert.deepEqual(invalidRevenue, {
+    netRevenue: -10,
+    grossProfit: -15,
+    netProfit: -17,
+    profitMargin: 0,
+  });
+  assert.deepEqual(invalidCogs, {
+    netRevenue: 90,
+    grossProfit: 90,
+    netProfit: 85,
+    profitMargin: 94.44444444444444,
+  });
+  assert.deepEqual(overflow, {
+    netRevenue: 0,
+    grossProfit: 0,
+    netProfit: 0,
+    profitMargin: 0,
+  });
+});

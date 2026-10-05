@@ -139,6 +139,24 @@ export function parseDateKey(dateKey: string) {
   return { year, month, day };
 }
 
+export function isValidDateKey(dateKey: string | undefined): dateKey is string {
+  if (!dateKey || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return false;
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === dateKey;
+}
+
+export function normalizeBusinessDateRange(from?: string, to?: string) {
+  let normalizedFrom = isValidDateKey(from) ? from : undefined;
+  let normalizedTo = isValidDateKey(to) ? to : undefined;
+
+  if (normalizedFrom && normalizedTo && normalizedFrom > normalizedTo) {
+    [normalizedFrom, normalizedTo] = [normalizedTo, normalizedFrom];
+  }
+
+  return { from: normalizedFrom, to: normalizedTo };
+}
+
 /** UTC instant for noon on a Cairo calendar day — safe for date-only DB fields. */
 export function dateKeyToUtcNoon(dateKey: string) {
   const { year, month, day } = parseDateKey(dateKey);
@@ -147,6 +165,9 @@ export function dateKeyToUtcNoon(dateKey: string) {
 }
 
 export function getBusinessDayBoundsForDateKey(dateKey: string) {
+  if (!isValidDateKey(dateKey)) {
+    throw new RangeError(`Invalid business date key: ${dateKey}`);
+  }
   const { year, month, day } = parseDateKey(dateKey);
   const nextDay = addDaysToDateParts(year, month, day, 1);
 
@@ -169,8 +190,13 @@ export function getBusinessDayBoundsFromDateKeys(from?: string, to?: string) {
   const todayKey = getEgyptBusinessDateKey();
   const { year, month } = getEgyptBusinessDateParts();
   const defaultFrom = formatDateKey(year, month, 1);
-  const fromKey = from || defaultFrom;
-  const toKey = to || todayKey;
+  const normalizedRange = normalizeBusinessDateRange(from, to);
+  const effectiveRange = normalizeBusinessDateRange(
+    normalizedRange.from ?? defaultFrom,
+    normalizedRange.to ?? todayKey,
+  );
+  const fromKey = effectiveRange.from ?? defaultFrom;
+  const toKey = effectiveRange.to ?? todayKey;
   const fromBounds = getBusinessDayBoundsForDateKey(fromKey);
   const toBounds = getBusinessDayBoundsForDateKey(toKey);
 

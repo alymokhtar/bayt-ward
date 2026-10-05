@@ -3,8 +3,11 @@ import test from "node:test";
 import {
   BUSINESS_TIME_ZONE,
   getBusinessDayBoundsForDateKey,
+  getBusinessDayBoundsFromDateKeys,
   getEgyptBusinessDateKey,
   getEgyptBusinessDateStamp,
+  isValidDateKey,
+  normalizeBusinessDateRange,
 } from "./business-day";
 
 function cairoDateTime(date: Date): string {
@@ -55,4 +58,29 @@ test("covers the Cairo business day across the end of daylight saving time", () 
   assert.equal(getEgyptBusinessDateKey(end), "2026-10-30");
   assert.equal(getEgyptBusinessDateStamp(new Date(start.getTime() - 1)), "20261028");
   assert.equal(getEgyptBusinessDateStamp(start), "20261029");
+});
+
+test("normalizes reversed business date ranges without reversing their UTC bounds", () => {
+  const normalized = normalizeBusinessDateRange("2026-10-05", "2026-10-01");
+  const { start, end } = getBusinessDayBoundsFromDateKeys(
+    "2026-10-05",
+    "2026-10-01",
+  );
+  const expected = getBusinessDayBoundsFromDateKeys("2026-10-01", "2026-10-05");
+
+  assert.deepEqual(normalized, { from: "2026-10-01", to: "2026-10-05" });
+  assert.equal(start.getTime(), expected.start.getTime());
+  assert.equal(end.getTime(), expected.end.getTime());
+  assert.ok(start < end);
+});
+
+test("rejects malformed and impossible date keys when normalizing ranges", () => {
+  assert.equal(isValidDateKey("2026-10-06"), true);
+  assert.equal(isValidDateKey("2026-02-29"), false);
+  assert.equal(isValidDateKey("2026-13-01"), false);
+  assert.equal(isValidDateKey("06-10-2026"), false);
+  assert.deepEqual(
+    normalizeBusinessDateRange("2026-02-30", "2026-10-06"),
+    { from: undefined, to: "2026-10-06" },
+  );
 });

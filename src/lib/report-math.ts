@@ -79,10 +79,17 @@ export function calculateProfitMetrics({
   costOfGoodsSold,
   totalExpenses,
 }: ProfitMetricsInput): ProfitMetricsResult {
-  const netRevenue = revenue - totalReturns;
-  const grossProfit = netRevenue - costOfGoodsSold;
-  const netProfit = grossProfit - totalExpenses;
-  const profitMargin = netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0;
+  const finiteOrZero = (value: number) => Number.isFinite(value) ? value : 0;
+  const safeRevenue = finiteOrZero(revenue);
+  const safeReturns = finiteOrZero(totalReturns);
+  const safeCostOfGoodsSold = finiteOrZero(costOfGoodsSold);
+  const safeExpenses = finiteOrZero(totalExpenses);
+  const netRevenue = finiteOrZero(safeRevenue - safeReturns);
+  const grossProfit = finiteOrZero(netRevenue - safeCostOfGoodsSold);
+  const netProfit = finiteOrZero(grossProfit - safeExpenses);
+  const profitMargin = finiteOrZero(
+    netRevenue > 0 ? (netProfit / netRevenue) * 100 : 0,
+  );
 
   return {
     netRevenue,

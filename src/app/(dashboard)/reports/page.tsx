@@ -5,6 +5,7 @@ import ReportsContentSection from "@/app/(dashboard)/reports/ReportsContentSecti
 import {
   detectReportPeriod,
   getReportPeriodRange,
+  normalizeBusinessDateRange,
 } from "@/lib/business-day";
 import { getSession } from "@/lib/auth";
 import type { SalesChannelFilter } from "@/lib/sales-analytics";
@@ -46,11 +47,19 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     : "ALL";
 
   const todayRange = getReportPeriodRange("today");
-  const from = params.from || todayRange.from;
-  const to = params.to || todayRange.to;
+  const normalizedRange = normalizeBusinessDateRange(
+    typeof params.from === "string" ? params.from : undefined,
+    typeof params.to === "string" ? params.to : undefined,
+  );
+  const effectiveRange = normalizeBusinessDateRange(
+    normalizedRange.from ?? todayRange.from,
+    normalizedRange.to ?? todayRange.to,
+  );
+  const from = effectiveRange.from ?? todayRange.from;
+  const to = effectiveRange.to ?? todayRange.to;
   const period =
     params.period ||
-    (params.from || params.to
+    (normalizedRange.from || normalizedRange.to
       ? detectReportPeriod(from, to)
       : "today");
 
