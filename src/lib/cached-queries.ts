@@ -34,10 +34,10 @@ type KpiData = {
 
 /** Dashboard aggregates — cached 30s, invalidated on sales/inventory mutations */
 /** KPIs in a single SQL round-trip (replaces 5 separate Prisma calls) */
-export const getCachedDashboardKpis = unstable_cache(
-  async (): Promise<KpiData> => {
+const getCachedDashboardKpisForBusinessDate = unstable_cache(
+  async (businessDateKey: string): Promise<KpiData> => {
     try {
-      const now = new Date();
+      const now = getBusinessDayBoundsForDateKey(businessDateKey).start;
     const { start: todayStart, end: todayEnd } = getEgyptBusinessDayBounds(now);
     const monthRange = getReportPeriodRange("month");
     const { start: monthStart, end: monthEnd } = getBusinessDayBoundsFromDateKeys(
@@ -152,11 +152,15 @@ export const getCachedDashboardKpis = unstable_cache(
   }
 );
 
+export function getCachedDashboardKpis() {
+  return getCachedDashboardKpisForBusinessDate(getEgyptBusinessDateKey());
+}
+
 /** 7-day chart grouped by Egypt business day (03:00 → 03:00 Cairo). */
-export const getCachedSalesChartData = unstable_cache(
-  async () => {
+const getCachedSalesChartDataForBusinessDate = unstable_cache(
+  async (businessDateKey: string) => {
     try {
-      const now = new Date();
+      const now = getBusinessDayBoundsForDateKey(businessDateKey).start;
     const salesChartData: { date: string; total: number; count: number }[] = [];
 
     for (let i = 6; i >= 0; i--) {
@@ -207,7 +211,7 @@ export const getCachedSalesChartData = unstable_cache(
         stack: error instanceof Error ? error.stack : undefined,
       });
       // إرجاع بيانات فارغة للـ 7 أيام الماضية
-      const now = new Date();
+      const now = getBusinessDayBoundsForDateKey(businessDateKey).start;
       const emptyChartData = [];
       for (let i = 6; i >= 0; i--) {
         emptyChartData.push({
@@ -225,6 +229,10 @@ export const getCachedSalesChartData = unstable_cache(
     revalidate: READ_CACHE_SECONDS,
   }
 );
+
+export function getCachedSalesChartData() {
+  return getCachedSalesChartDataForBusinessDate(getEgyptBusinessDateKey());
+}
 
 /** Recent sales list — cached separately for Suspense streaming */
 export const getCachedRecentSales = unstable_cache(
