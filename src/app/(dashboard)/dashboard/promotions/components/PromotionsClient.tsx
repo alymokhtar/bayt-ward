@@ -38,12 +38,16 @@ const typeLabels: Record<PromotionType, string> = {
 
 function formatDate(date: Date | null): string {
   if (!date || !Number.isFinite(date.getTime())) return "مفتوح";
-  return new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Asia/Cairo",
-  }).format(date);
+  try {
+    return new Intl.DateTimeFormat("ar-EG-u-nu-latn", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      timeZone: "Africa/Cairo",
+    }).format(date);
+  } catch {
+    return date.toLocaleDateString("ar-EG");
+  }
 }
 
 function promotionDetails(promotion: PromotionRecord): string {
