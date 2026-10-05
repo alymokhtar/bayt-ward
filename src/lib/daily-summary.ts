@@ -4,14 +4,17 @@ import {
   getEgyptBusinessDayBounds,
 } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
-import { calculateCostOfGoodsSoldFromSnapshots } from "@/lib/report-math";
+import {
+  calculateCostOfGoodsSoldFromSnapshots,
+  calculateNetSales,
+} from "@/lib/report-math";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/utils";
 
 export async function getDailySummary() {
   try {
     const { start, end } = getEgyptBusinessDayBounds();
 
-  const [salesAgg, payments, returnsAgg, costOfGoodsSoldRows, returnedCogsRows, expensesAgg] =
+  const [salesAgg, returnsAgg, costOfGoodsSoldRows, returnedCogsRows, expensesAgg] =
     await Promise.all([
       prisma.sale.aggregate({
         where: {
@@ -20,17 +23,6 @@ export async function getDailySummary() {
         },
         _sum: { totalAmount: true },
         _count: true,
-      }),
-      // ✅ حساب إجمالي المبيعات من جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
-      prisma.payment.aggregate({
-        where: {
-          createdAt: { gte: start, lt: end },
-          sale: {
-            status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
-            createdAt: { gte: start, lt: end },
-          },
-        },
-        _sum: { amount: true },
       }),
       prisma.return.aggregate({
         where: {
@@ -64,15 +56,14 @@ export async function getDailySummary() {
       }),
     ]);
 
-  // ✅ استخدام Payment.amount بدلاً من Sale.totalAmount لضمان التطابق مع مراجعة الخزنة
-  const totalSales = payments._sum.amount ?? 0;
+  const totalSales = salesAgg._sum.totalAmount ?? 0;
   const totalReturns = returnsAgg._sum.refundAmount ?? 0;
   const invoicesCount = salesAgg._count;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
   const totalCogs = costOfGoodsSoldRows[0]?.costOfGoodsSold ?? 0;
   const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
   const costOfGoodsSold = calculateCostOfGoodsSoldFromSnapshots(totalCogs, returnedCogs);
-  const netRevenue = totalSales - totalReturns;
+  const netRevenue = calculateNetSales(totalSales, totalReturns);
   const grossProfit = netRevenue - costOfGoodsSold;
 
   return {

@@ -2,9 +2,26 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   calculateCostOfGoodsSoldFromSnapshots,
+  calculateNetSales,
   calculateProfitMetrics,
   calculateSalesReportMetrics,
 } from "@/lib/report-math";
+
+test("keeps net sales unchanged when equal-value replacement sale and return are recorded", () => {
+  const beforeExchange = calculateNetSales(500, 0);
+  const afterExchange = calculateNetSales(500 + 180, 180);
+  const report = calculateSalesReportMetrics({
+    grossSalesBeforeDiscount: 500 + 180,
+    totalDiscount: 0,
+    totalReturns: 180,
+    accrualRevenue: 500 + 180,
+    salesCount: 2,
+  });
+
+  assert.equal(beforeExchange, 500);
+  assert.equal(afterExchange, beforeExchange);
+  assert.equal(report.netSales, beforeExchange);
+});
 
 test("calculates net sales from gross sales, discounts, and returns using accrual revenue for AOV", () => {
   const result = calculateSalesReportMetrics({

@@ -29,6 +29,17 @@ export interface SalesReportMetricsResult {
   averageSale: number;
 }
 
+export function calculateNetSales(
+  sales: number,
+  returns: number,
+  expenses = 0,
+): number {
+  const totalSales = Number.isFinite(sales) ? sales : 0;
+  const totalReturns = Number.isFinite(returns) ? returns : 0;
+  const totalExpenses = Number.isFinite(expenses) ? expenses : 0;
+  return totalSales - totalReturns - totalExpenses;
+}
+
 export function calculateCostOfGoodsSoldFromSnapshots(
   soldItemCostSnapshots: number,
   returnedItemCostSnapshots: number,
@@ -57,7 +68,7 @@ export function calculateSalesReportMetrics({
     totalDiscount: discounts,
     totalReturns: returns,
     accrualRevenue: revenue,
-    netSales: grossSales - discounts - returns,
+    netSales: calculateNetSales(grossSales - discounts, returns),
     averageSale: count > 0 ? revenue / count : 0,
   };
 }

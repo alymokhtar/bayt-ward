@@ -4,6 +4,7 @@ import {
   getBusinessDayBoundsForDateKey,
   getBusinessDayBoundsFromDateKeys,
   getEgyptBusinessDayBounds,
+  getEgyptBusinessDateKey,
   getOffsetBusinessDateKey,
   getReportPeriodRange,
 } from "@/lib/business-day";
@@ -12,6 +13,7 @@ import { getSalesChannelWhere } from "@/lib/sales-analytics";
 import { CACHE_TAG, READ_CACHE_SECONDS } from "@/lib/server-cache";
 import {
   calculateCostOfGoodsSoldFromSnapshots,
+  calculateNetSales,
   calculateProfitMetrics,
   calculateSalesReportMetrics,
 } from "@/lib/report-math";
@@ -60,22 +62,19 @@ export const getCachedDashboardKpis = unstable_cache(
       ]
     >`
       SELECT
-        -- ✅ استخدام جدول Payment (مجموع الدفعات الفعلية - نفس طريقة مراجعة الخزنة)
-        (SELECT COALESCE(SUM(p."amount"), 0)::float FROM "Payment" p
-          INNER JOIN "Sale" s ON p."orderId" = s.id
-          WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
-            AND p."createdAt" >= ${todayStart}
-            AND p."createdAt" < ${todayEnd}) AS "todayGrossSales",
+        -- Accrual sales include replacement invoices, which intentionally have no Payment rows.
+        (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+            AND "createdAt" >= ${todayStart}
+            AND "createdAt" < ${todayEnd}) AS "todayGrossSales",
         (SELECT COUNT(*)::int FROM "Sale"
           WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND "createdAt" >= ${todayStart}
             AND "createdAt" < ${todayEnd}) AS "todaySalesCount",
-        -- ✅ استخدام جدول Payment لشهر كامل
-        (SELECT COALESCE(SUM(p."amount"), 0)::float FROM "Payment" p
-          INNER JOIN "Sale" s ON p."orderId" = s.id
-          WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
-            AND p."createdAt" >= ${monthStart}
-            AND p."createdAt" < ${monthEnd}) AS "monthSales",
+        (SELECT COALESCE(SUM("totalAmount"), 0)::float FROM "Sale"
+          WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+            AND "createdAt" >= ${monthStart}
+            AND "createdAt" < ${monthEnd}) AS "monthSales",
         (SELECT COUNT(*)::int FROM "Sale"
           WHERE status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
             AND "createdAt" >= ${monthStart}
@@ -115,9 +114,13 @@ export const getCachedDashboardKpis = unstable_cache(
       todayGrossSales: data.todayGrossSales,
       todayReturns: data.todayReturns,
       todayExpenses: data.todayExpenses,
-      todayNetSales: data.todayGrossSales - data.todayReturns - data.todayExpenses,
+      todayNetSales: calculateNetSales(
+        data.todayGrossSales,
+        data.todayReturns,
+        data.todayExpenses,
+      ),
       todaySalesCount: data.todaySalesCount,
-      monthSales: data.monthSales - data.monthReturns,
+      monthSales: calculateNetSales(data.monthSales, data.monthReturns),
       monthSalesCount: data.monthSalesCount,
       totalProducts: data.totalProducts,
       totalCustomers: data.totalCustomers,
@@ -173,23 +176,21 @@ export const getCachedSalesChartData = unstable_cache(
       ? getBusinessDayBoundsForDateKey(lastDay).end
       : getEgyptBusinessDayBounds(now).end;
 
-    const rows = await prisma.$queryRaw<
-      Array<{ day: string; total: number; count: number }>
-    >`
-      SELECT
-        TO_CHAR(p."createdAt"::date, 'YYYY-MM-DD') AS day,
-        COALESCE(SUM(p."amount"), 0)::float AS total,
-        COUNT(*)::int AS count
-      FROM "Payment" p
-      INNER JOIN "Sale" s ON p."orderId" = s.id
-      WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
-        AND p."createdAt" >= ${firstDayStart}
-        AND p."createdAt" < ${lastDayEnd}
-      GROUP BY p."createdAt"::date
-      ORDER BY day ASC
-    `;
-
-    const byDay = new Map(rows.map((row) => [row.day, row]));
+    const sales = await prisma.sale.findMany({
+      where: {
+        status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
+        createdAt: { gte: firstDayStart, lt: lastDayEnd },
+      },
+      select: { totalAmount: true, createdAt: true },
+    });
+    const byDay = new Map<string, { total: number; count: number }>();
+    for (const sale of sales) {
+      const dayKey = getEgyptBusinessDateKey(sale.createdAt);
+      const totals = byDay.get(dayKey) ?? { total: 0, count: 0 };
+      totals.total += sale.totalAmount;
+      totals.count += 1;
+      byDay.set(dayKey, totals);
+    }
 
     return salesChartData.map((day) => {
       const match = byDay.get(day.date);
