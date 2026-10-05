@@ -19,6 +19,7 @@ import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { Plus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { calculateReturnRefundAmount } from "@/lib/return-pricing";
 
 type ReturnRecord = {
   id: string;
@@ -38,19 +39,31 @@ type SaleItem = {
   variantId: string;
   quantity: number;
   unitPrice: number;
+  discountAmount: number;
   totalPrice: number;
   variant: {
+    id: string;
     size: string;
     color: string;
     product: { name: string; nameAr: string | null };
   };
 };
 
+type PreviousReturnItem = {
+  saleItemId: string | null;
+  quantity: number;
+  totalPrice: number;
+  variant: { id: string };
+};
+
 type SaleData = {
   id: string;
   invoiceNumber: string;
-  customerId: string | null;
   items: SaleItem[];
+  returns: Array<{
+    status: string;
+    items: PreviousReturnItem[];
+  }>;
 };
 
 interface ReturnsClientProps {
@@ -119,17 +132,46 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
     ? sale.items
         .filter((item) => selectedItems[item.variantId])
         .map((item) => {
-          const qty = selectedItems[item.variantId];
           return {
             variantId: item.variantId,
-            quantity: qty,
-            unitPrice: item.unitPrice,
-            totalPrice: item.unitPrice * qty,
+            quantity: selectedItems[item.variantId],
           };
         })
     : [];
 
-  const refundAmount = returnItems.reduce((s, i) => s + i.totalPrice, 0);
+  const refundAmount = sale
+    ? sale.items.reduce((sum, item) => {
+        const quantity = selectedItems[item.variantId] ?? 0;
+        if (quantity === 0) return sum;
+
+        const previousReturns = sale.returns
+          .filter((returnRecord) => returnRecord.status === "APPROVED")
+          .flatMap((returnRecord) => returnRecord.items)
+          .filter((returnedItem) =>
+            returnedItem.saleItemId === item.id ||
+            (!returnedItem.saleItemId && returnedItem.variant.id === item.variantId)
+          );
+
+        return sum + calculateReturnRefundAmount(
+          item,
+          quantity,
+          previousReturns.reduce((total, returnedItem) => total + returnedItem.quantity, 0),
+          previousReturns.reduce((total, returnedItem) => total + returnedItem.totalPrice, 0),
+        ).refundAmount;
+      }, 0)
+    : 0;
+
+  function getAvailableQuantity(item: SaleItem) {
+    const returnedQuantity = sale?.returns
+      .filter((returnRecord) => returnRecord.status === "APPROVED")
+      .flatMap((returnRecord) => returnRecord.items)
+      .filter((returnedItem) =>
+        returnedItem.saleItemId === item.id ||
+        (!returnedItem.saleItemId && returnedItem.variant.id === item.variantId)
+      )
+      .reduce((sum, returnedItem) => sum + returnedItem.quantity, 0) ?? 0;
+    return Math.max(0, item.quantity - returnedQuantity);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -141,10 +183,7 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
     setLoading(true);
     const result = await createReturn({
       saleId: sale.id,
-      customerId: sale.customerId || undefined,
       items: returnItems,
-      totalAmount: refundAmount,
-      refundAmount,
       refundMethod,
       reason: reason || undefined,
       notes: notes || undefined,
@@ -254,7 +293,9 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
               <p className="text-sm font-medium text-brown">
                 فاتورة: {sale.invoiceNumber}
               </p>
-              {sale.items.map((item) => (
+              {sale.items.map((item) => {
+                const availableQuantity = getAvailableQuantity(item);
+                return (
                 <div
                   key={item.id}
                   className="flex items-center gap-3 rounded-lg border border-border p-3"
@@ -263,8 +304,9 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
                     type="checkbox"
                     checked={!!selectedItems[item.variantId]}
                     onChange={() =>
-                      toggleItem(item.variantId, item.quantity)
+                      toggleItem(item.variantId, availableQuantity)
                     }
+                    disabled={availableQuantity === 0}
                     className="rounded"
                   />
                   <div className="flex-1 text-sm">
@@ -274,30 +316,31 @@ export default function ReturnsClient({ returns: initial }: ReturnsClientProps) 
                     </p>
                     <p className="text-muted">
                       {item.variant.size}/{item.variant.color} — الكمية المباعة:{" "}
-                      {item.quantity}
+                      {item.quantity} — المتاح للإرجاع: {availableQuantity}
                     </p>
                   </div>
                   {selectedItems[item.variantId] && (
                     <Input
                       type="number"
                       min={1}
-                      max={item.quantity}
+                      max={availableQuantity}
                       value={selectedItems[item.variantId]}
                       onChange={(e) =>
                         updateQty(
                           item.variantId,
                           parseInt(e.target.value) || 1,
-                          item.quantity
+                          availableQuantity
                         )
                       }
                       className="w-20"
                     />
                   )}
                   <span className="text-sm text-gold">
-                    {formatCurrency(item.unitPrice)}
+                    {formatCurrency(item.unitPrice - item.discountAmount / item.quantity)}
                   </span>
                 </div>
-              ))}
+                );
+              })}
               {refundAmount > 0 && (
                 <p className="font-semibold text-brown">
                   مبلغ الاسترداد: {formatCurrency(refundAmount)}

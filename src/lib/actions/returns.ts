@@ -9,6 +9,8 @@ import { invalidateReturnsData, revalidateInventoryCache } from "@/lib/revalidat
 import { getCachedReturnsList } from "@/lib/cached-queries";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import { sendTelegramMessage } from "@/lib/telegram";
+import { calculateReturnRefundAmount } from "@/lib/return-pricing";
+import { Prisma } from "@prisma/client";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -17,8 +19,6 @@ type ActionResult<T = void> =
 export type ReturnItemInput = {
   variantId: string;
   quantity: number;
-  unitPrice: number;
-  totalPrice: number;
 };
 
 function handleActionError(error: unknown): ActionResult<never> {
@@ -99,10 +99,7 @@ export async function getReturn(id: string) {
 
 export async function createReturn(data: {
   saleId: string;
-  customerId?: string;
   items: ReturnItemInput[];
-  totalAmount: number;
-  refundAmount: number;
   refundMethod?: "CASH" | "INSTAPAY" | "WALLET";
   reason?: string;
   notes?: string;
@@ -118,8 +115,14 @@ export async function createReturn(data: {
       return { success: false, error: "يجب إضافة منتج واحد على الأقل" };
     }
 
-    if (data.refundAmount <= 0) {
-      return { success: false, error: "مبلغ الاسترداد يجب أن يكون أكبر من صفر" };
+    if (data.items.some((item) =>
+      !item.variantId || !Number.isInteger(item.quantity) || item.quantity <= 0
+    )) {
+      return { success: false, error: "عناصر المرتجع أو كمياتها غير صالحة" };
+    }
+
+    if (new Set(data.items.map((item) => item.variantId)).size !== data.items.length) {
+      return { success: false, error: "يوجد منتج مكرر في المرتجع" };
     }
 
     const sale = await prisma.sale.findUnique({
@@ -136,25 +139,60 @@ export async function createReturn(data: {
     }
 
     const returnRecord = await prisma.$transaction(async (tx) => {
-      for (const item of data.items) {
-        const saleItem = sale.items.find((si) => si.variantId === item.variantId);
+      const saleItemsByVariant = new Map(sale.items.map((item) => [item.variantId, item]));
+      const previousReturnItems = await tx.returnItem.findMany({
+        where: {
+          variantId: { in: data.items.map((item) => item.variantId) },
+          return: { saleId: data.saleId, status: "APPROVED" },
+        },
+        select: {
+          variantId: true,
+          quantity: true,
+          totalPrice: true,
+        },
+      });
+      const previousReturnsByVariant = new Map<
+        string,
+        { quantity: number; refundAmount: number }
+      >();
+
+      for (const returnedItem of previousReturnItems) {
+        const totals = previousReturnsByVariant.get(returnedItem.variantId) ?? {
+          quantity: 0,
+          refundAmount: 0,
+        };
+        totals.quantity += returnedItem.quantity;
+        totals.refundAmount += returnedItem.totalPrice;
+        previousReturnsByVariant.set(returnedItem.variantId, totals);
+      }
+
+      const pricedItems = data.items.map((item) => {
+        const saleItem = saleItemsByVariant.get(item.variantId);
         if (!saleItem) {
           throw new Error("المنتج غير موجود في فاتورة البيع الأصلية");
         }
 
-        const previousReturns = await tx.returnItem.aggregate({
-          where: {
-            variantId: item.variantId,
-            return: { saleId: data.saleId, status: "APPROVED" },
-          },
-          _sum: { quantity: true },
-        });
+        const previousReturn = previousReturnsByVariant.get(item.variantId);
+        const calculation = calculateReturnRefundAmount(
+          saleItem,
+          item.quantity,
+          previousReturn?.quantity ?? 0,
+          previousReturn?.refundAmount ?? 0,
+        );
 
-        const alreadyReturned = previousReturns._sum.quantity ?? 0;
-        if (alreadyReturned + item.quantity > saleItem.quantity) {
-          throw new Error("كمية الإرجاع تتجاوز الكمية المباعة");
-        }
+        return {
+          ...item,
+          saleItem,
+          unitPrice: calculation.netUnitPrice,
+          totalPrice: calculation.refundAmount,
+        };
+      });
+      const refundAmount = pricedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+      if (refundAmount <= 0) {
+        throw new Error("مبلغ الاسترداد يجب أن يكون أكبر من صفر");
+      }
 
+      for (const item of pricedItems) {
         const variant = await tx.productVariant.findUnique({
           where: { id: item.variantId },
         });
@@ -191,20 +229,21 @@ export async function createReturn(data: {
         data: {
           returnNumber,
           saleId: data.saleId,
-          customerId: data.customerId ?? sale.customerId,
+          customerId: sale.customerId,
           userId: user.id,
-          totalAmount: data.totalAmount,
-          refundAmount: data.refundAmount,
+          totalAmount: refundAmount,
+          refundAmount,
           refundMethod: data.refundMethod,
           reason: data.reason,
           notes: data.notes,
           status: "APPROVED",
           items: {
-            create: data.items.map((item) => ({
+            create: pricedItems.map((item) => ({
               variantId: item.variantId,
               quantity: item.quantity,
+              saleItemId: item.saleItem.id,
               unitPrice: item.unitPrice,
-              costPrice: sale.items.find((saleItem) => saleItem.variantId === item.variantId)!.costPrice,
+              costPrice: item.saleItem.costPrice,
               totalPrice: item.totalPrice,
             })),
           },
@@ -223,36 +262,39 @@ export async function createReturn(data: {
         },
       });
 
-      const totalReturned = await tx.return.aggregate({
-        where: { saleId: data.saleId, status: "APPROVED" },
-        _sum: { refundAmount: true },
+      const returnedQuantity = await tx.returnItem.aggregate({
+        where: { return: { saleId: data.saleId, status: "APPROVED" } },
+        _sum: { quantity: true },
       });
+      const totalSoldQuantity = sale.items.reduce((sum, item) => sum + item.quantity, 0);
+      const returnedQuantityTotal = returnedQuantity._sum.quantity ?? 0;
 
-      const returnedAmount = totalReturned._sum.refundAmount ?? 0;
-
-      if (returnedAmount >= sale.totalAmount) {
+      if (returnedQuantityTotal >= totalSoldQuantity) {
         await tx.sale.update({
           where: { id: data.saleId },
           data: { status: "REFUNDED" },
         });
-      } else if (returnedAmount > 0) {
+      } else if (returnedQuantityTotal > 0) {
         await tx.sale.update({
           where: { id: data.saleId },
           data: { status: "PARTIALLY_REFUNDED" },
         });
       }
 
-      const customerId = data.customerId ?? sale.customerId;
-      if (customerId) {
+      if (sale.customerId) {
         await tx.customer.update({
-          where: { id: customerId },
+          where: { id: sale.customerId },
           data: {
-            totalSpent: { decrement: data.refundAmount },
+            totalSpent: { decrement: refundAmount },
           },
         });
       }
 
       return created;
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      maxWait: 10000,
+      timeout: 30000,
     });
 
     revalidateReturnPaths();

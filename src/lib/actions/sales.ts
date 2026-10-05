@@ -13,6 +13,7 @@ import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import { normalizeSalePayments } from "@/lib/sales-payment-utils";
 import { calculateCartDiscounts } from "@/lib/promotions";
 import { getActivePromotionsData } from "@/lib/promotions-data";
+import { allocateInvoiceDiscount } from "@/lib/sale-pricing";
 import { Prisma, SaleStatus, SalesChannel, type PaymentMethod } from "@prisma/client";
 import { getBusinessDayBoundsFromDateKeys } from "@/lib/business-day";
 import {
@@ -28,9 +29,6 @@ type ActionResult<T = void> =
 export type SaleItemInput = {
   variantId: string;
   quantity: number;
-  unitPrice: number;
-  discountAmount?: number;
-  totalPrice: number;
 };
 
 export type SalePaymentInput = {
@@ -258,6 +256,7 @@ export async function getSale(id: string) {
           items: {
             select: {
               id: true,
+              saleItemId: true,
               quantity: true,
               unitPrice: true,
               totalPrice: true,
@@ -362,27 +361,52 @@ export async function createSale(data: {
         name: variant.product.nameAr || variant.product.name,
       };
     });
-    const subtotal = trustedItems.reduce(
+    const grossSubtotal = trustedItems.reduce(
       (sum, item) => sum + item.unitPrice * item.quantity,
       0,
     );
     const activePromotions = await getActivePromotionsData();
     const promotionResult = calculateCartDiscounts(
-      trustedItems,
+      trustedItems.map((item) => ({
+        productId: item.productId,
+        variantId: item.variantId,
+        categoryId: item.categoryId,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+        name: item.name,
+      })),
       activePromotions,
       { channel },
     );
-    const manualPercent = Number.isFinite(data.discountPercent)
-      ? Math.min(100, Math.max(0, data.discountPercent ?? 0))
-      : 0;
-    const manualFixed = Number.isFinite(data.manualDiscountAmount)
-      ? Math.max(0, data.manualDiscountAmount ?? 0)
-      : Number.isFinite(data.discountAmount)
-        ? Math.max(0, data.discountAmount ?? 0)
-        : 0;
-    const manualDiscount = subtotal * manualPercent / 100 + manualFixed;
-    const discountAmount = Math.min(subtotal, promotionResult.discountAmount + manualDiscount);
-    const totalAmount = Math.max(0, Math.round((subtotal - discountAmount + Number.EPSILON) * 100) / 100);
+    const submittedManualDiscount = data.manualDiscountAmount ?? data.discountAmount ?? 0;
+    const submittedDiscountPercent = data.discountPercent ?? 0;
+
+    if (
+      !Number.isFinite(submittedManualDiscount) ||
+      submittedManualDiscount < 0 ||
+      !Number.isFinite(submittedDiscountPercent) ||
+      submittedDiscountPercent < 0
+    ) {
+      return { success: false, error: "قيمة الخصم غير صالحة" };
+    }
+
+    const manualPercent = Math.min(100, submittedDiscountPercent);
+    const manualFixed = submittedManualDiscount;
+    const manualDiscount = grossSubtotal * manualPercent / 100 + manualFixed;
+    const requestedDiscount = Math.min(
+      grossSubtotal,
+      promotionResult.discountAmount + manualDiscount,
+    );
+    const salePricing = allocateInvoiceDiscount(
+      trustedItems.map((item) => ({
+        key: item.variantId,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+      })),
+      requestedDiscount,
+    );
+    const { subtotal, discountAmount, totalAmount } = salePricing;
+    const saleLinePricing = new Map(salePricing.lines.map((line) => [line.key, line]));
 
     if (totalAmount <= 0) {
       return { success: false, error: "إجمالي الفاتورة يجب أن يكون أكبر من صفر" };
@@ -501,8 +525,8 @@ export async function createSale(data: {
               quantity: item.quantity,
               unitPrice: variantMap.get(item.variantId)!.sellingPrice,
               costPrice: latestVariantMap.get(item.variantId)!.costPrice,
-              discountAmount: 0,
-              totalPrice: variantMap.get(item.variantId)!.sellingPrice * item.quantity,
+              discountAmount: saleLinePricing.get(item.variantId)!.discountAmount,
+              totalPrice: saleLinePricing.get(item.variantId)!.netAmount,
             })),
           },
           payments: {

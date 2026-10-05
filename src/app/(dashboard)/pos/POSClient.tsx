@@ -358,10 +358,6 @@ export default function POSClient({
       items: cart.map((item) => ({
         variantId: item.variant.id,
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        discountAmount: item.discountAmount,
-        totalPrice:
-          item.unitPrice * item.quantity - item.discountAmount,
       })),
       subtotal,
       manualDiscountAmount: discountAmount,
