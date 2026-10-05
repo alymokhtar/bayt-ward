@@ -59,10 +59,10 @@ function validatePromotionInput(input: PromotionInput): string | null {
     if (
       input.discountPercent == null ||
       !Number.isFinite(input.discountPercent) ||
-      input.discountPercent < 0 ||
+      input.discountPercent <= 0 ||
       input.discountPercent > 100
     ) {
-      return "نسبة خصم القطع المجانية يجب أن تكون بين 0 و100";
+      return "نسبة خصم القطع المجانية يجب أن تكون أكبر من صفر وحتى 100";
     }
   }
 

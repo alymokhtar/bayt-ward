@@ -270,30 +270,45 @@ export function calculateCartDiscounts(
   }
 
   const exclusiveProductIds = new Set(quantityDiscountedProductIds);
+  const pendingDirectPromotions = eligiblePromotions.filter(
+    (promotion) => promotion.type !== "BUY_X_GET_Y",
+  );
 
-  for (const promotion of eligiblePromotions) {
-    if (promotion.type === "BUY_X_GET_Y") continue;
+  while (pendingDirectPromotions.length > 0) {
+    let bestPromotionIndex = -1;
+    let bestEligibleItems: CartItem[] = [];
+    let bestDiscountValue = 0;
 
-    const eligibleItems = validCartItems.filter(
-      (item) =>
-        !exclusiveProductIds.has(item.productId) &&
-        matchesPromotion(item, promotion),
-    );
-    const discountValue = calculateDirectDiscount(
-      promotion,
-      originalTotal,
-      eligibleItems,
-    );
+    for (let index = 0; index < pendingDirectPromotions.length; index++) {
+      const promotion = pendingDirectPromotions[index];
+      const eligibleItems = validCartItems.filter(
+        (item) =>
+          !exclusiveProductIds.has(item.productId) &&
+          matchesPromotion(item, promotion),
+      );
+      const discountValue = calculateDirectDiscount(
+        promotion,
+        originalTotal,
+        eligibleItems,
+      );
 
-    if (discountValue <= 0) continue;
+      if (discountValue > bestDiscountValue) {
+        bestPromotionIndex = index;
+        bestEligibleItems = eligibleItems;
+        bestDiscountValue = discountValue;
+      }
+    }
 
-    for (const item of eligibleItems) {
+    if (bestPromotionIndex < 0) break;
+
+    const [promotion] = pendingDirectPromotions.splice(bestPromotionIndex, 1);
+    for (const item of bestEligibleItems) {
       exclusiveProductIds.add(item.productId);
     }
     appliedDiscounts.set(promotion.id, {
       id: promotion.id,
       title: promotion.title?.trim() || promotion.name,
-      discountValue,
+      discountValue: bestDiscountValue,
     });
   }
 

@@ -152,6 +152,34 @@ test("does not stack overlapping direct promotions on the same product", () => {
   assert.deepEqual(result.appliedPromotions.map(({ id }) => id), ["fixed"]);
 });
 
+test("chooses the highest direct discount when overlapping promotions compete", () => {
+  const result = calculateCartDiscounts(
+    [{ ...cartItems[0], quantity: 2 }],
+    [
+      promotion({ id: "percentage", discountPercent: 30 }),
+      promotion({ id: "fixed", type: "FIXED_AMOUNT", discountAmount: 50 }),
+    ],
+  );
+
+  assert.equal(result.discountAmount, 60);
+  assert.equal(result.finalTotal, 140);
+  assert.deepEqual(result.appliedPromotions.map(({ id }) => id), ["percentage"]);
+});
+
+test("chooses the larger fixed discount over a smaller overlapping percentage discount", () => {
+  const result = calculateCartDiscounts(
+    [{ ...cartItems[0], quantity: 2 }],
+    [
+      promotion({ id: "percentage", discountPercent: 20 }),
+      promotion({ id: "fixed", type: "FIXED_AMOUNT", discountAmount: 50 }),
+    ],
+  );
+
+  assert.equal(result.discountAmount, 50);
+  assert.equal(result.finalTotal, 150);
+  assert.deepEqual(result.appliedPromotions.map(({ id }) => id), ["fixed"]);
+});
+
 test("ignores inactive and out-of-date promotions", () => {
   const result = calculateCartDiscounts(
     cartItems,

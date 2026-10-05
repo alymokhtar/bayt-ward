@@ -42,7 +42,7 @@ function formatDate(date: Date | null): string {
     day: "numeric",
     month: "short",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: "Asia/Cairo",
   }).format(date);
 }
 
@@ -120,34 +120,47 @@ export default function PromotionsClient({ promotions, options }: PromotionsClie
 
   async function handleToggle(promotion: PromotionRecord) {
     setPendingId(promotion.id);
-    const result = await togglePromotionStatus(promotion.id);
-    setPendingId(null);
+    try {
+      const result = await togglePromotionStatus(promotion.id);
 
-    if (!result.success) {
-      setNotice({ message: result.error, error: true });
-      return;
+      if (!result.success) {
+        setNotice({ message: result.error, error: true });
+        return;
+      }
+
+      setNotice({ message: promotion.isActive ? "تم إيقاف العرض" : "تم تفعيل العرض" });
+      setPromotionRows((current) => current.map((row) =>
+        row.id === promotion.id ? { ...row, isActive: !promotion.isActive } : row,
+      ));
+    } catch (error) {
+      console.error("Failed to toggle promotion status:", error);
+      setNotice({ message: "تعذر تحديث حالة العرض. حاولي مرة أخرى", error: true });
+    } finally {
+      setPendingId(null);
     }
-
-    setNotice({ message: promotion.isActive ? "تم إيقاف العرض" : "تم تفعيل العرض" });
-    setPromotionRows((current) => current.map((row) =>
-      row.id === promotion.id ? { ...row, isActive: !promotion.isActive } : row,
-    ));
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    setPendingId(deleteTarget.id);
-    const result = await deletePromotion(deleteTarget.id);
-    setPendingId(null);
+    const target = deleteTarget;
+    setPendingId(target.id);
+    try {
+      const result = await deletePromotion(target.id);
 
-    if (!result.success) {
-      setNotice({ message: result.error, error: true });
-      return;
+      if (!result.success) {
+        setNotice({ message: result.error, error: true });
+        return;
+      }
+
+      setDeleteTarget(null);
+      setNotice({ message: "تم حذف العرض" });
+      setPromotionRows((current) => current.filter((row) => row.id !== target.id));
+    } catch (error) {
+      console.error("Failed to delete promotion:", error);
+      setNotice({ message: "تعذر حذف العرض. حاولي مرة أخرى", error: true });
+    } finally {
+      setPendingId(null);
     }
-
-    setDeleteTarget(null);
-    setNotice({ message: "تم حذف العرض" });
-    setPromotionRows((current) => current.filter((row) => row.id !== deleteTarget.id));
   }
 
   return (
