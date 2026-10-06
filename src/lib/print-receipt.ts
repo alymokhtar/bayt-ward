@@ -1,4 +1,6 @@
 import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
+import JsBarcode from "jsbarcode";
+import { isCode128Compatible } from "@/lib/barcode";
 import { formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
 function escapeHtml(value: string) {
@@ -36,10 +38,16 @@ function row(label: string, value: string, bold = false) {
   return `<div class="row${bold ? " bold" : ""}"><span>${label}</span><span>${value}</span></div>`;
 }
 
-export function buildReceiptPrintHtml(data: ReceiptData) {
+export function buildReceiptPrintHtml(
+  data: ReceiptData,
+  barcodeDataUrl?: string,
+) {
   const fmt = (amount: number) =>
     escapeHtml(formatCurrency(amount, data.currencySymbol));
   const cairoTime = escapeHtml(formatReceiptDateTime(data.createdAt));
+  const barcodeHtml = barcodeDataUrl
+    ? `<div class="barcode"><img src="${escapeHtml(barcodeDataUrl)}" alt="باركود الفاتورة ${escapeHtml(data.invoiceNumber)}" /></div>`
+    : "";
 
   const itemsHtml = data.items
     .map((item) => {
@@ -115,6 +123,8 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
     .item-row .center { text-align: center; }
     .item-row .num { text-align: left; direction: ltr; }
     .item-row .bold { font-weight: 700; }
+    .barcode { text-align: center; margin: 8px 0; }
+    .barcode img { display: block; width: 68mm; max-width: 100%; height: 15mm; margin: 0 auto; object-fit: contain; }
     .footer { text-align: center; padding-top: 4px; }
     .footer .thanks { font-weight: 700; }
     .footer .end { font-size: 9px; color: #666; margin-top: 8px; }
@@ -197,6 +207,8 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
       : ""
   }
 
+  ${barcodeHtml}
+
   ${dashedLine()}
 
   <div class="footer">
@@ -209,7 +221,27 @@ export function buildReceiptPrintHtml(data: ReceiptData) {
 }
 
 export function printReceipt(data: ReceiptData) {
-  const html = buildReceiptPrintHtml(data);
+  let barcodeDataUrl: string | undefined;
+  if (isCode128Compatible(data.invoiceNumber)) {
+    try {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      JsBarcode(svg, data.invoiceNumber.trim(), {
+        format: "CODE128",
+        width: 1.3,
+        height: 40,
+        displayValue: true,
+        fontSize: 10,
+        margin: 2,
+        lineColor: "#000000",
+      });
+      const svgMarkup = new XMLSerializer().serializeToString(svg);
+      barcodeDataUrl = `data:image/svg+xml;base64,${window.btoa(svgMarkup)}`;
+    } catch (error) {
+      console.error("Failed to generate invoice barcode for receipt:", error);
+    }
+  }
+
+  const html = buildReceiptPrintHtml(data, barcodeDataUrl);
   const printWindow = window.open("", "_blank", "width=420,height=640");
 
   if (!printWindow) {

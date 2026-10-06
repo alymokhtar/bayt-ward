@@ -24,6 +24,7 @@ import {
 import { Printer } from "lucide-react";
 import Link from "next/link";
 import SaleWhatsAppButton from "@/components/whatsapp/SaleWhatsAppButton";
+import BarcodeLabel from "@/components/barcode/BarcodeLabel";
 import { useState } from "react";
 
 type SaleData = Awaited<ReturnType<typeof getSale>>;
@@ -192,6 +193,12 @@ export default function InvoiceDetailView({
             <p className="text-sm text-muted mt-1">
               فاتورة بيع — {sale.invoiceNumber}
             </p>
+            <BarcodeLabel
+              value={sale.invoiceNumber}
+              width={1.3}
+              height={40}
+              className="mx-auto mt-3 h-auto w-full max-w-[280px]"
+            />
           </div>
 
           <div className="grid sm:grid-cols-2 gap-4 mb-6 text-sm">
