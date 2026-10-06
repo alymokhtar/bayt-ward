@@ -17,8 +17,8 @@ import { createExchange } from "@/lib/actions/exchanges";
 import ExchangeReceiptModal from "@/components/pos/ExchangeReceiptModal";
 import type { ExchangeReceiptData } from "@/components/pos/ExchangeReceiptInvoice";
 import ReturnDetailsModal from "@/app/(dashboard)/returns/ReturnDetailsModal";
-import { getSale } from "@/lib/actions/sales";
-import { searchVariants } from "@/lib/actions/products";
+import { getSale, getSales } from "@/lib/actions/sales";
+import { findVariantsByExactCode, searchVariants } from "@/lib/actions/products";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { Plus, Printer, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -109,20 +109,29 @@ export default function ReturnsClient({
   const [exchangeReceipt, setExchangeReceipt] = useState<ExchangeReceiptData | null>(null);
   const [exchangeReceiptOpen, setExchangeReceiptOpen] = useState(false);
 
-  async function loadSale() {
+  async function loadSale(invoiceNumber = invoiceSearch, requireExactMatch = false) {
     setError("");
     setSale(null);
-    if (!invoiceSearch.trim()) return;
+    const query = invoiceNumber.trim();
+    if (!query) return;
 
     try {
-      const salesResult = await import("@/lib/actions/sales").then((m) =>
-        m.getSales({ search: invoiceSearch.trim(), pageSize: 1 })
-      );
+      const salesResult = await getSales({ search: query, pageSize: 1 });
       if (salesResult.items.length === 0) {
         setError("لم يتم العثور على الفاتورة");
         return;
       }
-      const fullSale = await getSale(salesResult.items[0].id);
+      const matchingSale = requireExactMatch
+        ? salesResult.items.find(
+            (item) => item.invoiceNumber.toLowerCase() === query.toLowerCase(),
+          )
+        : salesResult.items[0];
+      if (!matchingSale) {
+        setError("لم يتم العثور على فاتورة مطابقة لهذا الرقم");
+        return;
+      }
+
+      const fullSale = await getSale(matchingSale.id);
       if (fullSale.status !== "COMPLETED" && fullSale.status !== "REFUNDED" && fullSale.status !== "PARTIALLY_REFUNDED") {
         setError("لا يمكن إرجاع منتجات من هذه الفاتورة");
         return;
@@ -132,6 +141,14 @@ export default function ReturnsClient({
     } catch {
       setError("خطأ في تحميل الفاتورة");
     }
+  }
+
+  function handleInvoiceSearchKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    void loadSale(event.currentTarget.value, true);
   }
 
   function toggleItem(variantId: string, maxQty: number) {
@@ -256,6 +273,51 @@ export default function ReturnsClient({
       setReplacementVariants(await searchVariants(replacementSearch.trim()));
     } catch {
       setError("تعذر البحث عن المنتجات البديلة");
+    }
+  }
+
+  async function scanReplacementVariant(code: string) {
+    const normalizedCode = code.trim();
+    if (!normalizedCode) return;
+
+    setError("");
+    try {
+      const exactMatches = await findVariantsByExactCode(normalizedCode);
+      if (exactMatches.length === 1) {
+        const variant = exactMatches[0];
+        const maxQuantity = getMaxReplacementQuantity(variant);
+        const selectedQuantity = replacementItems[variant.id] ?? 0;
+        if (selectedQuantity >= maxQuantity) {
+          setError("لا توجد كمية إضافية متاحة لهذا المنتج البديل");
+          return;
+        }
+
+        setReplacementVariants((previous) =>
+          previous.some((item) => item.id === variant.id)
+            ? previous
+            : [...previous, variant],
+        );
+        setReplacementItems((previous) => ({
+          ...previous,
+          [variant.id]: selectedQuantity + 1,
+        }));
+        setReplacementSearch("");
+        return;
+      }
+
+      if (exactMatches.length > 1) {
+        setReplacementVariants(exactMatches);
+        setError("هذا الباركود مرتبط بأكثر من متغير؛ اختر المنتج يدوياً");
+        return;
+      }
+
+      const matches = await searchVariants(normalizedCode);
+      setReplacementVariants(matches);
+      if (matches.length === 0) {
+        setError("لم يتم العثور على منتج بهذا الباركود أو الرمز");
+      }
+    } catch {
+      setError("تعذر البحث عن المنتج البديل");
     }
   }
 
@@ -480,11 +542,16 @@ export default function ReturnsClient({
               <input
                 value={invoiceSearch}
                 onChange={(e) => setInvoiceSearch(e.target.value)}
+                onKeyDown={handleInvoiceSearchKeyDown}
                 placeholder="رقم فاتورة البيع..."
                 className="w-full h-10 rounded-lg border border-border ps-10 pe-4 text-sm"
               />
             </div>
-            <Button type="button" variant="secondary" onClick={loadSale}>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void loadSale()}
+            >
               بحث
             </Button>
           </div>
@@ -566,6 +633,11 @@ export default function ReturnsClient({
                       label="ابحث عن المنتج البديل"
                       value={replacementSearch}
                       onChange={(event) => setReplacementSearch(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key !== "Enter") return;
+                        event.preventDefault();
+                        void scanReplacementVariant(event.currentTarget.value);
+                      }}
                     />
                     <Button
                       type="button"
