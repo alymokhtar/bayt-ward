@@ -66,15 +66,16 @@ export default function InvoiceDetailView({
         `• ${item.variant.product.nameAr || item.variant.product.name} (${item.variant.size}/${item.variant.color}) × ${item.quantity}`,
     )
     .join("\n");
-  const returnedQtyByVariant = new Map<string, number>();
+  const returnedQtyBySaleItem = new Map<string, number>();
 
   for (const ret of sale.returns) {
     if (ret.status !== "APPROVED") continue;
     for (const item of ret.items) {
+      if (!item.saleItemId) continue;
       const returnedQuantity =
-        returnedQtyByVariant.get(item.variant.id) ?? 0;
-      returnedQtyByVariant.set(
-        item.variant.id,
+        returnedQtyBySaleItem.get(item.saleItemId) ?? 0;
+      returnedQtyBySaleItem.set(
+        item.saleItemId,
         returnedQuantity + item.quantity,
       );
     }
@@ -99,6 +100,12 @@ export default function InvoiceDetailView({
     sale.tenderedAmount ?? salePaymentSummary.paidAmount;
   const historicalRemaining =
     sale.changeAmount ?? salePaymentSummary.remainingAmount;
+  const hasCashChange =
+    salePaymentSummary.normalizedPayments.some(
+      (payment) => payment.method === "CASH" && payment.amount > 0,
+    ) &&
+    sale.tenderedAmount !== null &&
+    historicalRemaining > 0;
   const paymentSummaryText = sale.exchangeAsReplacement
     ? "تسوية استبدال"
     : salePaymentSummary.normalizedPayments.length > 1
@@ -228,7 +235,7 @@ export default function InvoiceDetailView({
             <TableBody>
               {sale.items.map((item) => {
                 const returnedQuantity =
-                  returnedQtyByVariant.get(item.variant.id) ?? 0;
+                  returnedQtyBySaleItem.get(item.id) ?? 0;
 
                 return (
                   <TableRow key={item.id}>
@@ -287,11 +294,15 @@ export default function InvoiceDetailView({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted">المدفوع</span>
+              <span className="text-muted">
+                {hasCashChange ? "المبلغ المستلم" : "المدفوع"}
+              </span>
               <span>{formatCurrency(historicalPaidAmount)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted">الباقي</span>
+              <span className="text-muted">
+                {hasCashChange ? "الفكة المتبقية" : "الباقي"}
+              </span>
               <span>{formatCurrency(historicalRemaining)}</span>
             </div>
             {approvedReturns.length > 0 && (
