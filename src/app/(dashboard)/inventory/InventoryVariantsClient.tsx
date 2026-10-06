@@ -13,17 +13,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
-import { adjustStock } from "@/lib/actions/inventory";
+import {
+  adjustStock,
+  findInventoryVariantByCode,
+} from "@/lib/actions/inventory";
 import { formatCurrency } from "@/lib/utils";
-import { PackagePlus } from "lucide-react";
+import { Barcode, PackagePlus, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import ProductInventoryModal from "@/app/(dashboard)/inventory/ProductInventoryModal";
 
 type Variant = {
   id: string;
   productId: string;
   sku: string;
+  barcode?: string | null;
   size: string;
   color: string;
   stockQuantity: number;
@@ -53,6 +57,20 @@ export default function InventoryVariantsClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [detailProductId, setDetailProductId] = useState<string | null>(null);
+  const [quickScanCode, setQuickScanCode] = useState("");
+  const [quickScanMessage, setQuickScanMessage] = useState("");
+  const [quickScanError, setQuickScanError] = useState(false);
+  const [quickScanLoading, setQuickScanLoading] = useState(false);
+  const quickScanRef = useRef<HTMLInputElement>(null);
+
+  function focusQuickScan() {
+    window.setTimeout(() => quickScanRef.current?.focus(), 0);
+  }
+
+  function closeAdjustModal() {
+    setAdjustModal(false);
+    focusQuickScan();
+  }
 
   function openAdjust(variant: Variant) {
     setSelectedVariant(variant);
@@ -60,6 +78,39 @@ export default function InventoryVariantsClient({
     setNotes("");
     setError("");
     setAdjustModal(true);
+  }
+
+  async function handleQuickScan() {
+    const code = quickScanCode.trim();
+    if (!code || quickScanLoading) return;
+
+    setQuickScanLoading(true);
+    setQuickScanMessage("");
+    setQuickScanError(false);
+    try {
+      const result = await findInventoryVariantByCode(code);
+      if (!result.success) {
+        setQuickScanError(true);
+        setQuickScanMessage(result.error);
+        return;
+      }
+
+      if (result.data.length === 1) {
+        setQuickScanCode("");
+        openAdjust(result.data[0]);
+      } else if (result.data.length > 1) {
+        setQuickScanError(true);
+        setQuickScanMessage("الرمز يطابق أكثر من متغير؛ راجع SKU أو الباركود.");
+      } else {
+        setQuickScanError(true);
+        setQuickScanMessage("لم يتم العثور على منتج بهذا الباركود أو SKU.");
+      }
+    } catch {
+      setQuickScanError(true);
+      setQuickScanMessage("تعذر البحث عن المنتج. حاول مرة أخرى.");
+    } finally {
+      setQuickScanLoading(false);
+    }
   }
 
   async function handleAdjust(e: React.FormEvent) {
@@ -82,7 +133,7 @@ export default function InventoryVariantsClient({
     setLoading(false);
 
     if (result.success) {
-      setAdjustModal(false);
+      closeAdjustModal();
       router.refresh();
     } else {
       setError(result.error ?? "حدث خطأ");
@@ -91,6 +142,51 @@ export default function InventoryVariantsClient({
 
   return (
     <>
+      <div className="mb-5 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-cream-dark/30 p-4">
+        <div className="min-w-[220px] flex-1">
+          <label htmlFor="inventory-quick-scan" className="mb-1 block text-sm font-medium text-brown">
+            جرد سريع بالباركود أو SKU
+          </label>
+          <div className="relative">
+            <Barcode className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+            <input
+              ref={quickScanRef}
+              id="inventory-quick-scan"
+              value={quickScanCode}
+              onChange={(event) => setQuickScanCode(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void handleQuickScan();
+                }
+              }}
+              placeholder="امسح الباركود ثم اضغط Enter"
+              autoComplete="off"
+              className="h-10 w-full rounded-lg border border-border bg-white ps-10 pe-4 text-sm"
+            />
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => void handleQuickScan()}
+          loading={quickScanLoading}
+          disabled={!quickScanCode.trim()}
+          className="gap-2"
+        >
+          <Search className="h-4 w-4" />
+          جرد سريع
+        </Button>
+        {quickScanMessage && (
+          <p
+            role={quickScanError ? "alert" : "status"}
+            className={`basis-full text-sm ${quickScanError ? "text-danger" : "text-success"}`}
+          >
+            {quickScanMessage}
+          </p>
+        )}
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -154,16 +250,16 @@ export default function InventoryVariantsClient({
 
       <Modal
         isOpen={adjustModal}
-        onClose={() => setAdjustModal(false)}
+        onClose={closeAdjustModal}
         title="تعديل المخزون"
         description={
           selectedVariant
-            ? `${selectedVariant.product.nameAr || selectedVariant.product.name} — الكمية الحالية: ${selectedVariant.stockQuantity}`
+            ? `${selectedVariant.product.nameAr || selectedVariant.product.name} — ${selectedVariant.size} / ${selectedVariant.color} — SKU: ${selectedVariant.sku} — الكمية الحالية: ${selectedVariant.stockQuantity}`
             : undefined
         }
         footer={
           <div className="flex gap-2 justify-end">
-            <Button type="button" variant="ghost" onClick={() => setAdjustModal(false)}>
+            <Button type="button" variant="ghost" onClick={closeAdjustModal}>
               إلغاء
             </Button>
             <Button type="submit" form="modal-form-inventory-variant-adjust" loading={loading}>

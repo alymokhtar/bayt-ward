@@ -122,6 +122,49 @@ export async function getInventory(options?: {
   return getCachedInventoryPage(JSON.stringify(options ?? {}));
 }
 
+export async function findInventoryVariantByCode(code: string) {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+
+    const normalizedCode = code.trim();
+    if (!normalizedCode) {
+      return { success: true as const, data: [] };
+    }
+
+    const variants = await prisma.productVariant.findMany({
+      where: {
+        isActive: true,
+        product: { isActive: true },
+        OR: [{ barcode: normalizedCode }, { sku: normalizedCode }],
+      },
+      take: 2,
+      select: {
+        id: true,
+        productId: true,
+        sku: true,
+        barcode: true,
+        size: true,
+        color: true,
+        stockQuantity: true,
+        minStockLevel: true,
+        costPrice: true,
+        sellingPrice: true,
+        product: {
+          select: {
+            name: true,
+            nameAr: true,
+            category: { select: { name: true, nameAr: true } },
+          },
+        },
+      },
+    });
+
+    return { success: true as const, data: variants };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
 export async function adjustStock(data: {
   variantId: string;
   quantity: number;
