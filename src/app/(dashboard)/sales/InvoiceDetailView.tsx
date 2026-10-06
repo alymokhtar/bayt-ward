@@ -27,6 +27,17 @@ import SaleWhatsAppButton from "@/components/whatsapp/SaleWhatsAppButton";
 import { useState } from "react";
 
 type SaleData = Awaited<ReturnType<typeof getSale>>;
+type ExchangeItem = {
+  id: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  variant: {
+    size: string;
+    color: string;
+    product: { name: string; nameAr: string | null };
+  };
+};
 
 interface InvoiceDetailViewProps {
   sale: SaleData;
@@ -317,6 +328,10 @@ export default function InvoiceDetailView({
                     <p className="mt-1 text-sm text-muted">
                       {formatSettlement(exchange.settlementBalance)}
                     </p>
+                    <ExchangeItems
+                      returnedItems={exchange.return.items}
+                      replacementItems={exchange.replacementSale.items}
+                    />
                   </div>
                 ))}
                 {sale.exchangeAsReplacement && (
@@ -336,6 +351,12 @@ export default function InvoiceDetailView({
                         sale.exchangeAsReplacement.settlementBalance,
                       )}
                     </p>
+                    <ExchangeItems
+                      returnedItems={sale.exchangeAsReplacement.return.items}
+                      replacementItems={
+                        sale.exchangeAsReplacement.replacementSale.items
+                      }
+                    />
                   </div>
                 )}
               </div>
@@ -430,4 +451,83 @@ function formatSettlement(balance: number) {
   if (balance > 0) return `تم تحصيل ${formatCurrency(balance)}`;
   if (balance < 0) return `تم رد ${formatCurrency(Math.abs(balance))}`;
   return "تم الاستبدال دون فرق مالي";
+}
+
+function ExchangeItems({
+  returnedItems,
+  replacementItems,
+}: {
+  returnedItems: ExchangeItem[];
+  replacementItems: ExchangeItem[];
+}) {
+  return (
+    <div className="mt-4 space-y-4">
+      {returnedItems.length > 0 && (
+        <ExchangeItemsTable
+          title="الأصناف المرتجعة"
+          items={returnedItems}
+          returned
+        />
+      )}
+      {replacementItems.length > 0 && (
+        <ExchangeItemsTable
+          title="الأصناف البديلة"
+          items={replacementItems}
+        />
+      )}
+    </div>
+  );
+}
+
+function ExchangeItemsTable({
+  title,
+  items,
+  returned = false,
+}: {
+  title: string;
+  items: ExchangeItem[];
+  returned?: boolean;
+}) {
+  return (
+    <div>
+      <h4 className="mb-2 text-sm font-semibold text-brown">{title}</h4>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gold/30 text-muted">
+              <th className="py-1 text-start">المنتج</th>
+              <th className="py-1 text-start">المقاس/اللون</th>
+              <th className="py-1 text-start">الكمية</th>
+              <th className="py-1 text-start">السعر</th>
+              <th className="py-1 text-start">الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr
+                key={item.id}
+                className="border-b border-gold/10 last:border-0"
+              >
+                <td className="py-1">
+                  {item.variant.product.nameAr || item.variant.product.name}
+                </td>
+                <td className="py-1">
+                  {item.variant.size} / {item.variant.color}
+                </td>
+                <td
+                  className={`py-1 font-medium ${returned ? "text-red-600" : ""}`}
+                >
+                  {item.quantity}
+                </td>
+                <td className="py-1">{formatCurrency(item.unitPrice)}</td>
+                <td className="py-1 font-medium">
+                  {formatCurrency(item.totalPrice)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }

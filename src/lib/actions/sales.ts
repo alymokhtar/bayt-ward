@@ -277,7 +277,46 @@ export async function getSale(id: string) {
           id: true,
           exchangeNumber: true,
           settlementBalance: true,
-          replacementSale: { select: { id: true, invoiceNumber: true } },
+          return: {
+            select: {
+              items: {
+                select: {
+                  id: true,
+                  quantity: true,
+                  unitPrice: true,
+                  totalPrice: true,
+                  variant: {
+                    select: {
+                      size: true,
+                      color: true,
+                      product: { select: { name: true, nameAr: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          replacementSale: {
+            select: {
+              id: true,
+              invoiceNumber: true,
+              items: {
+                select: {
+                  id: true,
+                  quantity: true,
+                  unitPrice: true,
+                  totalPrice: true,
+                  variant: {
+                    select: {
+                      size: true,
+                      color: true,
+                      product: { select: { name: true, nameAr: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
       },
@@ -286,7 +325,45 @@ export async function getSale(id: string) {
           id: true,
           exchangeNumber: true,
           settlementBalance: true,
+          return: {
+            select: {
+              items: {
+                select: {
+                  id: true,
+                  quantity: true,
+                  unitPrice: true,
+                  totalPrice: true,
+                  variant: {
+                    select: {
+                      size: true,
+                      color: true,
+                      product: { select: { name: true, nameAr: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
           originalSale: { select: { id: true, invoiceNumber: true } },
+          replacementSale: {
+            select: {
+              items: {
+                select: {
+                  id: true,
+                  quantity: true,
+                  unitPrice: true,
+                  totalPrice: true,
+                  variant: {
+                    select: {
+                      size: true,
+                      color: true,
+                      product: { select: { name: true, nameAr: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },
