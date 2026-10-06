@@ -301,9 +301,15 @@ export default function POSClient({
       setNewCustomerPhone("");
       setCustomerQuery("");
       setCustomerResults([]);
+      focusBarcodeInput();
     } else {
       setError(result.success ? "حدث خطأ" : (result.error ?? "حدث خطأ"));
     }
+  }
+
+  function closeNewCustomerForm() {
+    setShowNewCustomer(false);
+    focusBarcodeInput();
   }
 
   function updateSplitPaymentField(key: SplitPaymentKey, rawValue: string) {
@@ -456,7 +462,7 @@ export default function POSClient({
   function handleCloseReceipt() {
     setReceipt(null);
     setSuccess("");
-    searchRef.current?.focus();
+    focusBarcodeInput();
   }
 
   return (
@@ -645,7 +651,7 @@ export default function POSClient({
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => setShowNewCustomer(false)}
+                    onClick={closeNewCustomerForm}
                   >
                     إلغاء
                   </Button>
@@ -674,6 +680,7 @@ export default function POSClient({
                             setSelectedCustomer(c);
                             setCustomerQuery("");
                             setCustomerResults([]);
+                            focusBarcodeInput();
                           }}
                           className="w-full px-3 py-2 text-sm text-start hover:bg-gold/5"
                         >

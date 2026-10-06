@@ -6,7 +6,7 @@ import PaginationNav from "@/components/ui/PaginationNav";
 import FilterForm from "@/components/ui/FilterForm";
 import SaleDetailsModal from "@/app/(dashboard)/sales/SaleDetailsModal";
 import SalesChannelChart from "@/app/(dashboard)/sales/SalesChannelChart";
-import { getSalesExport } from "@/lib/actions/sales";
+import { getSales, getSalesExport } from "@/lib/actions/sales";
 import type { SalesChannelAnalytics, SalesChannelFilter } from "@/lib/sales-analytics";
 import {
   Table,
@@ -23,7 +23,7 @@ import {
 } from "@/lib/utils";
 import { Download, Search, Wallet } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const statusLabels: Record<string, string> = {
   COMPLETED: "مكتملة",
@@ -72,6 +72,8 @@ export default function SalesClient({
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+  const [invoiceLookupError, setInvoiceLookupError] = useState("");
+  const invoiceLookupInProgress = useRef(false);
   const selectedMetrics = params.channel === "ALL"
     ? channelAnalytics.total
     : channelAnalytics.channels[params.channel];
@@ -104,6 +106,49 @@ export default function SalesClient({
       setExportError("تعذر تصدير المبيعات. حاول مرة أخرى");
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleSalesSearchKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key !== "Enter") return;
+
+    event.preventDefault();
+    const invoiceNumber = event.currentTarget.value.trim();
+    const form = event.currentTarget.form;
+    setInvoiceLookupError("");
+    if (!invoiceNumber || invoiceLookupInProgress.current) {
+      if (!invoiceNumber) form?.requestSubmit();
+      return;
+    }
+
+    const loadedSale = sales.find(
+      (sale) =>
+        sale.invoiceNumber.toLowerCase() === invoiceNumber.toLowerCase(),
+    );
+    if (loadedSale) {
+      setSelectedSaleId(loadedSale.id);
+      return;
+    }
+
+    invoiceLookupInProgress.current = true;
+    try {
+      const result = await getSales({ search: invoiceNumber, pageSize: 50 });
+      const exactMatch = result.items.find(
+        (sale) =>
+          sale.invoiceNumber.toLowerCase() === invoiceNumber.toLowerCase(),
+      );
+
+      if (exactMatch) {
+        setSelectedSaleId(exactMatch.id);
+      } else {
+        form?.requestSubmit();
+      }
+    } catch {
+      setInvoiceLookupError("تعذر التحقق من رقم الفاتورة. يمكنك استخدام زر التصفية لإجراء بحث عادي.");
+    } finally {
+      invoiceLookupInProgress.current = false;
     }
   }
 
@@ -145,6 +190,7 @@ export default function SalesClient({
               <input
                 name="search"
                 defaultValue={params.search}
+                onKeyDown={handleSalesSearchKeyDown}
                 placeholder="رقم الفاتورة أو العميل..."
                 className="w-full h-10 rounded-lg border border-border bg-white ps-10 pe-4 text-sm"
               />
@@ -184,6 +230,7 @@ export default function SalesClient({
             />
           </FilterForm>
           {exportError && <p role="alert" className="mb-3 text-sm text-danger">{exportError}</p>}
+          {invoiceLookupError && <p role="alert" className="mb-3 text-sm text-danger">{invoiceLookupError}</p>}
 
           <Table>
             <TableHeader>
