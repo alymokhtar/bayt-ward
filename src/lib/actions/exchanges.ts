@@ -24,6 +24,34 @@ type ExchangeItemInput = {
 
 type ExchangeSettlementMethod = "CASH" | "CARD" | "WALLET";
 
+type ExchangeReceiptData = {
+  exchangeNumber: string;
+  originalInvoiceNumber: string;
+  returnNumber: string;
+  replacementInvoiceNumber: string;
+  createdAt: Date;
+  cashierName: string;
+  customerName: string | null;
+  customerPhone: string | null;
+  returnedItems: ExchangeReceiptLine[];
+  replacementItems: ExchangeReceiptLine[];
+  refundAmount: number;
+  replacementSubtotal: number;
+  replacementDiscountAmount: number;
+  replacementTotal: number;
+  settlementBalance: number;
+  settlementMethod: ExchangeSettlementMethod | null;
+};
+
+type ExchangeReceiptLine = {
+    name: string;
+    size: string;
+    color: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+};
+
 type ActionResult<T> =
   | { success: true; data: T }
   | { success: false; error: string };
@@ -98,9 +126,17 @@ export async function createExchange(data: {
       const originalSale = await tx.sale.findUnique({
         where: { id: data.originalSaleId },
         include: {
+          customer: { select: { name: true, phone: true } },
           items: {
             include: {
-              variant: { select: { productId: true } },
+              variant: {
+                select: {
+                  productId: true,
+                  size: true,
+                  color: true,
+                  product: { select: { name: true, nameAr: true } },
+                },
+              },
             },
           },
         },
@@ -215,6 +251,8 @@ export async function createExchange(data: {
           quantity: item.quantity,
           unitPrice: variant.sellingPrice,
           name: variant.product.nameAr || variant.product.name,
+          size: variant.size,
+          color: variant.color,
         };
       });
       const grossSubtotal = trustedReplacementItems.reduce(
@@ -420,6 +458,7 @@ export async function createExchange(data: {
           id: true,
           exchangeNumber: true,
           settlementBalance: true,
+          createdAt: true,
         },
       });
 
@@ -513,6 +552,20 @@ export async function createExchange(data: {
         });
       }
 
+      const receiptSource = {
+        exchangeNumber: createdExchange.exchangeNumber,
+        originalInvoiceNumber: originalSale.invoiceNumber,
+        returnNumber,
+        replacementInvoiceNumber: invoiceNumber,
+        createdAt: createdExchange.createdAt,
+        cashierName: user.name,
+        customerName: originalSale.customer?.name ?? null,
+        customerPhone: originalSale.customer?.phone ?? null,
+        returnedItems: pricedReturnItems,
+        replacementItems: trustedReplacementItems,
+        replacementPricingLines: exchangePricing.lines,
+      };
+
       return {
         ...createdExchange,
         originalInvoiceNumber: originalSale.invoiceNumber,
@@ -520,6 +573,7 @@ export async function createExchange(data: {
         replacementInvoiceNumber: invoiceNumber,
         refundAmount,
         replacementTotal,
+        receiptSource,
       };
     }, {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
@@ -533,7 +587,66 @@ export async function createExchange(data: {
     updateTag("products-list");
     void checkLowStockAndNotify(replacementVariantIds);
 
-    return { success: true, data: exchange };
+    const { receiptSource, ...exchangeResult } = exchange;
+    let receipt: ExchangeReceiptData | undefined;
+    try {
+      receipt = {
+        exchangeNumber: receiptSource.exchangeNumber,
+        originalInvoiceNumber: receiptSource.originalInvoiceNumber,
+        returnNumber: receiptSource.returnNumber,
+        replacementInvoiceNumber: receiptSource.replacementInvoiceNumber,
+        createdAt: receiptSource.createdAt,
+        cashierName: receiptSource.cashierName,
+        customerName: receiptSource.customerName,
+        customerPhone: receiptSource.customerPhone,
+        returnedItems: receiptSource.returnedItems.map((item) => ({
+          name:
+            item.saleItem.variant.product.nameAr ||
+            item.saleItem.variant.product.name,
+          size: item.saleItem.variant.size,
+          color: item.saleItem.variant.color,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
+        replacementItems: receiptSource.replacementItems.map((item, index) => {
+          const pricing = receiptSource.replacementPricingLines[index];
+          if (!pricing) {
+            throw new Error("Replacement pricing missing from exchange receipt data");
+          }
+          return {
+            name: item.name,
+            size: item.size,
+            color: item.color,
+            quantity: item.quantity,
+            unitPrice: pricing.unitPrice,
+            totalPrice: pricing.netAmount,
+          };
+        }),
+        refundAmount: exchangeResult.refundAmount,
+        replacementSubtotal: receiptSource.replacementPricingLines.reduce(
+          (sum, line) => sum + line.grossAmount,
+          0,
+        ),
+        replacementDiscountAmount: receiptSource.replacementPricingLines.reduce(
+          (sum, line) => sum + line.discountAmount,
+          0,
+        ),
+        replacementTotal: exchangeResult.replacementTotal,
+        settlementBalance: exchangeResult.settlementBalance,
+        settlementMethod: data.settlementMethod ?? null,
+      };
+    } catch (error) {
+      console.error("Failed to prepare exchange receipt data:", error);
+    }
+
+    return {
+      success: true,
+      data: {
+        ...exchangeResult,
+        ...(receipt ? { receipt } : {}),
+      },
+    };
   } catch (error) {
     return handleActionError(error);
   }

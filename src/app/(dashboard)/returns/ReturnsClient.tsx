@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/Table";
 import { createReturn } from "@/lib/actions/returns";
 import { createExchange } from "@/lib/actions/exchanges";
+import ExchangeReceiptModal from "@/components/pos/ExchangeReceiptModal";
+import type { ExchangeReceiptData } from "@/components/pos/ExchangeReceiptInvoice";
 import ReturnDetailsModal from "@/app/(dashboard)/returns/ReturnDetailsModal";
 import { getSale } from "@/lib/actions/sales";
 import { searchVariants } from "@/lib/actions/products";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Printer, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { calculateReturnRefundAmount } from "@/lib/return-pricing";
@@ -104,6 +106,8 @@ export default function ReturnsClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedReturnId, setSelectedReturnId] = useState<string | null>(null);
+  const [exchangeReceipt, setExchangeReceipt] = useState<ExchangeReceiptData | null>(null);
+  const [exchangeReceiptOpen, setExchangeReceiptOpen] = useState(false);
 
   async function loadSale() {
     setError("");
@@ -332,13 +336,18 @@ export default function ReturnsClient({
 
     if (result.success) {
       if (isExchange && result.data && "settlementBalance" in result.data) {
-        setSuccess(
-          result.data.settlementBalance > 0
+        const exchangeSuccessMessage = result.data.settlementBalance > 0
             ? `تم الاستبدال وتحصيل ${formatCurrency(result.data.settlementBalance)}`
             : result.data.settlementBalance < 0
               ? `تم الاستبدال ورد ${formatCurrency(Math.abs(result.data.settlementBalance))}`
-              : "تم الاستبدال دون فرق مالي",
-        );
+              : "تم الاستبدال دون فرق مالي";
+        if ("receipt" in result.data && result.data.receipt) {
+          setSuccess(exchangeSuccessMessage);
+          setExchangeReceipt(result.data.receipt);
+          setExchangeReceiptOpen(true);
+        } else {
+          setSuccess(`${exchangeSuccessMessage}؛ تعذّر تجهيز بيانات الطباعة.`);
+        }
       } else {
         setSuccess("تم تسجيل المرتجع بنجاح");
       }
@@ -360,6 +369,18 @@ export default function ReturnsClient({
       {success && (
         <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
           {success}
+        </div>
+      )}
+      {exchangeReceipt && (
+        <div className="mb-4 flex justify-end">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setExchangeReceiptOpen(true)}
+          >
+            <Printer className="h-4 w-4" />
+            إعادة طباعة فاتورة الاستبدال
+          </Button>
         </div>
       )}
       <div className="flex justify-end mb-4">
@@ -691,6 +712,10 @@ export default function ReturnsClient({
       <ReturnDetailsModal
         returnId={selectedReturnId}
         onClose={() => setSelectedReturnId(null)}
+      />
+      <ExchangeReceiptModal
+        receipt={exchangeReceiptOpen ? exchangeReceipt : null}
+        onClose={() => setExchangeReceiptOpen(false)}
       />
     </>
   );
