@@ -625,35 +625,36 @@ export default function ReturnsClient({
                       toggleItem(item.variantId, availableQuantity)
                     }
                     disabled={availableQuantity === 0}
-                    className="rounded"
+                    className="shrink-0 rounded"
                   />
-                  <div className="flex-1 text-sm">
-                    <p className="font-medium">
+                  <div className="min-w-0 flex-1 text-sm">
+                    <p className="break-words font-medium">
                       {item.variant.product.nameAr ||
                         item.variant.product.name}
                     </p>
-                    <p className="text-muted">
+                    <p className="break-words text-muted">
                       {item.variant.size}/{item.variant.color} — الكمية المباعة:{" "}
                       {item.quantity} — المتاح للإرجاع: {availableQuantity}
                     </p>
                   </div>
                   {selectedItems[item.variantId] && (
-                    <Input
-                      type="number"
-                      min={1}
-                      max={availableQuantity}
-                      value={selectedItems[item.variantId]}
-                      onChange={(e) =>
-                        updateQty(
-                          item.variantId,
-                          parseInt(e.target.value) || 1,
-                          availableQuantity
-                        )
-                      }
-                      className="w-20"
-                    />
+                    <div className="w-20 shrink-0">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={availableQuantity}
+                        value={selectedItems[item.variantId]}
+                        onChange={(e) =>
+                          updateQty(
+                            item.variantId,
+                            parseInt(e.target.value) || 1,
+                            availableQuantity
+                          )
+                        }
+                      />
+                    </div>
                   )}
-                  <span className="text-sm text-gold">
+                  <span className="shrink-0 whitespace-nowrap text-sm text-gold">
                     {formatCurrency(item.unitPrice - item.discountAmount / item.quantity)}
                   </span>
                 </div>
@@ -692,35 +693,37 @@ export default function ReturnsClient({
                     const maxQuantity = getMaxReplacementQuantity(variant);
                     return (
                       <div key={variant.id} className="flex items-center gap-3 rounded-lg border border-border bg-white p-3">
-                        <div className="flex-1 text-sm">
-                          <p className="font-medium">
+                        <div className="min-w-0 flex-1 text-sm">
+                          <p className="break-words font-medium">
                             {variant.product.nameAr || variant.product.name}
                           </p>
-                          <p className="text-muted">
+                          <p className="break-words text-muted">
                             {variant.size}/{variant.color} — المخزون المتاح: {maxQuantity}
                           </p>
                         </div>
-                        <span className="text-sm text-gold">
+                        <span className="shrink-0 whitespace-nowrap text-sm text-gold">
                           {formatCurrency(variant.sellingPrice)}
                         </span>
                         {selected > 0 ? (
                           <>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={maxQuantity}
-                              value={selected}
-                              onChange={(event) =>
-                                updateReplacementQuantity(
-                                  variant,
-                                  parseInt(event.target.value, 10) || 1,
-                                )
-                              }
-                              className="w-20"
-                            />
+                            <div className="w-20 shrink-0">
+                              <Input
+                                type="number"
+                                min={1}
+                                max={maxQuantity}
+                                value={selected}
+                                onChange={(event) =>
+                                  updateReplacementQuantity(
+                                    variant,
+                                    parseInt(event.target.value, 10) || 1,
+                                  )
+                                }
+                              />
+                            </div>
                             <Button
                               type="button"
                               variant="ghost"
+                              className="shrink-0"
                               onClick={() =>
                                 {
                                   setSettlementMethod("");
@@ -739,6 +742,7 @@ export default function ReturnsClient({
                           <Button
                             type="button"
                             variant="secondary"
+                            className="shrink-0"
                             disabled={maxQuantity <= 0}
                             onClick={() => addReplacementVariant(variant)}
                           >
