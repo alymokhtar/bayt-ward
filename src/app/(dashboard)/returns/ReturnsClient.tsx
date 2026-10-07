@@ -32,6 +32,13 @@ import {
 } from "@/lib/exchange-pricing";
 
 type VariantResult = Awaited<ReturnType<typeof searchVariants>>[number];
+type SettlementMethod = "CASH" | "CARD" | "INSTAPAY" | "WALLET";
+
+const settlementMethods: SettlementMethod[] = ["CASH", "CARD", "INSTAPAY", "WALLET"];
+
+function isSettlementMethod(value: string): value is SettlementMethod {
+  return settlementMethods.some((method) => method === value);
+}
 
 type ReturnRecord = {
   id: string;
@@ -101,7 +108,7 @@ export default function ReturnsClient({
   const [replacementSearch, setReplacementSearch] = useState("");
   const [replacementVariants, setReplacementVariants] = useState<VariantResult[]>([]);
   const [replacementItems, setReplacementItems] = useState<Record<string, number>>({});
-  const [settlementMethod, setSettlementMethod] = useState<"CASH" | "CARD" | "INSTAPAY" | "WALLET">("CASH");
+  const [settlementMethod, setSettlementMethod] = useState<SettlementMethod | "">("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -292,6 +299,7 @@ export default function ReturnsClient({
           return;
         }
 
+        setSettlementMethod("");
         setReplacementVariants((previous) =>
           previous.some((item) => item.id === variant.id)
             ? previous
@@ -331,6 +339,7 @@ export default function ReturnsClient({
   function addReplacementVariant(variant: VariantResult) {
     const maxQuantity = getMaxReplacementQuantity(variant);
     if (maxQuantity <= 0) return;
+    setSettlementMethod("");
     setReplacementItems((previous) => ({
       ...previous,
       [variant.id]: Math.min(previous[variant.id] ?? 1, maxQuantity),
@@ -339,6 +348,7 @@ export default function ReturnsClient({
 
   function updateReplacementQuantity(variant: VariantResult, quantity: number) {
     const maxQuantity = getMaxReplacementQuantity(variant);
+    setSettlementMethod("");
     setReplacementItems((previous) => {
       if (maxQuantity <= 0) {
         const next = { ...previous };
@@ -368,7 +378,11 @@ export default function ReturnsClient({
       setError("الكمية البديلة تتجاوز المخزون المتاح بعد المرتجع");
       return;
     }
-    if (isExchange && settlementBalance !== 0 && !settlementMethod) {
+    if (
+      isExchange &&
+      settlementBalance !== 0 &&
+      !isSettlementMethod(settlementMethod)
+    ) {
       setError("اختر طريقة دفع أو رد الفرق");
       return;
     }
@@ -382,7 +396,10 @@ export default function ReturnsClient({
             variantId: variant.id,
             quantity,
           })),
-          settlementMethod: settlementBalance === 0 ? undefined : settlementMethod,
+          settlementMethod:
+            settlementBalance === 0 || !isSettlementMethod(settlementMethod)
+              ? undefined
+              : settlementMethod,
           expectedSettlementBalance: settlementBalance,
           reason: reason || undefined,
           notes: notes || undefined,
@@ -521,7 +538,9 @@ export default function ReturnsClient({
                   (replacementCart.length === 0 ||
                     replacementCart.some(
                       ({ variant, quantity }) => quantity > getMaxReplacementQuantity(variant),
-                    )))
+                    ) ||
+                    (settlementBalance !== 0 &&
+                      !isSettlementMethod(settlementMethod))))
               }
             >
               {isExchange ? "تأكيد الاستبدال" : "تأكيد المرتجع"}
@@ -567,6 +586,7 @@ export default function ReturnsClient({
                   checked={isExchange}
                   onChange={(event) => {
                     setIsExchange(event.target.checked);
+                    setSettlementMethod("");
                     setError("");
                   }}
                 />
@@ -683,11 +703,14 @@ export default function ReturnsClient({
                               type="button"
                               variant="ghost"
                               onClick={() =>
-                                setReplacementItems((previous) => {
-                                  const next = { ...previous };
-                                  delete next[variant.id];
-                                  return next;
-                                })
+                                {
+                                  setSettlementMethod("");
+                                  setReplacementItems((previous) => {
+                                    const next = { ...previous };
+                                    delete next[variant.id];
+                                    return next;
+                                  });
+                                }
                               }
                             >
                               <Trash2 className="h-4 w-4" />
@@ -716,32 +739,44 @@ export default function ReturnsClient({
                         <p>
                           صافي المرتجع: <strong>{formatCurrency(refundAmount)}</strong>
                         </p>
-                        <p className="font-semibold text-brown">
-                          {settlementBalance > 0
-                            ? `المطلوب تحصيله: ${formatCurrency(settlementBalance)}`
-                            : settlementBalance < 0
-                              ? `المطلوب رده: ${formatCurrency(Math.abs(settlementBalance))}`
-                              : "لا يوجد فرق مالي"}
-                        </p>
                       </div>
-                      {settlementBalance !== 0 && (
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-brown">
-                            طريقة تسوية الفرق
-                          </label>
-                          <select
-                            value={settlementMethod}
-                            onChange={(event) =>
-                              setSettlementMethod(event.target.value as "CASH" | "CARD" | "INSTAPAY" | "WALLET")
-                            }
-                            className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
-                          >
-                            <option value="CASH">كاش</option>
-                            <option value="CARD">بطاقة</option>
-                            <option value="INSTAPAY">إنستاباي</option>
-                            <option value="WALLET">محفظة</option>
-                          </select>
+                      {settlementBalance !== 0 ? (
+                        <div className="grid gap-3 rounded-lg border border-gold/40 bg-gold/5 p-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                          <div>
+                            <p className="text-sm font-semibold text-brown">
+                              {settlementBalance > 0
+                                ? "مبلغ مطلوب تحصيله من العميل"
+                                : "مبلغ مطلوب رده للعميل"}
+                            </p>
+                            <p className="mt-1 text-lg font-bold text-brown">
+                              {formatCurrency(Math.abs(settlementBalance))}
+                            </p>
+                          </div>
+                          <div>
+                            <label className="mb-1.5 block text-sm font-medium text-brown">
+                              طريقة تسوية الفرق
+                            </label>
+                            <select
+                              value={settlementMethod}
+                              required
+                              onChange={(event) => {
+                                const value = event.target.value;
+                                setSettlementMethod(isSettlementMethod(value) ? value : "");
+                              }}
+                              className="h-10 w-full min-w-48 rounded-lg border border-border bg-white px-3 text-sm"
+                            >
+                              <option value="">اختر طريقة التسوية</option>
+                              <option value="CASH">كاش</option>
+                              <option value="CARD">بطاقة</option>
+                              <option value="INSTAPAY">إنستاباي</option>
+                              <option value="WALLET">محفظة</option>
+                            </select>
+                          </div>
                         </div>
+                      ) : (
+                        <p className="rounded-lg border border-border bg-muted/30 p-3 text-sm font-semibold text-brown">
+                          لا يوجد فرق مالي
+                        </p>
                       )}
                       <p className="text-xs text-muted">
                         يعاد التحقق من الأسعار والعروض والمخزون على الخادم قبل اعتماد العملية.
