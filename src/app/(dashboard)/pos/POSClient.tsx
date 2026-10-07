@@ -189,14 +189,15 @@ export default function POSClient({
     if (e.key !== "Enter" && e.key !== "Tab") return;
 
     e.preventDefault();
+    e.stopPropagation();
 
     const nextValue = inputValue.trim();
+    e.currentTarget.value = "";
+    setQuery("");
 
     if (!nextValue) {
       return;
     }
-
-    setQuery(nextValue);
 
     // Always treat the submitted value as an exact scan/code (SKU/Variant code)
     // and attempt to resolve it directly.
