@@ -103,7 +103,7 @@ export default function ReturnsClient({
   >({});
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
-  const [refundMethod, setRefundMethod] = useState<"CASH" | "CARD" | "INSTAPAY" | "WALLET">("CASH");
+  const [refundMethod, setRefundMethod] = useState<SettlementMethod | "">("");
   const [isExchange, setIsExchange] = useState(false);
   const [replacementSearch, setReplacementSearch] = useState("");
   const [replacementVariants, setReplacementVariants] = useState<VariantResult[]>([]);
@@ -145,6 +145,7 @@ export default function ReturnsClient({
       }
       setSale(fullSale);
       setSelectedItems({});
+      setRefundMethod("");
     } catch {
       setError("خطأ في تحميل الفاتورة");
     }
@@ -159,6 +160,7 @@ export default function ReturnsClient({
   }
 
   function toggleItem(variantId: string, maxQty: number) {
+    setRefundMethod("");
     setSelectedItems((prev) => {
       if (prev[variantId]) {
         const next = { ...prev };
@@ -170,6 +172,7 @@ export default function ReturnsClient({
   }
 
   function updateQty(variantId: string, qty: number, max: number) {
+    setRefundMethod("");
     setSelectedItems((prev) => ({
       ...prev,
       [variantId]: Math.min(Math.max(1, qty), max),
@@ -364,6 +367,7 @@ export default function ReturnsClient({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const selectedRefundMethod = refundMethod;
     if (!sale || returnItems.length === 0) {
       setError(isExchange ? "اختر المنتجات المرتجعة والبديلة" : "اختر منتجات للإرجاع");
       return;
@@ -388,8 +392,9 @@ export default function ReturnsClient({
     }
 
     setLoading(true);
-    const result = isExchange
-      ? await createExchange({
+    let result;
+    if (isExchange) {
+      result = await createExchange({
           originalSaleId: sale.id,
           returnItems,
           replacementItems: replacementCart.map(({ variant, quantity }) => ({
@@ -403,14 +408,21 @@ export default function ReturnsClient({
           expectedSettlementBalance: settlementBalance,
           reason: reason || undefined,
           notes: notes || undefined,
-        })
-      : await createReturn({
+        });
+    } else {
+      if (!isSettlementMethod(selectedRefundMethod)) {
+        setLoading(false);
+        setError("اختر طريقة الاسترجاع");
+        return;
+      }
+      result = await createReturn({
           saleId: sale.id,
           items: returnItems,
-          refundMethod,
+          refundMethod: selectedRefundMethod,
           reason: reason || undefined,
           notes: notes || undefined,
         });
+    }
     setLoading(false);
 
     if (result.success) {
@@ -437,6 +449,7 @@ export default function ReturnsClient({
       setReplacementItems({});
       setReplacementVariants([]);
       setSelectedItems({});
+      setRefundMethod("");
       router.refresh();
     } else {
       setError(result.error ?? "حدث خطأ");
@@ -471,6 +484,8 @@ export default function ReturnsClient({
           setIsExchange(false);
           setReplacementItems({});
           setReplacementVariants([]);
+          setSelectedItems({});
+          setRefundMethod("");
         }}>
           <Plus className="h-4 w-4" />
           مرتجع جديد
@@ -540,7 +555,10 @@ export default function ReturnsClient({
                       ({ variant, quantity }) => quantity > getMaxReplacementQuantity(variant),
                     ) ||
                     (settlementBalance !== 0 &&
-                      !isSettlementMethod(settlementMethod))))
+                      !isSettlementMethod(settlementMethod)))) ||
+                (!isExchange &&
+                  (returnItems.length === 0 ||
+                    !isSettlementMethod(refundMethod)))
               }
             >
               {isExchange ? "تأكيد الاستبدال" : "تأكيد المرتجع"}
@@ -586,6 +604,7 @@ export default function ReturnsClient({
                   checked={isExchange}
                   onChange={(event) => {
                     setIsExchange(event.target.checked);
+                    setRefundMethod("");
                     setSettlementMethod("");
                     setError("");
                   }}
@@ -640,7 +659,7 @@ export default function ReturnsClient({
                 </div>
                 );
               })}
-              {refundAmount > 0 && (
+              {isExchange && refundAmount > 0 && (
                 <p className="font-semibold text-brown">
                   {isExchange ? "صافي قيمة المنتجات المرتجعة" : "مبلغ الاسترداد"}:{" "}
                   {formatCurrency(refundAmount)}
@@ -785,21 +804,33 @@ export default function ReturnsClient({
                   )}
                 </div>
               ) : (
-                <div>
-                  <label className="text-sm font-medium text-brown block mb-1.5">
-                    طريقة الاسترجاع
-                  </label>
-                  <select
-                    value={refundMethod}
-                    onChange={(e) => setRefundMethod(e.target.value as "CASH" | "CARD" | "INSTAPAY" | "WALLET")}
-                    className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm"
-                  >
-                    <option value="CASH">كاش</option>
-                    <option value="CARD">بطاقة</option>
-                    <option value="INSTAPAY">إنستاباي</option>
-                    <option value="WALLET">محفظة</option>
-                  </select>
-                </div>
+                returnItems.length > 0 && (
+                  <div className="grid gap-3 rounded-lg border border-gold/40 bg-gold/5 p-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                    <p className="text-base font-bold text-brown">
+                      إجمالي المبلغ المطلوب رده للعميل: {formatCurrency(refundAmount)}
+                    </p>
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-brown">
+                        طريقة الاسترجاع
+                      </label>
+                      <select
+                        value={refundMethod}
+                        required
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setRefundMethod(isSettlementMethod(value) ? value : "");
+                        }}
+                        className="h-10 w-full min-w-48 rounded-lg border border-border bg-white px-3 text-sm"
+                      >
+                        <option value="">اختر طريقة الاسترجاع</option>
+                        <option value="CASH">كاش</option>
+                        <option value="CARD">بطاقة</option>
+                        <option value="INSTAPAY">إنستاباي</option>
+                        <option value="WALLET">محفظة</option>
+                      </select>
+                    </div>
+                  </div>
+                )
               )}
             </div>
           )}
