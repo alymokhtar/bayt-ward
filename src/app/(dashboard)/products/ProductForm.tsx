@@ -145,6 +145,8 @@ export default function ProductForm({
   const [publishToWebsite, setPublishToWebsite] = useState(product?.publishToWebsite ?? false);
   const [featuredProduct, setFeaturedProduct] = useState(product?.featuredProduct ?? false);
   const [isActive, setIsActive] = useState(product?.isActive ?? true);
+  const [bulkCostPrice, setBulkCostPrice] = useState("");
+  const [bulkSellingPrice, setBulkSellingPrice] = useState("");
   const [variants, setVariants] = useState<VariantForm[]>(
     product?.variants.map((v) => {
       const sizeMode = getVariantSizeMode(v.size);
@@ -240,6 +242,32 @@ export default function ProductForm({
       if (combinationChanged) setError("");
       return next;
     });
+  }
+
+  function applyBulkPrices() {
+    const costPrice = Number(bulkCostPrice);
+    const sellingPrice = Number(bulkSellingPrice);
+
+    if (
+      !bulkCostPrice.trim() ||
+      !bulkSellingPrice.trim() ||
+      !Number.isFinite(costPrice) ||
+      costPrice < 0 ||
+      !Number.isFinite(sellingPrice) ||
+      sellingPrice < 0
+    ) {
+      setError("أدخل سعري تكلفة وبيع صالحين وغير سالبين لتطبيقهما");
+      return;
+    }
+
+    setVariants((current) =>
+      current.map((variant) => ({
+        ...variant,
+        costPrice,
+        sellingPrice,
+      }))
+    );
+    setError("");
   }
 
   function selectGlobalColor(index: number, color: GlobalColor) {
@@ -551,6 +579,44 @@ export default function ProductForm({
       <div className="rounded-xl border border-border bg-white p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-brown">المتغيرات (المقاسات والألوان)</h2>
+        </div>
+
+        <div className="rounded-lg border border-gold/30 bg-gold/5 p-4">
+          <p className="mb-3 text-sm font-medium text-brown">
+            تطبيق أسعار موحدة على جميع المتغيرات
+          </p>
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+            <Input
+              label="سعر التكلفة الموحد"
+              type="number"
+              min={0}
+              step={0.01}
+              value={bulkCostPrice}
+              onChange={(event) => {
+                setBulkCostPrice(event.target.value);
+                setError("");
+              }}
+              placeholder="أدخل سعر التكلفة"
+            />
+            <Input
+              label="سعر البيع الموحد"
+              type="number"
+              min={0}
+              step={0.01}
+              value={bulkSellingPrice}
+              onChange={(event) => {
+                setBulkSellingPrice(event.target.value);
+                setError("");
+              }}
+              placeholder="أدخل سعر البيع"
+            />
+            <Button type="button" variant="outline" onClick={applyBulkPrices}>
+              تطبيق على جميع المتغيرات
+            </Button>
+          </div>
+          <p className="mt-2 text-xs text-muted">
+            يمكنك تعديل سعر أي متغير يدوياً بعد تطبيق الأسعار الموحدة.
+          </p>
         </div>
 
         {variants.map((variant, index) => (
