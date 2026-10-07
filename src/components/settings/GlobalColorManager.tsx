@@ -4,8 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { createGlobalColor, deleteGlobalColor, getGlobalColors } from "@/lib/actions/global-colors";
-import { Trash2 } from "lucide-react";
+import {
+  createGlobalColor,
+  deleteGlobalColor,
+  getGlobalColors,
+  updateGlobalColor,
+} from "@/lib/actions/global-colors";
+import { Pencil, Trash2, X } from "lucide-react";
 
 type GlobalColor = {
   id: string;
@@ -19,10 +24,26 @@ export default function GlobalColorManager() {
   const [colors, setColors] = useState<GlobalColor[]>([]);
   const [name, setName] = useState("");
   const [hexCode, setHexCode] = useState("#000000");
+  const [editingColorId, setEditingColorId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    getGlobalColors()
+      .then((result) => {
+        if (active) setColors(result);
+      })
+      .catch(() => {
+        if (active) setError("تعذر تحميل الألوان");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function loadColors() {
     try {
@@ -33,29 +54,44 @@ export default function GlobalColorManager() {
     }
   }
 
-  useEffect(() => {
-    loadColors();
-  }, []);
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError("");
     setSuccess("");
 
-    const result = await createGlobalColor({ name, hexCode });
+    const result = editingColorId
+      ? await updateGlobalColor(editingColorId, { name, hexCode })
+      : await createGlobalColor({ name, hexCode });
     setLoading(false);
 
     if (result.success) {
       setName("");
       setHexCode("#000000");
-      setSuccess("تم إضافة اللون بنجاح");
+      setEditingColorId(null);
+      setSuccess(
+        editingColorId ? "تم تحديث اللون والمنتجات المرتبطة به" : "تم إضافة اللون بنجاح"
+      );
       await loadColors();
       router.refresh();
       return;
     }
 
     setError(result.error ?? "تعذر إضافة اللون");
+  }
+
+  function handleEdit(color: GlobalColor) {
+    setEditingColorId(color.id);
+    setName(color.name);
+    setHexCode(color.hexCode);
+    setError("");
+    setSuccess("");
+  }
+
+  function cancelEdit() {
+    setEditingColorId(null);
+    setName("");
+    setHexCode("#000000");
   }
 
   async function handleDelete(colorId: string) {
@@ -67,6 +103,7 @@ export default function GlobalColorManager() {
     setDeleteLoading(null);
 
     if (result.success) {
+      if (editingColorId === colorId) cancelEdit();
       setSuccess("تم حذف اللون بنجاح");
       await loadColors();
       router.refresh();
@@ -121,9 +158,21 @@ export default function GlobalColorManager() {
         </div>
 
         <div className="lg:col-span-2 xl:col-span-2">
-          <Button type="submit" loading={loading} className="w-full">
-            حفظ اللون
+          <Button type="submit" loading={loading} className="w-full" disabled={deleteLoading !== null}>
+            {editingColorId ? "حفظ التعديلات" : "إضافة اللون"}
           </Button>
+          {editingColorId && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-2 w-full"
+              onClick={cancelEdit}
+              disabled={loading}
+            >
+              إلغاء التعديل
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </form>
 
@@ -150,9 +199,18 @@ export default function GlobalColorManager() {
                 </div>
                 <button
                   type="button"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-brown transition hover:bg-gold/10"
+                  onClick={() => handleEdit(color)}
+                  disabled={loading || deleteLoading !== null}
+                  aria-label={`تعديل ${color.name}`}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
                   className="inline-flex h-7 w-7 items-center justify-center rounded-full text-danger transition hover:bg-danger/10"
                   onClick={() => handleDelete(color.id)}
-                  disabled={deleteLoading !== null}
+                  disabled={deleteLoading !== null || loading}
                   aria-label={`حذف ${color.name}`}
                 >
                   <Trash2 className="h-4 w-4" />

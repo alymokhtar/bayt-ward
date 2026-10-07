@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export const BACKUP_VERSION = 3 as const;
+export const BACKUP_VERSION = 4 as const;
 
 type BackupRow = Record<string, unknown>;
 
@@ -11,6 +11,7 @@ export interface BackupPayload {
     settings: BackupRow[];
     users: BackupRow[];
     categories: BackupRow[];
+    globalColors: BackupRow[];
     products: BackupRow[];
     productColors: BackupRow[];
     productMedia: BackupRow[];
@@ -41,6 +42,7 @@ export interface BackupRestoreCounts {
   settings: number;
   users: number;
   categories: number;
+  globalColors: number;
   products: number;
   productColors: number;
   productMedia: number;
@@ -94,6 +96,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
     settings,
     users,
     categories,
+    globalColors,
     products,
     productColors,
     productMedia,
@@ -115,6 +118,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
     prisma.setting.findMany({ orderBy: { key: "asc" } }),
     prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.category.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.globalColor.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.product.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.productColor.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.productMedia.findMany({ orderBy: { createdAt: "asc" } }),
@@ -141,6 +145,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
       settings: cloneRecords(settings),
       users: cloneRecords(users),
       categories: cloneRecords(categories),
+      globalColors: cloneRecords(globalColors),
       products: cloneRecords(products),
       productColors: cloneRecords(productColors),
       productMedia: cloneRecords(productMedia),
@@ -164,7 +169,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
 
 function normalizeBackupPayload(payload: BackupPayload | BackupPayloadLike): BackupPayload["data"] {
   const version = Number(payload.version ?? 0);
-  if (version !== BACKUP_VERSION && version !== 2 && version !== 1) {
+  if (version !== BACKUP_VERSION && version !== 3 && version !== 2 && version !== 1) {
     throw new Error("UNSUPPORTED_BACKUP_VERSION");
   }
 
@@ -178,6 +183,7 @@ function normalizeBackupPayload(payload: BackupPayload | BackupPayloadLike): Bac
     settings: Array.isArray(data.settings) ? data.settings : [],
     users: Array.isArray(data.users) ? data.users : [],
     categories: Array.isArray(data.categories) ? data.categories : [],
+    globalColors: Array.isArray(data.globalColors) ? data.globalColors : [],
     products: Array.isArray(data.products) ? data.products : [],
     productColors: Array.isArray(data.productColors) ? data.productColors : [],
     productMedia: Array.isArray(data.productMedia) ? data.productMedia : [],
@@ -234,6 +240,19 @@ export async function restoreBackupSnapshot(
     createdAt: toDate(row.createdAt),
   }));
 
+  const globalColors = data.globalColors.map((row) => ({
+    id: String(row.id),
+    name: String(row.name),
+    hexCode: String(row.hexCode),
+    createdAt: toDate(row.createdAt),
+  }));
+  const globalColorIds = new Set(globalColors.map((color) => color.id));
+
+  function restoreGlobalColorId(value: unknown): string | null {
+    const id = toNullableString(value);
+    return id && globalColorIds.has(id) ? id : null;
+  }
+
   const products = data.products.map((row) => ({
     id: String(row.id),
     name: String(row.name),
@@ -252,6 +271,7 @@ export async function restoreBackupSnapshot(
     productId: String(row.productId),
     color: String(row.color),
     colorHex: toNullableString(row.colorHex),
+    globalColorId: restoreGlobalColorId(row.globalColorId),
     sortOrder: Number(row.sortOrder ?? 0),
     isActive: Boolean(row.isActive),
     createdAt: toDate(row.createdAt),
@@ -277,6 +297,7 @@ export async function restoreBackupSnapshot(
     size: String(row.size),
     color: String(row.color),
     colorHex: toNullableString(row.colorHex),
+    globalColorId: restoreGlobalColorId(row.globalColorId),
     costPrice: Number(row.costPrice ?? 0),
     sellingPrice: Number(row.sellingPrice ?? 0),
     stockQuantity: Number(row.stockQuantity ?? 0),
@@ -493,6 +514,7 @@ export async function restoreBackupSnapshot(
     await tx.productColor.deleteMany();
     await tx.productVariant.deleteMany();
     await tx.product.deleteMany();
+    await tx.globalColor.deleteMany();
     await tx.customer.deleteMany();
     await tx.supplier.deleteMany();
     await tx.category.deleteMany();
@@ -505,6 +527,7 @@ export async function restoreBackupSnapshot(
     await tx.supplier.createMany({ data: suppliers as never[] });
     await tx.customer.createMany({ data: customers as never[] });
     await tx.product.createMany({ data: products as never[] });
+    await tx.globalColor.createMany({ data: globalColors as never[] });
     await tx.productColor.createMany({ data: productColors as never[] });
     await tx.productMedia.createMany({ data: productMedia as never[] });
     await tx.productVariant.createMany({ data: productVariants as never[] });
@@ -525,6 +548,7 @@ export async function restoreBackupSnapshot(
     settings: settings.length,
     users: users.length,
     categories: categories.length,
+    globalColors: globalColors.length,
     products: products.length,
     productColors: productColors.length,
     productMedia: productMedia.length,

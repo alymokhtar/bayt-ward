@@ -127,7 +127,13 @@ export async function getProductColorsWithMedia(
 
     const variants = await prisma.productVariant.findMany({
       where: { productId, isActive: true },
-      select: { id: true, color: true, colorHex: true, isActive: true },
+      select: {
+        id: true,
+        color: true,
+        colorHex: true,
+        globalColorId: true,
+        isActive: true,
+      },
       orderBy: [{ color: "asc" }],
     });
 
@@ -143,6 +149,7 @@ export async function getProductColorsWithMedia(
               id: variant.id,
               color: variant.color.trim(),
               colorHex: variant.colorHex?.trim() || null,
+              globalColorId: variant.globalColorId,
               isActive: variant.isActive,
             })),
           []
@@ -367,7 +374,6 @@ export async function uploadProductImage(
     }
 
     let actualProductId = productId;
-    let variantProductId: string | null = null;
 
     if (productVariantId) {
       const variant = await prisma.productVariant.findUnique({
@@ -378,9 +384,8 @@ export async function uploadProductImage(
       if (!variant || (productId && variant.productId !== productId)) {
         return { success: false, error: "Variant was not found for this product" };
       }
-
       actualProductId = variant.productId;
-      variantProductId = variant.id;
+      actualProductId = variant.productId;
     } else {
       const product = await prisma.product.findUnique({
         where: { id: productId },

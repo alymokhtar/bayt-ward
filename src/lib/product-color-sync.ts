@@ -4,6 +4,7 @@ type VariantColorInput = {
   id?: string;
   color: string;
   colorHex?: string | null;
+  globalColorId?: string | null;
   isActive?: boolean;
 };
 
@@ -18,15 +19,37 @@ function normalizeColor(color: string): string {
 
 function buildDistinctColorMap(
   variants: VariantColorInput[]
-): Map<string, string | null> {
-  const map = new Map<string, string | null>();
+): Map<string, { colorHex: string | null; globalColorId?: string | null }> {
+  const map = new Map<
+    string,
+    { colorHex: string | null; globalColorId?: string | null }
+  >();
 
   for (const variant of variants) {
     const color = normalizeColor(variant.color);
     if (!color || variant.isActive === false) continue;
 
     if (!map.has(color)) {
-      map.set(color, variant.colorHex?.trim() || null);
+      map.set(color, {
+        colorHex: variant.colorHex?.trim() || null,
+        globalColorId: variant.globalColorId,
+      });
+      continue;
+    }
+
+    const existing = map.get(color)!;
+    if (
+      variant.globalColorId &&
+      existing.globalColorId &&
+      variant.globalColorId !== existing.globalColorId
+    ) {
+      throw new Error("لا يمكن ربط الاسم نفسه بأكثر من لون مركزي");
+    }
+    if (!existing.globalColorId && variant.globalColorId) {
+      existing.globalColorId = variant.globalColorId;
+    }
+    if (!existing.colorHex && variant.colorHex?.trim()) {
+      existing.colorHex = variant.colorHex.trim();
     }
   }
 
@@ -96,8 +119,6 @@ export async function syncProductColors(
   const colorsByName = new Map(
     existingColors.map((color) => [color.color, color])
   );
-  const colorsById = new Map(existingColors.map((color) => [color.id, color]));
-
   if (previousVariants?.length) {
     const renames = collectColorRenames(variants, previousVariants);
     const renamePromises: Promise<unknown>[] = [];
@@ -142,17 +163,28 @@ export async function syncProductColors(
     productId: string;
     color: string;
     colorHex: string | null;
+    globalColorId: string | null;
     sortOrder: number;
   }> = [];
 
-  for (const [color, colorHex] of distinctColors) {
+  for (const [color, colorData] of distinctColors) {
     const existing = colorsByName.get(color);
     if (existing) {
-      if (colorHex && existing.colorHex !== colorHex) {
+      const updateData: {
+        colorHex?: string | null;
+        globalColorId?: string | null;
+      } = {};
+      if (colorData.colorHex !== existing.colorHex) {
+        updateData.colorHex = colorData.colorHex;
+      }
+      if (colorData.globalColorId !== undefined) {
+        updateData.globalColorId = colorData.globalColorId;
+      }
+      if (Object.keys(updateData).length > 0) {
         updatePromises.push(
           tx.productColor.update({
             where: { id: existing.id },
-            data: { colorHex },
+            data: updateData,
           })
         );
       }
@@ -162,7 +194,8 @@ export async function syncProductColors(
     createData.push({
       productId,
       color,
-      colorHex,
+      colorHex: colorData.colorHex,
+      globalColorId: colorData.globalColorId ?? null,
       sortOrder: nextSortOrder,
     });
     nextSortOrder += 1;

@@ -1,8 +1,8 @@
 "use server";
 
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { invalidateProductsData } from "@/lib/revalidate-tags";
 
 export type ActionResult<T = void> =
   | { success: true; data: T }
@@ -66,6 +66,130 @@ export async function createGlobalColor(
       },
     });
 
+    return { success: true, data: undefined };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function updateGlobalColor(
+  id: string,
+  data: GlobalColorInput
+): Promise<ActionResult> {
+  try {
+    await requireRole(["ADMIN"]);
+
+    if (typeof id !== "string" || !id.trim()) {
+      return { success: false, error: "معرّف اللون غير صالح" };
+    }
+
+    const name = typeof data?.name === "string" ? data.name.trim() : "";
+    const hexCode =
+      typeof data?.hexCode === "string" ? normalizeHex(data.hexCode) : "";
+
+    if (!name) {
+      return { success: false, error: "اسم اللون مطلوب" };
+    }
+
+    if (!/^#[0-9A-F]{6}$/.test(hexCode)) {
+      return { success: false, error: "يجب اختيار قيمة Hex صحيحة" };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const existing = await tx.globalColor.findUnique({
+        where: { id: id.trim() },
+        select: { id: true, name: true },
+      });
+
+      if (!existing) {
+        throw new Error("اللون غير موجود");
+      }
+
+      const duplicate = await tx.globalColor.findFirst({
+        where: { name, id: { not: existing.id } },
+        select: { id: true },
+      });
+      if (duplicate) {
+        throw new Error("اسم اللون مستخدم بالفعل");
+      }
+
+      const linkedVariants = await tx.productVariant.findMany({
+        where: { globalColorId: existing.id },
+        select: { productId: true },
+        distinct: ["productId"],
+      });
+      const linkedProductColors = await tx.productColor.findMany({
+        where: { globalColorId: existing.id },
+        select: { productId: true },
+        distinct: ["productId"],
+      });
+      const productIds = [
+        ...new Set([
+          ...linkedVariants.map((variant) => variant.productId),
+          ...linkedProductColors.map((productColor) => productColor.productId),
+        ]),
+      ];
+
+      if (name !== existing.name && productIds.length > 0) {
+        const conflictingProductColor = await tx.productColor.findFirst({
+          where: {
+            productId: { in: productIds },
+            color: name,
+            NOT: { globalColorId: existing.id },
+          },
+          select: { id: true },
+        });
+        if (conflictingProductColor) {
+          throw new Error(
+            "تعذر تغيير الاسم لوجود لون بهذا الاسم في أحد المنتجات المرتبطة"
+          );
+        }
+      }
+
+      await tx.globalColor.update({
+        where: { id: existing.id },
+        data: { name, hexCode },
+      });
+
+      await Promise.all([
+        tx.productVariant.updateMany({
+          where: {
+            OR: [
+              { globalColorId: existing.id },
+              ...(productIds.length > 0
+                ? [
+                    {
+                      productId: { in: productIds },
+                      color: existing.name,
+                      globalColorId: null,
+                    },
+                  ]
+                : []),
+            ],
+          },
+          data: { color: name, colorHex: hexCode },
+        }),
+        tx.productColor.updateMany({
+          where: {
+            OR: [
+              { globalColorId: existing.id },
+              ...(productIds.length > 0
+                ? [
+                    {
+                      productId: { in: productIds },
+                      color: existing.name,
+                      globalColorId: null,
+                    },
+                  ]
+                : []),
+            ],
+          },
+          data: { color: name, colorHex: hexCode, globalColorId: existing.id },
+        }),
+      ]);
+    });
+
+    invalidateProductsData();
     return { success: true, data: undefined };
   } catch (error) {
     return handleActionError(error);
