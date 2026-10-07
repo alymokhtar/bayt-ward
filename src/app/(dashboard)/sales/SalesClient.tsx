@@ -20,6 +20,7 @@ import {
   formatCurrency,
   formatDateTime,
   getPaymentDisplayLabel,
+  getPaymentMethodLabel,
 } from "@/lib/utils";
 import { Download, Search, Wallet } from "lucide-react";
 import Link from "next/link";
@@ -41,6 +42,14 @@ type SaleItem = {
   status: string;
   paymentMethod: string | null;
   payments?: Array<{ method?: string | null; amount?: number }>;
+  exchangeAsReplacement: {
+    settlementBalance: number;
+    settlements: Array<{
+      direction: "COLLECTION" | "REFUND";
+      amount: number;
+      method: string;
+    }>;
+  } | null;
   createdAt: Date;
   customer: { name: string } | null;
   user: { name: string };
@@ -269,7 +278,9 @@ export default function SalesClient({
                   </TableCell>
                   <TableCell>{sale.user.name}</TableCell>
                   <TableCell>
-                    {getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}
+                    {sale.paymentMethod === null && sale.exchangeAsReplacement
+                      ? formatExchangePayment(sale.exchangeAsReplacement)
+                      : getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}
                   </TableCell>
                   <TableCell className="font-semibold">
                     {formatCurrency(sale.totalAmount)}
@@ -306,6 +317,34 @@ export default function SalesClient({
         onClose={() => setSelectedSaleId(null)}
       />
     </div>
+  );
+}
+
+function formatExchangePayment(exchange: SaleItem["exchangeAsReplacement"]) {
+  if (!exchange || exchange.settlementBalance === 0) {
+    return <span className="text-sm text-muted">استبدال — لا يوجد فرق مالي</span>;
+  }
+
+  if (exchange.settlements.length === 0) {
+    return (
+      <span className="text-sm text-muted">
+        استبدال — فرق {formatCurrency(Math.abs(exchange.settlementBalance))}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex flex-wrap gap-1 text-sm">
+      <span>استبدال —</span>
+      {exchange.settlements.map((settlement, index) => (
+        <span key={`${settlement.direction}-${settlement.method}-${index}`}>
+          {settlement.direction === "COLLECTION" ? "تحصيل" : "رد"}{" "}
+          {formatCurrency(settlement.amount)} عبر{" "}
+          {getPaymentMethodLabel(settlement.method)}
+          {index < exchange.settlements.length - 1 ? "،" : ""}
+        </span>
+      ))}
+    </span>
   );
 }
 

@@ -40,6 +40,12 @@ type ExchangeItem = {
   };
 };
 
+type ExchangeSettlement = {
+  direction: string;
+  amount: number;
+  method: string;
+};
+
 interface InvoiceDetailViewProps {
   sale: SaleData;
   settings?: {
@@ -108,7 +114,10 @@ export default function InvoiceDetailView({
     sale.tenderedAmount !== null &&
     historicalRemaining > 0;
   const paymentSummaryText = sale.exchangeAsReplacement
-    ? "تسوية استبدال"
+    ? formatSettlement(
+        sale.exchangeAsReplacement.settlementBalance,
+        sale.exchangeAsReplacement.settlements,
+      )
     : salePaymentSummary.normalizedPayments.length > 1
       ? salePaymentSummary.normalizedPayments
           .map(
@@ -344,7 +353,10 @@ export default function InvoiceDetailView({
                       </Link>
                     </p>
                     <p className="mt-1 text-sm text-muted">
-                      {formatSettlement(exchange.settlementBalance)}
+                      {formatSettlement(
+                        exchange.settlementBalance,
+                        exchange.settlements,
+                      )}
                     </p>
                     <ExchangeItems
                       returnedItems={exchange.return.items}
@@ -367,6 +379,7 @@ export default function InvoiceDetailView({
                     <p className="mt-1 text-sm text-muted">
                       {formatSettlement(
                         sale.exchangeAsReplacement.settlementBalance,
+                        sale.exchangeAsReplacement.settlements,
                       )}
                     </p>
                     <ExchangeItems
@@ -465,10 +478,21 @@ export default function InvoiceDetailView({
   );
 }
 
-function formatSettlement(balance: number) {
-  if (balance > 0) return `تم تحصيل ${formatCurrency(balance)}`;
-  if (balance < 0) return `تم رد ${formatCurrency(Math.abs(balance))}`;
-  return "تم الاستبدال دون فرق مالي";
+function formatSettlement(
+  balance: number,
+  settlements: ExchangeSettlement[],
+) {
+  if (balance === 0) return "تم الاستبدال دون فرق مالي";
+  if (settlements.length === 0) {
+    return `فرق التسوية ${formatCurrency(Math.abs(balance))} — طريقة التسوية غير مسجلة`;
+  }
+
+  return settlements
+    .map((settlement) => {
+      const action = settlement.direction === "COLLECTION" ? "تم تحصيل الفرق" : "تم رد الفرق";
+      return `${action} (${formatCurrency(settlement.amount)}) عبر: ${getPaymentMethodLabel(settlement.method)}`;
+    })
+    .join(" • ");
 }
 
 function ExchangeItems({

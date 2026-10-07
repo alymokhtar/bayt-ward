@@ -320,6 +320,13 @@ export async function getSale(id: string) {
           id: true,
           exchangeNumber: true,
           settlementBalance: true,
+          settlements: {
+            select: {
+              direction: true,
+              amount: true,
+              method: true,
+            },
+          },
           return: {
             select: {
               items: {
@@ -368,6 +375,13 @@ export async function getSale(id: string) {
           id: true,
           exchangeNumber: true,
           settlementBalance: true,
+          settlements: {
+            select: {
+              direction: true,
+              amount: true,
+              method: true,
+            },
+          },
           return: {
             select: {
               items: {
