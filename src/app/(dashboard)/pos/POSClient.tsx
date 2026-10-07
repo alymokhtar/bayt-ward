@@ -546,7 +546,12 @@ export default function POSClient({
             <select
               id="pos-order-channel"
               value={orderChannel}
-              onChange={(event) => setOrderChannel(event.target.value as SalesChannel)}
+              onChange={(event) => {
+                setOrderChannel(event.target.value as SalesChannel);
+                setTimeout(() => {
+                  searchRef.current?.focus();
+                }, 0);
+              }}
               disabled={loading}
               className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm text-brown focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30 disabled:opacity-60"
             >
