@@ -9,7 +9,7 @@ import BarcodePrintSheet, {
 import { getBarcodeValue } from "@/lib/barcode";
 import { formatCurrency } from "@/lib/utils";
 import { Barcode, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 type Variant = {
   id: string;
@@ -31,6 +31,7 @@ interface BarcodesClientProps {
 export default function BarcodesClient({ variants }: BarcodesClientProps) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, number>>({});
+  const quantityInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const filtered = useMemo(() => {
     if (!search.trim()) return variants;
@@ -62,15 +63,24 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
       });
   }, [selected, variants]);
 
-  function toggleVariant(id: string) {
+  function toggleVariant(id: string, checked: boolean) {
     setSelected((prev) => {
-      if (prev[id]) {
+      if (!checked) {
         const next = { ...prev };
         delete next[id];
         return next;
       }
-      return { ...prev, [id]: 1 };
+      return { ...prev, [id]: prev[id] || 1 };
     });
+
+    if (checked) {
+      requestAnimationFrame(() => {
+        const quantityInput = quantityInputRefs.current[id];
+        if (!quantityInput) return;
+        quantityInput.focus();
+        quantityInput.select();
+      });
+    }
   }
 
   function updateQuantity(id: string, qty: number) {
@@ -131,7 +141,9 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => toggleVariant(variant.id)}
+                      onChange={(event) =>
+                        toggleVariant(variant.id, event.currentTarget.checked)
+                      }
                       className="h-4 w-4 shrink-0 accent-gold"
                     />
                     <div className="min-w-0 flex-1">
@@ -150,6 +162,9 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
                     {isSelected && (
                       <div className="w-20 shrink-0">
                         <Input
+                          ref={(element) => {
+                            quantityInputRefs.current[variant.id] = element;
+                          }}
                           type="number"
                           min={1}
                           max={100}
