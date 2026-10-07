@@ -12,6 +12,7 @@ import {
   formatCurrency,
   formatDateTime,
   getPaymentDisplayLabel,
+  getPaymentMethodLabel,
 } from "@/lib/utils";
 import Link from "next/link";
 
@@ -57,7 +58,9 @@ export default async function DashboardRecentSalesSection() {
                 </TableCell>
                 <TableCell>{sale.user.name}</TableCell>
                 <TableCell>
-                  {getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}
+                  {sale.paymentMethod === null && sale.exchangeAsReplacement
+                    ? formatExchangePayment(sale.exchangeAsReplacement)
+                    : getPaymentDisplayLabel(sale.paymentMethod, sale.payments)}
                 </TableCell>
                 <TableCell className="font-semibold">
                   {formatCurrency(sale.totalAmount)}
@@ -71,5 +74,40 @@ export default async function DashboardRecentSalesSection() {
         </Table>
       </CardContent>
     </Card>
+  );
+}
+
+function formatExchangePayment(exchange: {
+  settlementBalance: number;
+  settlements: Array<{
+    direction: string;
+    amount: number;
+    method: string;
+  }>;
+}) {
+  if (exchange.settlementBalance === 0) {
+    return <span className="text-sm text-muted">استبدال — لا يوجد فرق مالي</span>;
+  }
+
+  if (exchange.settlements.length === 0) {
+    return (
+      <span className="text-sm text-muted">
+        استبدال — فرق {formatCurrency(Math.abs(exchange.settlementBalance))}
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex flex-wrap gap-1 text-sm">
+      <span>استبدال —</span>
+      {exchange.settlements.map((settlement, index) => (
+        <span key={`${settlement.direction}-${settlement.method}-${index}`}>
+          {settlement.direction === "COLLECTION" ? "تحصيل" : "رد"}{" "}
+          {formatCurrency(settlement.amount)} عبر{" "}
+          {getPaymentMethodLabel(settlement.method)}
+          {index < exchange.settlements.length - 1 ? "،" : ""}
+        </span>
+      ))}
+    </span>
   );
 }

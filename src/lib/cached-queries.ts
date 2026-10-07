@@ -251,6 +251,18 @@ export const getCachedRecentSales = unstable_cache(
         payments: {
           select: { method: true, amount: true },
         },
+        exchangeAsReplacement: {
+          select: {
+            settlementBalance: true,
+            settlements: {
+              select: {
+                direction: true,
+                amount: true,
+                method: true,
+              },
+            },
+          },
+        },
         customer: { select: { id: true, name: true, phone: true } },
         user: { select: { id: true, name: true } },
       },
