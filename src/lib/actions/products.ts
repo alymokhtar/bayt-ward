@@ -67,6 +67,12 @@ function revalidateProductPaths() {
   invalidateProductsData();
 }
 
+function validateOptionalText(value: unknown, fieldName: string) {
+  if (value !== undefined && typeof value !== "string") {
+    throw new Error(`${fieldName} غير صالح`);
+  }
+}
+
 export async function getProducts(options?: {
   search?: string;
   categoryId?: string;
@@ -158,21 +164,31 @@ export async function getNextVariantCodes(
   }
 }
 
-async function ensureVariantCodes(
-  variants: VariantInput[],
+function prepareVariantsForSave(
+  variants: VariantSaveInput[],
   existingRows: { id?: string; sku: string; barcode: string | null }[]
-): Promise<VariantInput[]> {
+): (VariantSaveInput & { barcode: string; stockQuantity: number; minStockLevel: number })[] {
   const needsAllocation = variants.filter((v) => !v.sku?.trim()).length;
-
   const freshCodes =
     needsAllocation > 0
       ? computeNextVariantCodes(existingRows, needsAllocation)
       : [];
-
   let codeIndex = 0;
 
   const prepared = variants.map((variant) => {
-    if (!variant.globalColorId?.trim()) {
+    if (!variant || typeof variant !== "object") {
+      throw new Error("بيانات المتغير غير صالحة");
+    }
+    if (typeof variant.sku !== "string") {
+      throw new Error("رمز SKU غير صالح");
+    }
+    if (variant.barcode !== undefined && typeof variant.barcode !== "string") {
+      throw new Error("الباركود غير صالح");
+    }
+    if (variant.colorHex !== undefined && typeof variant.colorHex !== "string") {
+      throw new Error("رمز اللون غير صالح");
+    }
+    if (typeof variant.globalColorId !== "string" || !variant.globalColorId.trim()) {
       throw new Error("يرجى اختيار لون مركزي لكل متغير");
     }
 
@@ -189,49 +205,74 @@ async function ensureVariantCodes(
       barcode = resolveStoredBarcode(sku, barcode);
     }
 
-    return { ...variant, sku, barcode };
-  });
-
-  validateVariantCodesPayload(prepared, existingRows);
-
-  return prepared;
-}
-
-function prepareVariantsForSave(
-  variants: VariantSaveInput[]
-): (VariantSaveInput & { barcode: string })[] {
-  return variants.map((variant) => {
-    const sku = String(variant.sku || "").trim();
     if (!sku) {
       throw new Error("رمز SKU مطلوب لكل متغير");
     }
-
-    if (!variant.globalColorId) {
-      throw new Error("يرجى اختيار لون مركزي لكل متغير");
+    const size = typeof variant.size === "string" ? variant.size.trim() : "";
+    const color = typeof variant.color === "string" ? variant.color.trim() : "";
+    if (!size || !color) {
+      throw new Error("المقاس واللون مطلوبان لكل متغير");
     }
 
-    const barcode = resolveStoredBarcode(sku, variant.barcode);
-    
-    // Validate numeric fields
-    const costPrice = typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0");
-    const sellingPrice = typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0");
-    
-    if (!Number.isFinite(costPrice) || costPrice < 0) {
+    if (typeof variant.costPrice !== "number" || !Number.isFinite(variant.costPrice) || variant.costPrice < 0) {
       throw new Error("سعر التكلفة يجب أن يكون رقماً صحيحاً موجباً");
     }
-    
-    if (!Number.isFinite(sellingPrice) || sellingPrice < 0) {
+    if (typeof variant.sellingPrice !== "number" || !Number.isFinite(variant.sellingPrice) || variant.sellingPrice < 0) {
       throw new Error("سعر البيع يجب أن يكون رقماً صحيحاً موجباً");
     }
 
-    return { 
-      ...variant, 
+    const stockQuantity = variant.stockQuantity ?? 0;
+    if (!Number.isInteger(stockQuantity) || stockQuantity < 0) {
+      throw new Error("الكمية الافتتاحية يجب أن تكون عدداً صحيحاً غير سالب");
+    }
+    const minStockLevel = variant.minStockLevel ?? 5;
+    if (!Number.isInteger(minStockLevel) || minStockLevel < 0) {
+      throw new Error("الحد الأدنى للمخزون يجب أن يكون عدداً صحيحاً غير سالب");
+    }
+
+    return {
+      ...variant,
       sku, 
       barcode,
-      costPrice,
-      sellingPrice,
+      size,
+      color,
+      stockQuantity,
+      minStockLevel,
     };
   });
+
+  validateVariantCodesPayload(prepared, existingRows);
+  return prepared;
+}
+
+async function validateProductCategory(categoryId: string) {
+  if (typeof categoryId !== "string" || !categoryId.trim()) {
+    throw new Error("التصنيف مطلوب");
+  }
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId.trim() },
+    select: { id: true },
+  });
+  if (!category) throw new Error("التصنيف غير موجود");
+}
+
+async function validateGlobalColors(
+  variants: Array<{ globalColorId?: string | null }>
+) {
+  const colorIds = [...new Set(
+    variants
+      .map((variant) => variant.globalColorId?.trim())
+      .filter((colorId): colorId is string => Boolean(colorId)),
+  )];
+  if (colorIds.length === 0) return;
+
+  const colors = await prisma.globalColor.findMany({
+    where: { id: { in: colorIds } },
+    select: { id: true },
+  });
+  if (colors.length !== colorIds.length) {
+    throw new Error("أحد الألوان المركزية غير موجود");
+  }
 }
 
 function assertUniqueVariantCombinations(
@@ -270,36 +311,27 @@ export async function createProduct(data: {
   try {
     const user = await requireRole(["ADMIN", "MANAGER"]);
 
-    if (!data.name?.trim()) {
+    if (typeof data.name !== "string" || !data.name.trim()) {
       return { success: false, error: "اسم المنتج مطلوب" };
     }
+    validateOptionalText(data.nameAr, "الاسم العربي");
+    validateOptionalText(data.description, "الوصف");
+    validateOptionalText(data.brand, "العلامة التجارية");
 
-    if (!data.categoryId) {
-      return { success: false, error: "التصنيف مطلوب" };
-    }
-
-    if (!data.variants?.length) {
+    if (!Array.isArray(data.variants) || data.variants.length === 0) {
       return { success: false, error: "يجب إضافة متغير واحد على الأقل" };
     }
 
-    const category = await prisma.category.findUnique({
-      where: { id: data.categoryId },
+    await validateProductCategory(data.categoryId);
+    const existingRows = await prisma.productVariant.findMany({
+      select: { id: true, sku: true, barcode: true },
     });
-    if (!category) {
-      return { success: false, error: "التصنيف غير موجود" };
-    }
+    const preparedVariants = prepareVariantsForSave(data.variants, existingRows);
+    assertUniqueVariantCombinations(preparedVariants);
+    await validateGlobalColors(preparedVariants);
 
     const product = await prisma.$transaction(
       async (tx) => {
-        const existingRows = await tx.productVariant.findMany({
-          select: { id: true, sku: true, barcode: true },
-        });
-        const preparedVariants = await ensureVariantCodes(
-          data.variants,
-          existingRows
-        );
-        assertUniqueVariantCombinations(preparedVariants);
-
         const created = await tx.product.create({
           data: {
             name: data.name.trim(),
@@ -317,10 +349,10 @@ export async function createProduct(data: {
                 color: String(v.color).trim() || "",
                 colorHex: v.colorHex?.trim() || null,
                 globalColorId: v.globalColorId || undefined,
-                costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
-                sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
-                stockQuantity: typeof v.stockQuantity === "number" ? Math.max(0, v.stockQuantity) : parseInt(String(v.stockQuantity) || "0"),
-                minStockLevel: typeof v.minStockLevel === "number" ? Math.max(0, v.minStockLevel) : 5,
+                costPrice: v.costPrice,
+                sellingPrice: v.sellingPrice,
+                stockQuantity: v.stockQuantity,
+                minStockLevel: v.minStockLevel,
                 isActive: true,
               })),
             },
@@ -410,6 +442,16 @@ export async function updateProduct(
   try {
     await requireRole(["ADMIN", "MANAGER"]);
 
+    if (data.name !== undefined && (typeof data.name !== "string" || !data.name.trim())) {
+      return { success: false, error: "اسم المنتج مطلوب" };
+    }
+    validateOptionalText(data.nameAr, "الاسم العربي");
+    validateOptionalText(data.description, "الوصف");
+    validateOptionalText(data.brand, "العلامة التجارية");
+    if (data.categoryId !== undefined) {
+      await validateProductCategory(data.categoryId);
+    }
+
     const existing = await prisma.product.findUnique({
       where: { id },
       include: { variants: true },
@@ -419,13 +461,32 @@ export async function updateProduct(
       return { success: false, error: "المنتج غير موجود" };
     }
 
-    if (data.categoryId) {
-      const category = await prisma.category.findUnique({
-        where: { id: data.categoryId },
-      });
-      if (!category) {
-        return { success: false, error: "التصنيف غير موجود" };
+    const existingIds = new Set(existing.variants.map((variant) => variant.id));
+    let preparedVariants: ReturnType<typeof prepareVariantsForSave> | undefined;
+    if (data.variants !== undefined) {
+      if (!Array.isArray(data.variants) || data.variants.length === 0) {
+        return { success: false, error: "يجب إضافة متغير واحد على الأقل" };
       }
+
+      const incomingIds = data.variants
+        .map((variant) => variant.id?.trim())
+        .filter((variantId): variantId is string => Boolean(variantId));
+      if (incomingIds.some((variantId) => !existingIds.has(variantId))) {
+        return { success: false, error: "أحد المتغيرات لا ينتمي إلى هذا المنتج" };
+      }
+      const deletedIds = (data.deletedVariantIds ?? [])
+        .map((variantId) => variantId.trim())
+        .filter(Boolean);
+      if (deletedIds.some((variantId) => !existingIds.has(variantId))) {
+        return { success: false, error: "أحد المتغيرات المراد أرشفتها غير صالح" };
+      }
+
+      const allRows = await prisma.productVariant.findMany({
+        select: { id: true, sku: true, barcode: true },
+      });
+      preparedVariants = prepareVariantsForSave(data.variants, allRows);
+      assertUniqueVariantCombinations(preparedVariants);
+      await validateGlobalColors(preparedVariants);
     }
 
     const product = await prisma.$transaction(
@@ -446,10 +507,9 @@ export async function updateProduct(
           data: updateData,
         });
 
-      if (data.variants) {
-        const existingIds = new Set(existing.variants.map((v) => v.id));
+      if (preparedVariants) {
         const incomingIds = new Set(
-          data.variants.filter((v) => v.id).map((v) => v.id!)
+          preparedVariants.filter((v) => v.id).map((v) => v.id!)
         );
 
         const explicitDeletedVariantIds = (data.deletedVariantIds ?? [])
@@ -470,33 +530,6 @@ export async function updateProduct(
           });
         }
 
-        const allRows = await tx.productVariant.findMany({
-          select: { id: true, sku: true, barcode: true },
-        });
-
-        const variantsNeedingCodes = data.variants.filter((v) => !v.sku?.trim());
-        const allocatedCodes =
-          variantsNeedingCodes.length > 0
-            ? computeNextVariantCodes(allRows, variantsNeedingCodes.length)
-            : [];
-        let allocationIndex = 0;
-
-        const incomingPrepared = data.variants.map((variant) => {
-          if (!variant.sku?.trim()) {
-            const codes = allocatedCodes[allocationIndex++];
-            return {
-              ...variant,
-              sku: codes.sku,
-              barcode: variant.barcode?.trim() || codes.barcode,
-            };
-          }
-          return variant;
-        });
-
-        const preparedVariants = prepareVariantsForSave(incomingPrepared);
-        assertUniqueVariantCombinations(preparedVariants);
-        validateVariantCodesPayload(preparedVariants, allRows);
-
         await syncProductColors(tx, id, preparedVariants, existing.variants);
 
         const variantOperations = preparedVariants.map((variant) => {
@@ -507,9 +540,9 @@ export async function updateProduct(
               size: variant.size?.trim() || "",
               color: variant.color?.trim() || "",
               globalColorId: variant.globalColorId || undefined,
-              costPrice: typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0"),
-              sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
-              minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
+              costPrice: variant.costPrice,
+              sellingPrice: variant.sellingPrice,
+              minStockLevel: variant.minStockLevel,
               isActive: variant.isActive ?? true,
             };
 
@@ -532,10 +565,10 @@ export async function updateProduct(
               color: variant.color?.trim() || "",
               colorHex: variant.colorHex?.trim() || null,
               globalColorId: variant.globalColorId || undefined,
-              costPrice: typeof variant.costPrice === "number" ? variant.costPrice : parseFloat(String(variant.costPrice) || "0"),
-              sellingPrice: typeof variant.sellingPrice === "number" ? variant.sellingPrice : parseFloat(String(variant.sellingPrice) || "0"),
+              costPrice: variant.costPrice,
+              sellingPrice: variant.sellingPrice,
               stockQuantity: 0,
-              minStockLevel: typeof variant.minStockLevel === "number" ? Math.max(0, variant.minStockLevel) : 5,
+              minStockLevel: variant.minStockLevel,
               isActive: true,
             },
           });

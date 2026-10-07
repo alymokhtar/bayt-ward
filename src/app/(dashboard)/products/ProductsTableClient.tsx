@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/Table";
-import { deleteProduct } from "@/lib/actions/products";
+import { deleteProduct, getProduct } from "@/lib/actions/products";
 import { formatCurrency } from "@/lib/utils";
 import { ExternalLink, Image as ImageIcon, Trash2 } from "lucide-react";
 import Image from "next/image";
@@ -24,67 +24,50 @@ type Product = {
   id: string;
   name: string;
   nameAr: string | null;
-  description: string | null;
   brand: string | null;
   publishToWebsite: boolean;
   featuredProduct: boolean;
   isActive: boolean;
   category: { name: string; nameAr: string | null };
-  colors: {
-    id: string;
-    color: string;
-    colorHex: string | null;
-    media: {
-      id: string;
-      url: string;
-      altText: string | null;
-      isPrimary: boolean;
-      isActive: boolean;
-    }[];
-  }[];
   images?: {
     id: string;
     url: string;
-    altText: string | null;
     isPrimary: boolean;
-    isActive: boolean;
   }[];
   variants: {
     id: string;
-    sku: string;
-    barcode: string | null;
     size: string;
     color: string;
     colorHex: string | null;
     stockQuantity: number;
     minStockLevel: number;
-    costPrice: number;
     sellingPrice: number;
     isActive: boolean;
     images?: {
       id: string;
       url: string;
-      altText: string | null;
       isPrimary: boolean;
-      isActive: boolean;
     }[];
   }[];
 };
+
+type ProductDetail = Awaited<ReturnType<typeof getProduct>>;
 
 interface ProductsTableClientProps {
   products: Product[];
 }
 
 function getProductSummary(product: Product) {
-  const totalStock = product.variants.reduce(
+  const activeVariants = product.variants.filter((variant) => variant.isActive);
+  const totalStock = activeVariants.reduce(
     (sum, v) => sum + v.stockQuantity,
     0
   );
-  const totalMinStock = product.variants.reduce(
-    (sum, v) => sum + v.minStockLevel,
-    0
+  const outOfStockVariants = activeVariants.filter((v) => v.stockQuantity === 0);
+  const lowStockVariants = activeVariants.filter(
+    (v) => v.stockQuantity <= v.minStockLevel
   );
-  const prices = product.variants.map((v) => v.sellingPrice);
+  const prices = activeVariants.map((v) => v.sellingPrice);
   const minPrice = prices.length ? Math.min(...prices) : 0;
   const maxPrice = prices.length ? Math.max(...prices) : 0;
   const priceLabel =
@@ -92,7 +75,13 @@ function getProductSummary(product: Product) {
       ? formatCurrency(minPrice)
       : `${formatCurrency(minPrice)} - ${formatCurrency(maxPrice)}`;
 
-  return { totalStock, totalMinStock, priceLabel };
+  return {
+    totalStock,
+    activeVariantCount: activeVariants.length,
+    outOfStockVariants,
+    lowStockVariants,
+    priceLabel,
+  };
 }
 
 function getProductIdentifier(product: Product): string | null {
@@ -113,15 +102,44 @@ export default function ProductsTableClient({
   products,
 }: ProductsTableClientProps) {
   const router = useRouter();
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState("");
   const selectedSummary = useMemo(
-    () => (selectedProduct ? getProductSummary(selectedProduct) : null),
+    () =>
+      selectedProduct
+        ? getProductSummary({
+            ...selectedProduct,
+            publishToWebsite: false,
+            featuredProduct: false,
+            variants: selectedProduct.variants.map((variant) => ({
+              ...variant,
+              images: variant.images,
+            })),
+          })
+        : null,
     [selectedProduct]
   );
+
+  async function openProductDetails(productId: string) {
+    setSelectedProductId(productId);
+    setSelectedProduct(null);
+    setDetailsError(null);
+    setIsLoadingDetails(true);
+    try {
+      setSelectedProduct(await getProduct(productId));
+    } catch (error) {
+      console.error("Failed to load product details", error);
+      setDetailsError("تعذر تحميل تفاصيل المنتج. يرجى المحاولة مرة أخرى.");
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  }
 
   async function handleDeleteProduct() {
     if (!productToDelete) return;
@@ -166,17 +184,11 @@ export default function ProductsTableClient({
           {products.map((product) => {
             const summary = getProductSummary(product);
             const productId = getProductIdentifier(product);
-            const mediaItems = [
-              ...(product.images ?? []),
-              ...product.colors.flatMap((color) => color.media ?? []),
-              ...product.variants.flatMap((v) => (v.images ? v.images : [])),
-            ];
             const primaryMedia =
-              mediaItems.find((item) => item.isPrimary && item.isActive) ??
-              mediaItems.find((item) => item.isActive) ??
+              product.images?.[0] ??
+              product.variants.find((variant) => variant.images?.length)?.images?.[0] ??
               null;
             const primaryImageUrl = primaryMedia?.url || null;
-            const imageCount = mediaItems.filter((item) => item.isActive).length;
 
             return (
               <TableRow key={product.id}>
@@ -192,7 +204,7 @@ export default function ProductsTableClient({
                     <div>
                       <button
                         type="button"
-                        onClick={() => setSelectedProduct(product)}
+                        onClick={() => void openProductDetails(product.id)}
                         className="font-medium text-brown text-start hover:text-gold hover:underline"
                       >
                         {product.nameAr || product.name}
@@ -211,22 +223,29 @@ export default function ProductsTableClient({
                   {product.category.nameAr || product.category.name}
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1 text-sm">
-                    <div>{product.variants.length} متغير</div>
-                    <div className="text-xs text-muted">{imageCount} صورة متاحة</div>
-                  </div>
+                  {summary.activeVariantCount} متغير نشط
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={
-                      summary.totalStock <=
-                      summary.totalMinStock / Math.max(product.variants.length, 1)
-                        ? "warning"
-                        : "default"
-                    }
-                  >
-                    {summary.totalStock}
-                  </Badge>
+                  <div className="space-y-1">
+                    <Badge
+                      variant={summary.outOfStockVariants.length || summary.lowStockVariants.length ? "warning" : "default"}
+                    >
+                      {summary.totalStock}
+                    </Badge>
+                    {summary.outOfStockVariants.length > 0 && (
+                      <p className="text-xs text-red-700">
+                        نفد: {summary.outOfStockVariants.map((v) => `${v.size}/${v.color}`).join("، ")}
+                      </p>
+                    )}
+                    {summary.lowStockVariants.length > 0 && (
+                      <p className="text-xs text-amber-700">
+                        منخفض: {summary.lowStockVariants
+                          .filter((v) => v.stockQuantity > 0)
+                          .map((v) => `${v.size}/${v.color}`)
+                          .join("، ") || "توجد متغيرات نافدة"}
+                      </p>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell className="font-medium text-gold">
                   {summary.priceLabel}
@@ -274,12 +293,18 @@ export default function ProductsTableClient({
       </Table>
 
       <Modal
-        isOpen={!!selectedProduct}
-        onClose={() => setSelectedProduct(null)}
+        isOpen={!!selectedProductId}
+        onClose={() => {
+          setSelectedProductId(null);
+          setSelectedProduct(null);
+          setDetailsError(null);
+        }}
         title={selectedProduct?.nameAr || selectedProduct?.name}
         description={selectedProduct?.brand || undefined}
         size="xl"
       >
+        {isLoadingDetails && <p className="py-8 text-center text-muted">جارٍ تحميل تفاصيل المنتج...</p>}
+        {detailsError && <p className="py-8 text-center text-red-700">{detailsError}</p>}
         {selectedProduct && selectedSummary && (
           <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-3">
