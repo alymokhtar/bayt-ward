@@ -54,25 +54,68 @@ function revalidateSalePaths() {
   revalidateInventoryCache();
 }
 
+function escapeSaleHtml(value: string | number) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function formatSaleTelegramMessage(sale: {
   invoiceNumber: string;
   totalAmount: number;
+  channel: SalesChannel;
   customer?: { name: string | null } | null;
   user?: { name: string } | null;
-  items: { quantity: number }[];
+  payments: Array<{ method: PaymentMethod; amount: number }>;
+  items: {
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    variant: {
+      size: string;
+      color: string;
+      product: { name: string; nameAr: string | null };
+    };
+  }[];
 }) {
   const totalQuantity = sale.items.reduce((sum, item) => sum + item.quantity, 0);
   const dateTime = formatDateTime(new Date());
+  const itemLines = sale.items.map((item) => {
+    const name = item.variant.product.nameAr || item.variant.product.name;
+    const variant = [item.variant.size, item.variant.color]
+      .filter(Boolean)
+      .map(escapeSaleHtml)
+      .join(" / ");
+    return [
+      `• <b>${escapeSaleHtml(name)}</b>${variant ? ` (${variant})` : ""}`,
+      `  ${escapeSaleHtml(item.quantity)} × ${escapeSaleHtml(formatCurrency(item.unitPrice))} = ${escapeSaleHtml(formatCurrency(item.totalPrice))}`,
+    ].join("\n");
+  });
+  const paymentLines = sale.payments.map(
+    (payment) =>
+      `• ${escapeSaleHtml(getPaymentMethodLabel(payment.method))}: ${escapeSaleHtml(formatCurrency(payment.amount))}`,
+  );
 
   return [
-    "🛒 عملية بيع جديدة",
+    "🛒 <b>عملية بيع جديدة</b>",
     "",
-    `رقم الفاتورة: ${sale.invoiceNumber}`,
-    `اسم العميل: ${sale.customer?.name || "عميل نقدي"}`,
-    `عدد المنتجات: ${totalQuantity}`,
-    `إجمالي الفاتورة: ${formatCurrency(sale.totalAmount)}`,
-    `اسم المستخدم: ${sale.user?.name || "—"}`,
-    `التاريخ والوقت: ${dateTime}`,
+    `<b>رقم الفاتورة:</b> ${escapeSaleHtml(sale.invoiceNumber)}`,
+    `<b>العميل:</b> ${escapeSaleHtml(sale.customer?.name || "عميل نقدي")}`,
+    `<b>قناة البيع:</b> ${escapeSaleHtml(sale.channel === SalesChannel.ONLINE ? "المتجر الإلكتروني" : "نقطة البيع")}`,
+    `<b>الكاشير:</b> ${escapeSaleHtml(sale.user?.name || "—")}`,
+    `<b>عدد القطع:</b> ${escapeSaleHtml(totalQuantity)}`,
+    "",
+    "<b>الأصناف:</b>",
+    ...itemLines,
+    "",
+    "<b>طريقة الدفع:</b>",
+    ...(paymentLines.length > 0 ? paymentLines : ["—"]),
+    "",
+    `<b>صافي الفاتورة:</b> ${escapeSaleHtml(formatCurrency(sale.totalAmount))}`,
+    `<b>التاريخ والوقت:</b> ${escapeSaleHtml(dateTime)}`,
   ].join("\n");
 }
 
@@ -640,6 +683,12 @@ export async function createSale(data: {
           paidAmount: true,
           changeAmount: true,
           appliedPromotions: true,
+          payments: {
+            select: {
+              method: true,
+              amount: true,
+            },
+          },
           items: {
             select: {
               id: true,
@@ -714,7 +763,13 @@ export async function createSale(data: {
     }
 
     void checkLowStockAndNotify(data.items.map((item) => item.variantId));
-    void sendTelegramMessage(formatSaleTelegramMessage(sale));
+    try {
+      await sendTelegramMessage(formatSaleTelegramMessage(sale), {
+        parseMode: "HTML",
+      });
+    } catch (error) {
+      console.error("Failed to send sale Telegram notification:", error);
+    }
     return { success: true, data: sale };
   } catch (error) {
     return handleActionError(error);
