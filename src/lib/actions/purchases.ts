@@ -24,6 +24,73 @@ type PurchaseItemRow = {
   unitCost: number;
 };
 
+type ValidatedPurchaseItem = PurchaseItemRow & {
+  totalCost: number;
+};
+
+function roundMoney(value: number): number {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function validatePurchaseInput(data: {
+  supplierId: string;
+  items: PurchaseItemInput[];
+  taxAmount?: number;
+}) {
+  if (typeof data.supplierId !== "string" || !data.supplierId.trim()) {
+    throw new Error("المورد مطلوب");
+  }
+  if (!Array.isArray(data.items) || data.items.length === 0) {
+    throw new Error("يجب إضافة منتج واحد على الأقل");
+  }
+  if (data.items.some((item) => !item || typeof item !== "object")) {
+    throw new Error("أحد بنود الشراء غير صالح");
+  }
+  if (data.items.some((item) => typeof item.variantId !== "string" || !item.variantId.trim())) {
+    throw new Error("أحد المنتجات غير صالح");
+  }
+  if (new Set(data.items.map((item) => item.variantId)).size !== data.items.length) {
+    throw new Error("لا يمكن تكرار المنتج نفسه في فاتورة الشراء");
+  }
+  if (data.items.some((item) => !Number.isInteger(item.quantity) || item.quantity <= 0)) {
+    throw new Error("كميات الشراء يجب أن تكون أعداداً صحيحة موجبة");
+  }
+  if (data.items.some((item) => !Number.isFinite(item.unitCost) || item.unitCost < 0)) {
+    throw new Error("تكلفة الوحدة يجب أن تكون رقماً منتهياً غير سالب");
+  }
+  const taxAmount = data.taxAmount ?? 0;
+  if (!Number.isFinite(taxAmount) || taxAmount < 0) {
+    throw new Error("قيمة الضريبة يجب أن تكون رقماً منتهياً غير سالب");
+  }
+
+  const items: ValidatedPurchaseItem[] = data.items.map((item) => {
+    const unitCost = roundMoney(item.unitCost);
+    return {
+      variantId: item.variantId.trim(),
+      quantity: item.quantity,
+      unitCost,
+      totalCost: roundMoney(unitCost * item.quantity),
+    };
+  });
+  const subtotal = roundMoney(items.reduce((sum, item) => sum + item.totalCost, 0));
+  const normalizedTaxAmount = roundMoney(taxAmount);
+  if (
+    items.some((item) => !Number.isFinite(item.unitCost) || !Number.isFinite(item.totalCost)) ||
+    !Number.isFinite(subtotal) ||
+    !Number.isFinite(normalizedTaxAmount) ||
+    !Number.isFinite(subtotal + normalizedTaxAmount)
+  ) {
+    throw new Error("إجمالي فاتورة الشراء خارج النطاق المسموح");
+  }
+
+  return {
+    items,
+    subtotal,
+    taxAmount: normalizedTaxAmount,
+    totalAmount: roundMoney(subtotal + normalizedTaxAmount),
+  };
+}
+
 function handleActionError(error: unknown): ActionResult<never> {
   if (error instanceof Error) {
     if (error.message === "UNAUTHORIZED") {
@@ -51,17 +118,45 @@ async function applyPurchaseItemsToInventory(
   if (items.length === 0) return;
 
   for (const item of items) {
-    const updatedVariants = await tx.productVariant.updateManyAndReturn({
+    const currentVariant = await tx.productVariant.findUnique({
       where: { id: item.variantId },
+      select: { stockQuantity: true, costPrice: true },
+    });
+    if (!currentVariant) {
+      throw new Error("أحد المنتجات غير موجود");
+    }
+
+    const currentStock = currentVariant.stockQuantity;
+    const currentCost = currentVariant.costPrice;
+    if (!Number.isFinite(currentCost) || currentCost < 0) {
+      throw new Error("تكلفة المنتج الحالية غير صالحة");
+    }
+    const nextStock = currentStock + item.quantity;
+    const weightedCost =
+      currentStock <= 0
+        ? item.unitCost
+        : roundMoney(
+            (currentStock * currentCost + item.quantity * item.unitCost) /
+              nextStock
+          );
+    if (!Number.isFinite(weightedCost)) {
+      throw new Error("تعذر احتساب متوسط تكلفة المنتج");
+    }
+    const updatedVariants = await tx.productVariant.updateManyAndReturn({
+      where: {
+        id: item.variantId,
+        stockQuantity: currentStock,
+        costPrice: currentCost,
+      },
       data: {
         stockQuantity: { increment: item.quantity },
-        costPrice: item.unitCost,
+        costPrice: weightedCost,
       },
       select: { stockQuantity: true },
     });
     const updatedVariant = updatedVariants[0];
     if (!updatedVariant) {
-      throw new Error("أحد المنتجات غير موجود");
+      throw new Error("تغير رصيد أو تكلفة المنتج أثناء استلام الشراء. أعد المحاولة");
     }
 
     const newQty = updatedVariant.stockQuantity;
@@ -120,30 +215,24 @@ export async function getPurchase(id: string) {
 export async function createPurchase(data: {
   supplierId: string;
   items: PurchaseItemInput[];
-  subtotal: number;
+  subtotal?: number;
   taxAmount?: number;
-  totalAmount: number;
+  totalAmount?: number;
   notes?: string;
 }) {
   try {
     const user = await requireRole(["ADMIN", "MANAGER"]);
 
-    if (!data.supplierId) {
-      return { success: false, error: "المورد مطلوب" };
-    }
-
-    if (!data.items?.length) {
-      return { success: false, error: "يجب إضافة منتج واحد على الأقل" };
-    }
+    const validated = validatePurchaseInput(data);
 
     const supplier = await prisma.supplier.findUnique({
-      where: { id: data.supplierId },
+      where: { id: data.supplierId.trim() },
     });
     if (!supplier || !supplier.isActive) {
       return { success: false, error: "المورد غير موجود" };
     }
 
-    const variantIds = data.items.map((item) => item.variantId);
+    const variantIds = validated.items.map((item) => item.variantId);
     const foundVariants = await prisma.productVariant.findMany({
       where: { id: { in: variantIds } },
       select: { id: true },
@@ -160,16 +249,16 @@ export async function createPurchase(data: {
         const created = await tx.purchase.create({
           data: {
             invoiceNumber,
-            supplierId: data.supplierId,
+            supplierId: data.supplierId.trim(),
             userId: user.id,
-            subtotal: data.subtotal,
-            taxAmount: data.taxAmount ?? 0,
-            totalAmount: data.totalAmount,
+            subtotal: validated.subtotal,
+            taxAmount: validated.taxAmount,
+            totalAmount: validated.totalAmount,
             status: "RECEIVED",
             receivedAt: now,
             notes: data.notes,
             items: {
-              create: data.items.map((item) => ({
+              create: validated.items.map((item) => ({
                 variantId: item.variantId,
                 quantity: item.quantity,
                 unitCost: item.unitCost,
@@ -234,6 +323,17 @@ export async function receivePurchase(id: string) {
     }
 
     const received = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.purchase.updateMany({
+        where: { id, status: "PENDING" },
+        data: {
+          status: "RECEIVED",
+          receivedAt: new Date(),
+        },
+      });
+      if (claimed.count !== 1) {
+        throw new Error("تم تغيير حالة أمر الشراء. أعد تحميل الصفحة");
+      }
+
       await applyPurchaseItemsToInventory(
         tx,
         purchase.items,
@@ -241,12 +341,8 @@ export async function receivePurchase(id: string) {
         user.id
       );
 
-      return tx.purchase.update({
+      return tx.purchase.findUniqueOrThrow({
         where: { id },
-        data: {
-          status: "RECEIVED",
-          receivedAt: new Date(),
-        },
         include: {
           supplier: true,
           items: {

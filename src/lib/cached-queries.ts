@@ -1233,22 +1233,55 @@ export const getCachedTopProducts = unstable_cache(
         profit: number;
       }[]
     >`
+      WITH sales_by_product AS (
+        SELECT
+          pv."productId",
+          SUM(si.quantity)::int AS "quantitySold",
+          SUM(si."totalPrice")::float AS revenue,
+          SUM(si."totalPrice" - si."costPrice" * si.quantity)::float AS profit
+        FROM "SaleItem" si
+        INNER JOIN "Sale" s ON si."saleId" = s.id
+        INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
+        WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED', 'REFUNDED')
+          AND s."createdAt" >= ${start}
+          AND s."createdAt" < ${end}
+          AND (${selectedChannel === "ALL"} OR s.channel::text = ${selectedChannel})
+        GROUP BY pv."productId"
+      ),
+      returns_by_product AS (
+        SELECT
+          pv."productId",
+          SUM(ri.quantity)::int AS "returnedQuantity",
+          SUM(ri."totalPrice")::float AS "returnedRevenue",
+          SUM(ri."totalPrice" - ri."costPrice" * ri.quantity)::float AS "returnedProfit"
+        FROM "ReturnItem" ri
+        INNER JOIN "Return" r ON ri."returnId" = r.id
+        INNER JOIN "Sale" s ON r."saleId" = s.id
+        INNER JOIN "ProductVariant" pv ON ri."variantId" = pv.id
+        WHERE r.status = 'APPROVED'
+          AND r."createdAt" >= ${start}
+          AND r."createdAt" < ${end}
+          AND (${selectedChannel === "ALL"} OR s.channel::text = ${selectedChannel})
+        GROUP BY pv."productId"
+      ),
+      net_product_totals AS (
+        SELECT
+          COALESCE(s."productId", r."productId") AS "productId",
+          COALESCE(s."quantitySold", 0) - COALESCE(r."returnedQuantity", 0) AS "quantitySold",
+          COALESCE(s.revenue, 0) - COALESCE(r."returnedRevenue", 0) AS revenue,
+          COALESCE(s.profit, 0) - COALESCE(r."returnedProfit", 0) AS profit
+        FROM sales_by_product s
+        FULL OUTER JOIN returns_by_product r ON s."productId" = r."productId"
+      )
       SELECT
         p.id AS "productId",
         COALESCE(p."nameAr", p.name) AS "productName",
-        SUM(si.quantity)::int AS "quantitySold",
-        SUM(si."totalPrice")::float AS revenue,
-        SUM((si."unitPrice" - si."costPrice") * si.quantity - si."discountAmount")::float AS profit
-      FROM "SaleItem" si
-      INNER JOIN "Sale" s ON si."saleId" = s.id
-      INNER JOIN "ProductVariant" pv ON si."variantId" = pv.id
-      INNER JOIN "Product" p ON pv."productId" = p.id
-      WHERE s.status IN ('COMPLETED', 'PARTIALLY_REFUNDED')
-        AND s."createdAt" >= ${start}
-        AND s."createdAt" < ${end}
-        AND (${selectedChannel === "ALL"} OR s.channel::text = ${selectedChannel})
-      GROUP BY p.id, p."nameAr", p.name
-      ORDER BY revenue DESC
+        totals."quantitySold",
+        totals.revenue,
+        totals.profit
+      FROM net_product_totals totals
+      INNER JOIN "Product" p ON p.id = totals."productId"
+      ORDER BY totals.revenue DESC
       LIMIT ${limit}
     `;
   },
