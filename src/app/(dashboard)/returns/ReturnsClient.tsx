@@ -96,12 +96,12 @@ export default function ReturnsClient({
   >({});
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
-  const [refundMethod, setRefundMethod] = useState<"CASH" | "INSTAPAY" | "WALLET">("CASH");
+  const [refundMethod, setRefundMethod] = useState<"CASH" | "CARD" | "INSTAPAY" | "WALLET">("CASH");
   const [isExchange, setIsExchange] = useState(false);
   const [replacementSearch, setReplacementSearch] = useState("");
   const [replacementVariants, setReplacementVariants] = useState<VariantResult[]>([]);
   const [replacementItems, setReplacementItems] = useState<Record<string, number>>({});
-  const [settlementMethod, setSettlementMethod] = useState<"CASH" | "CARD" | "WALLET">("CASH");
+  const [settlementMethod, setSettlementMethod] = useState<"CASH" | "CARD" | "INSTAPAY" | "WALLET">("CASH");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -732,12 +732,13 @@ export default function ReturnsClient({
                           <select
                             value={settlementMethod}
                             onChange={(event) =>
-                              setSettlementMethod(event.target.value as "CASH" | "CARD" | "WALLET")
+                              setSettlementMethod(event.target.value as "CASH" | "CARD" | "INSTAPAY" | "WALLET")
                             }
                             className="h-10 w-full rounded-lg border border-border bg-white px-3 text-sm"
                           >
                             <option value="CASH">كاش</option>
                             <option value="CARD">بطاقة</option>
+                            <option value="INSTAPAY">إنستاباي</option>
                             <option value="WALLET">محفظة</option>
                           </select>
                         </div>
@@ -755,10 +756,11 @@ export default function ReturnsClient({
                   </label>
                   <select
                     value={refundMethod}
-                    onChange={(e) => setRefundMethod(e.target.value as "CASH" | "INSTAPAY" | "WALLET")}
+                    onChange={(e) => setRefundMethod(e.target.value as "CASH" | "CARD" | "INSTAPAY" | "WALLET")}
                     className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm"
                   >
                     <option value="CASH">كاش</option>
+                    <option value="CARD">بطاقة</option>
                     <option value="INSTAPAY">إنستاباي</option>
                     <option value="WALLET">محفظة</option>
                   </select>

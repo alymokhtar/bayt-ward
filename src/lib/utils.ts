@@ -142,6 +142,7 @@ export function getPaymentMethodLabel(method: string | null | undefined): string
     WALLET: "محفظة",
     TRANSFER: "تحويل",
     MIXED: "مختلط",
+    UNSPECIFIED: "غير محدد",
   };
   if (!method) return "—";
   return labels[method] || method;

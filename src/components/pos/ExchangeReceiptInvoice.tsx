@@ -25,7 +25,7 @@ export type ExchangeReceiptData = {
   replacementDiscountAmount: number;
   replacementTotal: number;
   settlementBalance: number;
-  settlementMethod: "CASH" | "CARD" | "WALLET" | null;
+  settlementMethod: "CASH" | "CARD" | "INSTAPAY" | "WALLET" | null;
   storeNameAr?: string;
   storePhone?: string | null;
   currencySymbol?: string;

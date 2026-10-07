@@ -5,6 +5,8 @@ import {
 import { prisma } from "@/lib/prisma";
 import type { PaymentMethod } from "@prisma/client";
 
+type CashRegisterPaymentMethod = PaymentMethod | "UNSPECIFIED";
+
 export async function getCashRegisterReview(from?: string, to?: string) {
   const fromKey = from || getEgyptBusinessDateKey();
   const toKey = to || fromKey;
@@ -112,9 +114,9 @@ export async function getCashRegisterReview(from?: string, to?: string) {
 
   const netRevenue = totalRevenue - totalReturns - totalExpenses;
 
-  const refundMap = new Map<PaymentMethod | null, number>();
+  const refundMap = new Map<CashRegisterPaymentMethod, number>();
   for (const row of returnsByMethod) {
-    refundMap.set(row.refundMethod, row._sum.refundAmount ?? 0);
+    refundMap.set(row.refundMethod ?? "UNSPECIFIED", row._sum.refundAmount ?? 0);
   }
   const collectionMap = new Map<PaymentMethod, number>();
   const exchangeRefundMap = new Map<PaymentMethod, number>();
@@ -137,40 +139,50 @@ export async function getCashRegisterReview(from?: string, to?: string) {
     refundMap.set(method, (refundMap.get(method) ?? 0) + amount);
   }
 
-  const expensesMap = new Map(
-    expensesByMethod.map((e) => [e.paymentMethod, e._sum.amount ?? 0])
+  const expensesMap = new Map<CashRegisterPaymentMethod, number>(
+    expensesByMethod.map(
+      (expense): [CashRegisterPaymentMethod, number] => [
+        expense.paymentMethod ?? "UNSPECIFIED",
+        expense._sum.amount ?? 0,
+      ],
+    ),
   );
 
-  const methods = new Set<PaymentMethod>([
+  const methods = new Set<CashRegisterPaymentMethod>([
     ...salesByMethod.map((group) => group.method),
     ...collectionMap.keys(),
     ...exchangeRefundMap.keys(),
-    ...[...refundMap.keys()].filter(
-      (method): method is PaymentMethod => method !== null,
-    ),
-    ...expensesByMethod.flatMap((group) => group.paymentMethod ? [group.paymentMethod] : []),
+    ...refundMap.keys(),
+    ...expensesMap.keys(),
   ]);
   const paymentCountMap = new Map(
     salesByMethod.map((group) => [group.method, group._count]),
   );
   const paymentBreakdown = [...methods].map((method) => {
     const revenue = (salesByMethod.find((group) => group.method === method)?._sum.amount ?? 0)
-      + (collectionMap.get(method) ?? 0);
+      + (method === "UNSPECIFIED" ? 0 : collectionMap.get(method) ?? 0);
     const refund = refundMap.get(method) ?? 0;
     const expense = expensesMap.get(method) ?? 0;
+    const exchangeCount =
+      method === "UNSPECIFIED" ? 0 : settlementCountMap.get(method) ?? 0;
+    const salePaymentCount =
+      method === "UNSPECIFIED" ? 0 : paymentCountMap.get(method) ?? 0;
     return {
       method,
       revenue,
       refund,
       expense,
       net: revenue - refund - expense,
-      count: (paymentCountMap.get(method) ?? 0) + (settlementCountMap.get(method) ?? 0),
+      count: salePaymentCount + exchangeCount,
     };
   });
 
-  const refundBreakdownMap = new Map<PaymentMethod | null, { totalAmount: number; count: number }>();
+  const refundBreakdownMap = new Map<
+    CashRegisterPaymentMethod,
+    { totalAmount: number; count: number }
+  >();
   for (const group of returnsByMethod) {
-    refundBreakdownMap.set(group.refundMethod, {
+    refundBreakdownMap.set(group.refundMethod ?? "UNSPECIFIED", {
       totalAmount: group._sum.refundAmount ?? 0,
       count: group._count,
     });
@@ -183,7 +195,7 @@ export async function getCashRegisterReview(from?: string, to?: string) {
     });
   }
   const refundBreakdown = [...refundBreakdownMap].map(([method, totals]) => ({
-    method: method as PaymentMethod,
+    method,
     ...totals,
   }));
 

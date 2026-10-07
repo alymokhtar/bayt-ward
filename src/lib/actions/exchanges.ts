@@ -24,7 +24,7 @@ type ExchangeItemInput = {
   quantity: number;
 };
 
-type ExchangeSettlementMethod = "CASH" | "CARD" | "WALLET";
+type ExchangeSettlementMethod = "CASH" | "CARD" | "INSTAPAY" | "WALLET";
 
 type ExchangeReceiptData = {
   exchangeNumber: string;
@@ -175,7 +175,7 @@ export async function createExchange(data: {
     }
     if (
       data.settlementMethod !== undefined &&
-      !["CASH", "CARD", "WALLET"].includes(data.settlementMethod)
+      !["CASH", "CARD", "INSTAPAY", "WALLET"].includes(data.settlementMethod)
     ) {
       return { success: false, error: "طريقة تسوية الفرق غير صالحة" };
     }
@@ -403,6 +403,8 @@ export async function createExchange(data: {
         ? PaymentMethod.CASH
         : data.settlementMethod === "CARD"
           ? PaymentMethod.CARD
+          : data.settlementMethod === "INSTAPAY"
+            ? PaymentMethod.INSTAPAY
           : data.settlementMethod === "WALLET"
             ? PaymentMethod.WALLET
             : undefined;

@@ -100,7 +100,7 @@ export async function getReturn(id: string) {
 export async function createReturn(data: {
   saleId: string;
   items: ReturnItemInput[];
-  refundMethod?: "CASH" | "INSTAPAY" | "WALLET";
+  refundMethod: "CASH" | "CARD" | "INSTAPAY" | "WALLET";
   reason?: string;
   notes?: string;
 }) {
@@ -113,6 +113,10 @@ export async function createReturn(data: {
 
     if (!data.items?.length) {
       return { success: false, error: "يجب إضافة منتج واحد على الأقل" };
+    }
+
+    if (!["CASH", "CARD", "INSTAPAY", "WALLET"].includes(data.refundMethod)) {
+      return { success: false, error: "يجب اختيار وسيلة صحيحة لاسترداد المبلغ" };
     }
 
     if (data.items.some((item) =>

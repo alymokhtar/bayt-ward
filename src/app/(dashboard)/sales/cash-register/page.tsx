@@ -38,7 +38,7 @@ interface ReviewData {
   returnsCount: number;
   expensesCount: number;
   paymentBreakdown: {
-    method: PaymentMethod;
+    method: PaymentMethod | "UNSPECIFIED";
     revenue: number;
     refund: number;
     expense: number;
@@ -46,7 +46,7 @@ interface ReviewData {
     count: number;
   }[];
   refundBreakdown: {
-    method: PaymentMethod;
+    method: PaymentMethod | "UNSPECIFIED";
     totalAmount: number;
     count: number;
   }[];

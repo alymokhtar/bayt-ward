@@ -121,7 +121,7 @@ function formatSaleTelegramMessage(sale: {
 
 export async function sendVaultReconciliationTelegram(data: {
   paymentBreakdown: Array<{
-    method: PaymentMethod;
+    method: string;
     net: number;
   }>;
   from: string;
