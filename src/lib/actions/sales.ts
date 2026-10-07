@@ -731,14 +731,20 @@ export async function createSale(data: {
 
         if (!variant) continue;
 
-        const previousQty = variant.stockQuantity;
-        const newQty = previousQty - item.quantity;
-        variant.stockQuantity = newQty;
-
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stockQuantity: newQty },
+        const updatedVariants = await tx.productVariant.updateManyAndReturn({
+          where: {
+            id: item.variantId,
+            stockQuantity: { gte: item.quantity },
+          },
+          data: { stockQuantity: { decrement: item.quantity } },
+          select: { stockQuantity: true },
         });
+        if (updatedVariants.length !== 1) {
+          throw new Error("تغير المخزون أثناء إتمام البيع. أعد المحاولة");
+        }
+        const newQty = updatedVariants[0].stockQuantity;
+        const previousQty = newQty + item.quantity;
+        variant.stockQuantity = newQty;
 
         await tx.stockMovement.create({
           data: {
@@ -828,17 +834,21 @@ export async function cancelSale(id: string, reason?: string) {
       for (const item of sale.items) {
         const variant = await tx.productVariant.findUnique({
           where: { id: item.variantId },
+          select: { id: true, stockQuantity: true },
         });
 
         if (!variant) continue;
 
         const previousQty = variant.stockQuantity;
-        const newQty = previousQty + item.quantity;
-
-        await tx.productVariant.update({
-          where: { id: item.variantId },
-          data: { stockQuantity: newQty },
+        const updatedVariants = await tx.productVariant.updateManyAndReturn({
+          where: { id: item.variantId, stockQuantity: previousQty },
+          data: { stockQuantity: { increment: item.quantity } },
+          select: { stockQuantity: true },
         });
+        if (updatedVariants.length !== 1) {
+          throw new Error("تغير المخزون أثناء إلغاء البيع. أعد المحاولة");
+        }
+        const newQty = updatedVariants[0].stockQuantity;
 
         await tx.stockMovement.create({
           data: {

@@ -50,31 +50,23 @@ async function applyPurchaseItemsToInventory(
 ) {
   if (items.length === 0) return;
 
-  const variantIds = Array.from(new Set(items.map((item) => item.variantId)));
-  const variants = await tx.productVariant.findMany({
-    where: { id: { in: variantIds } },
-  });
-
-  const variantMap = new Map(variants.map((variant) => [variant.id, variant]));
-
-  const operations = items.map(async (item) => {
-    const variant = variantMap.get(item.variantId);
-    if (!variant) {
+  for (const item of items) {
+    const updatedVariants = await tx.productVariant.updateManyAndReturn({
+      where: { id: item.variantId },
+      data: {
+        stockQuantity: { increment: item.quantity },
+        costPrice: item.unitCost,
+      },
+      select: { stockQuantity: true },
+    });
+    const updatedVariant = updatedVariants[0];
+    if (!updatedVariant) {
       throw new Error("أحد المنتجات غير موجود");
     }
 
-    const previousQty = variant.stockQuantity;
-    const newQty = previousQty + item.quantity;
-
-    const updatePromise = tx.productVariant.update({
-      where: { id: item.variantId },
-      data: {
-        stockQuantity: newQty,
-        costPrice: item.unitCost,
-      },
-    });
-
-    const movementPromise = tx.stockMovement.create({
+    const newQty = updatedVariant.stockQuantity;
+    const previousQty = newQty - item.quantity;
+    await tx.stockMovement.create({
       data: {
         variantId: item.variantId,
         userId,
@@ -86,11 +78,7 @@ async function applyPurchaseItemsToInventory(
         notes: "شراء من مورد",
       },
     });
-
-    await Promise.all([updatePromise, movementPromise]);
-  });
-
-  await Promise.all(operations);
+  }
 }
 
 export async function getPurchases(options?: {

@@ -178,36 +178,43 @@ export async function adjustStock(data: {
       return { success: false, error: "المتغير مطلوب" };
     }
 
-    if (data.quantity === 0) {
-      return { success: false, error: "الكمية يجب أن تكون مختلفة عن صفر" };
+    if (!Number.isInteger(data.quantity) || data.quantity === 0) {
+      return { success: false, error: "الكمية يجب أن تكون رقماً صحيحاً مختلفاً عن صفر" };
     }
 
     const movement = await prisma.$transaction(async (tx) => {
-      const variant = await tx.productVariant.findUnique({
-        where: { id: data.variantId },
-        select: {
-          id: true,
+      const updatedVariants = await tx.productVariant.updateManyAndReturn({
+        where: {
+          id: data.variantId,
           isActive: true,
-          stockQuantity: true,
-          product: { select: { isActive: true } },
+          product: { isActive: true },
+          ...(data.quantity < 0
+            ? { stockQuantity: { gte: Math.abs(data.quantity) } }
+            : {}),
         },
+        data: { stockQuantity: { increment: data.quantity } },
+        select: { id: true, stockQuantity: true },
       });
 
-      if (!variant || !variant.isActive || !variant.product.isActive) {
-        throw new Error("المنتج غير موجود");
-      }
-
-      const previousQty = variant.stockQuantity;
-      const newQty = previousQty + data.quantity;
-
-      if (newQty < 0) {
+      const updatedVariant = updatedVariants[0];
+      if (!updatedVariant) {
+        const variant = await tx.productVariant.findUnique({
+          where: { id: data.variantId },
+          select: {
+            id: true,
+            isActive: true,
+            stockQuantity: true,
+            product: { select: { isActive: true } },
+          },
+        });
+        if (!variant || !variant.isActive || !variant.product.isActive) {
+          throw new Error("المنتج غير موجود");
+        }
         throw new Error("الكمية الناتجة لا يمكن أن تكون سالبة");
       }
 
-      await tx.productVariant.update({
-        where: { id: data.variantId },
-        data: { stockQuantity: newQty },
-      });
+      const newQty = updatedVariant.stockQuantity;
+      const previousQty = newQty - data.quantity;
 
       return tx.stockMovement.create({
         data: {

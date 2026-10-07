@@ -86,6 +86,30 @@ type VariantForm = VariantInput & {
   globalColorId?: string;
 };
 
+const DUPLICATE_VARIANT_COMBINATION_ERROR =
+  "لا يمكن تكرار نفس المقاس واللون للمنتج";
+
+function getVariantCombinationKey(variant: VariantForm) {
+  const size = (
+    variant.sizeMode === "custom" ? variant.customSize : variant.size
+  )
+    ?.trim()
+    .toLocaleLowerCase();
+  const colorId = variant.globalColorId?.trim();
+  return size && colorId ? JSON.stringify([size, colorId]) : null;
+}
+
+function hasDuplicateVariantCombinations(variants: VariantForm[]) {
+  const seen = new Set<string>();
+  for (const variant of variants) {
+    const key = getVariantCombinationKey(variant);
+    if (!key) continue;
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
+}
+
 const emptyVariant = (
   template?: VariantForm,
   codes?: VariantCodePair
@@ -198,9 +222,24 @@ export default function ProductForm({
     field: keyof VariantForm,
     value: string | number | boolean
   ) {
-    setVariants((prev) =>
-      prev.map((v, i) => (i === index ? { ...v, [field]: value } : v))
-    );
+    setVariants((prev) => {
+      const next = prev.map((variant, variantIndex) =>
+        variantIndex === index
+          ? { ...variant, [field]: value }
+          : variant
+      );
+      const combinationChanged =
+        field === "size" ||
+        field === "sizeMode" ||
+        field === "customSize" ||
+        field === "globalColorId";
+      if (combinationChanged && hasDuplicateVariantCombinations(next)) {
+        setError(DUPLICATE_VARIANT_COMBINATION_ERROR);
+        return prev;
+      }
+      if (combinationChanged) setError("");
+      return next;
+    });
   }
 
   function selectGlobalColor(index: number, color: GlobalColor) {
@@ -216,13 +255,8 @@ export default function ProductForm({
           : v
       );
 
-      const duplicate = next.some((variant, variantIndex) => {
-        if (variantIndex === index) return false;
-        return variant.globalColorId === color.id;
-      });
-
-      if (duplicate) {
-        setError(`لا يمكن اختيار هذا اللون أكثر من مرة لنفس المنتج`);
+      if (hasDuplicateVariantCombinations(next)) {
+        setError(DUPLICATE_VARIANT_COMBINATION_ERROR);
         return prev;
       }
 
@@ -252,8 +286,8 @@ export default function ProductForm({
   }
 
   function updateVariantSize(index: number, mode: "preset" | "custom", value: string) {
-    setVariants((prev) =>
-      prev.map((variant, variantIndex) => {
+    setVariants((prev) => {
+      const next = prev.map((variant, variantIndex): VariantForm => {
         if (variantIndex !== index) return variant;
 
         if (mode === "custom") {
@@ -271,8 +305,14 @@ export default function ProductForm({
           customSize: "",
           size: value,
         };
-      })
-    );
+      });
+      if (hasDuplicateVariantCombinations(next)) {
+        setError(DUPLICATE_VARIANT_COMBINATION_ERROR);
+        return prev;
+      }
+      setError("");
+      return next;
+    });
   }
 
   async function addVariant() {
@@ -343,6 +383,11 @@ export default function ProductForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+
+    if (hasDuplicateVariantCombinations(variants)) {
+      setError(DUPLICATE_VARIANT_COMBINATION_ERROR);
+      return;
+    }
 
     const localCodeError = validateLocalVariantCodes();
     if (localCodeError) {

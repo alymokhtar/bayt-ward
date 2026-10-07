@@ -234,6 +234,28 @@ function prepareVariantsForSave(
   });
 }
 
+function assertUniqueVariantCombinations(
+  variants: Array<{
+    size: string;
+    globalColorId?: string | null;
+    isActive?: boolean;
+  }>
+) {
+  const seen = new Set<string>();
+  for (const variant of variants) {
+    if (variant.isActive === false) continue;
+    const size = variant.size.trim();
+    const globalColorId = variant.globalColorId?.trim();
+    if (!size || !globalColorId) continue;
+
+    const combination = `${size}\u0000${globalColorId}`;
+    if (seen.has(combination)) {
+      throw new Error("لا يمكن تكرار نفس المقاس واللون للمنتج");
+    }
+    seen.add(combination);
+  }
+}
+
 export async function createProduct(data: {
   name: string;
   nameAr?: string;
@@ -276,6 +298,7 @@ export async function createProduct(data: {
           data.variants,
           existingRows
         );
+        assertUniqueVariantCombinations(preparedVariants);
 
         const created = await tx.product.create({
           data: {
@@ -471,6 +494,7 @@ export async function updateProduct(
         });
 
         const preparedVariants = prepareVariantsForSave(incomingPrepared);
+        assertUniqueVariantCombinations(preparedVariants);
         validateVariantCodesPayload(preparedVariants, allRows);
 
         await syncProductColors(tx, id, preparedVariants, existing.variants);
@@ -600,47 +624,77 @@ export async function updateProduct(
   }
 }
 
-export async function deleteProduct(id: string) {
+export async function deleteProduct(
+  id: string,
+): Promise<ActionResult<{ archived: boolean; message: string }>> {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
 
-    const existing = await prisma.product.findUnique({
-      where: { id },
-      include: { variants: true },
-    });
+    const archived = await prisma.$transaction(async (tx) => {
+      const existing = await tx.product.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          variants: {
+            select: { id: true, stockQuantity: true },
+          },
+        },
+      });
 
-    if (!existing) {
-      return { success: false, error: "المنتج غير موجود" };
-    }
-
-    await prisma.$transaction(async (tx) => {
-      const variantIds = existing.variants.map((variant) => variant.id);
-
-      if (variantIds.length > 0) {
-        await tx.saleItem.deleteMany({
-          where: { variantId: { in: variantIds } },
-        });
-        await tx.purchaseItem.deleteMany({
-          where: { variantId: { in: variantIds } },
-        });
-        await tx.returnItem.deleteMany({
-          where: { variantId: { in: variantIds } },
-        });
-        await tx.stockMovement.deleteMany({
-          where: { variantId: { in: variantIds } },
-        });
+      if (!existing) {
+        throw new Error("المنتج غير موجود");
       }
 
-      await tx.product.delete({
-        where: { id },
-      });
+      const variantIds = existing.variants.map((variant) => variant.id);
+      const hasStock = existing.variants.some((variant) => variant.stockQuantity !== 0);
+      const [saleItems, purchaseItems, returnItems, stockMovements] =
+        variantIds.length > 0
+          ? await Promise.all([
+              tx.saleItem.count({ where: { variantId: { in: variantIds } } }),
+              tx.purchaseItem.count({ where: { variantId: { in: variantIds } } }),
+              tx.returnItem.count({ where: { variantId: { in: variantIds } } }),
+              tx.stockMovement.count({ where: { variantId: { in: variantIds } } }),
+            ])
+          : [0, 0, 0, 0];
+
+      const hasHistory =
+        hasStock ||
+        saleItems > 0 ||
+        purchaseItems > 0 ||
+        returnItems > 0 ||
+        stockMovements > 0;
+
+      if (hasHistory) {
+        await tx.product.update({
+          where: { id },
+          data: { isActive: false },
+        });
+        if (variantIds.length > 0) {
+          await tx.productVariant.updateMany({
+            where: { id: { in: variantIds } },
+            data: { isActive: false },
+          });
+        }
+        return true;
+      }
+
+      await tx.product.delete({ where: { id } });
+      return false;
     }, { maxWait: 10000, timeout: 20000 });
 
     revalidateProductPaths();
     // Immediate cache invalidation for storefront
     updateTag('products-list');
     updateTag('product-' + id);
-    return { success: true, data: undefined };
+    return {
+      success: true,
+      data: {
+        archived,
+        message: archived
+          ? "تمت أرشفة المنتج والمتغيرات للحفاظ على سجلات الحركات السابقة"
+          : "تم حذف المنتج لعدم وجود حركات أو سجلات تاريخية مرتبطة به",
+      },
+    };
   } catch (error) {
     return handleActionError(error);
   }

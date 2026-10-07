@@ -117,6 +117,7 @@ export default function ProductsTableClient({
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState("");
   const selectedSummary = useMemo(
     () => (selectedProduct ? getProductSummary(selectedProduct) : null),
     [selectedProduct]
@@ -131,6 +132,8 @@ export default function ProductsTableClient({
     const result = await deleteProduct(productToDelete.id);
 
     if (result.success) {
+      setDeleteSuccess(result.data.message);
+      setIsDeleting(false);
       setProductToDelete(null);
       router.refresh();
       return;
@@ -142,6 +145,11 @@ export default function ProductsTableClient({
 
   return (
     <>
+      {deleteSuccess && (
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          {deleteSuccess}
+        </div>
+      )}
       <Table>
         <TableHeader>
           <TableRow>
@@ -250,6 +258,7 @@ export default function ProductsTableClient({
                       size="sm"
                       onClick={() => {
                         setDeleteError(null);
+                        setDeleteSuccess("");
                         setProductToDelete(product);
                       }}
                     >
@@ -391,7 +400,7 @@ export default function ProductsTableClient({
         }}
         onConfirm={handleDeleteProduct}
         title="تأكيد حذف المنتج"
-        description="هل أنت متأكد؟ هذا الإجراء سيؤدي إلى حذف المنتج نهائياً ولا يمكن التراجع عنه."
+        description="سيُحذف المنتج إذا لم تكن له حركات أو سجلات تاريخية، وإلا فسيُؤرشف المنتج ومتغيراته للحفاظ على السجلات."
         itemName={productToDelete?.nameAr || productToDelete?.name || undefined}
         loading={isDeleting}
       >

@@ -205,13 +205,16 @@ export async function createReturn(data: {
           throw new Error("المنتج غير موجود");
         }
 
-        const previousQty = variant.stockQuantity;
-        const newQty = previousQty + item.quantity;
-
-        await tx.productVariant.update({
+        const updatedVariants = await tx.productVariant.updateManyAndReturn({
           where: { id: item.variantId },
-          data: { stockQuantity: newQty },
+          data: { stockQuantity: { increment: item.quantity } },
+          select: { stockQuantity: true },
         });
+        if (updatedVariants.length !== 1) {
+          throw new Error("تعذر تحديث مخزون المنتج المرتجع");
+        }
+        const newQty = updatedVariants[0].stockQuantity;
+        const previousQty = newQty - item.quantity;
 
         await tx.stockMovement.create({
           data: {
