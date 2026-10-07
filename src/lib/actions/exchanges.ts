@@ -5,6 +5,8 @@ import { PaymentMethod, Prisma, SalesChannel } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumberSafe } from "@/lib/invoice-generator";
+import { formatCurrency } from "@/lib/utils";
+import { sendTelegramMessage } from "@/lib/telegram";
 import { invalidateReturnsData, invalidateSalesData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import { calculateCartDiscounts } from "@/lib/promotions";
@@ -51,6 +53,81 @@ type ExchangeReceiptLine = {
     unitPrice: number;
     totalPrice: number;
 };
+
+function escapeTelegramHtml(value: string | number) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildExchangeTelegramMessage(data: {
+  exchangeNumber: string;
+  originalInvoiceNumber: string;
+  returnNumber: string;
+  replacementInvoiceNumber: string;
+  cashierName: string;
+  customerName: string | null;
+  settlementBalance: number;
+  returnedItems: Array<{
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+    saleItem: {
+      variant: {
+        size: string;
+        color: string;
+        product: { name: string; nameAr: string | null };
+      };
+    };
+  }>;
+  replacementItems: Array<{
+    quantity: number;
+    name: string;
+    size: string;
+    color: string;
+  }>;
+  replacementPricingLines: Array<{ unitPrice: number; netAmount: number }>;
+}) {
+  const returnedItems = data.returnedItems.map((item) => {
+    const variant = item.saleItem.variant;
+    return `• ${escapeTelegramHtml(variant.product.nameAr || variant.product.name)} (${escapeTelegramHtml(variant.size)} / ${escapeTelegramHtml(variant.color)}) × ${item.quantity} — ${formatCurrency(item.unitPrice)} للوحدة، ${formatCurrency(item.totalPrice)} إجمالي`;
+  });
+  const replacementItems = data.replacementItems.map((item, index) => {
+    const pricing = data.replacementPricingLines[index];
+    if (!pricing) {
+      throw new Error("Replacement pricing missing from exchange Telegram message");
+    }
+    return `• ${escapeTelegramHtml(item.name)} (${escapeTelegramHtml(item.size)} / ${escapeTelegramHtml(item.color)}) × ${item.quantity} — ${formatCurrency(pricing.unitPrice)} للوحدة، ${formatCurrency(pricing.netAmount)} إجمالي`;
+  });
+  const settlement = data.settlementBalance > 0
+    ? `مطلوب تحصيله من العميل: ${formatCurrency(data.settlementBalance)}`
+    : data.settlementBalance < 0
+      ? `مبلغ مسترد للعميل: ${formatCurrency(Math.abs(data.settlementBalance))}`
+      : "لا يوجد فرق مالي";
+
+  return [
+    "🔄 <b>عملية استبدال جديدة</b>",
+    "",
+    `<b>رقم الاستبدال:</b> ${escapeTelegramHtml(data.exchangeNumber)}`,
+    `<b>الفاتورة الأصلية:</b> ${escapeTelegramHtml(data.originalInvoiceNumber)}`,
+    `<b>رقم المرتجع:</b> ${escapeTelegramHtml(data.returnNumber)}`,
+    `<b>فاتورة البديل:</b> ${escapeTelegramHtml(data.replacementInvoiceNumber)}`,
+    `<b>العميل:</b> ${escapeTelegramHtml(data.customerName || "عميل نقدي")}`,
+    `<b>قناة البيع:</b> ${escapeTelegramHtml("نقطة البيع (POS)")}`,
+    `<b>الكاشير:</b> ${escapeTelegramHtml(data.cashierName)}`,
+    "",
+    "<b>الأصناف المرتجعة:</b>",
+    ...returnedItems,
+    "",
+    "<b>الأصناف البديلة:</b>",
+    ...replacementItems,
+    "",
+    `<b>التسوية:</b> ${settlement}`,
+  ].join("\n");
+}
 
 type ActionResult<T> =
   | { success: true; data: T }
@@ -588,6 +665,24 @@ export async function createExchange(data: {
     void checkLowStockAndNotify(replacementVariantIds);
 
     const { receiptSource, ...exchangeResult } = exchange;
+    try {
+      const telegramMessage = buildExchangeTelegramMessage({
+        exchangeNumber: receiptSource.exchangeNumber,
+        originalInvoiceNumber: receiptSource.originalInvoiceNumber,
+        returnNumber: receiptSource.returnNumber,
+        replacementInvoiceNumber: receiptSource.replacementInvoiceNumber,
+        cashierName: receiptSource.cashierName,
+        customerName: receiptSource.customerName,
+        settlementBalance: exchangeResult.settlementBalance,
+        returnedItems: receiptSource.returnedItems,
+        replacementItems: receiptSource.replacementItems,
+        replacementPricingLines: receiptSource.replacementPricingLines,
+      });
+      await sendTelegramMessage(telegramMessage, { parseMode: "HTML" });
+    } catch (error) {
+      console.error("Failed to send exchange Telegram notification:", error);
+    }
+
     let receipt: ExchangeReceiptData | undefined;
     try {
       receipt = {

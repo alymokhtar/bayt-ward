@@ -11,7 +11,10 @@ function getTelegramConfig() {
   return { token, chatId };
 }
 
-export async function sendTelegramMessage(message: string): Promise<void> {
+export async function sendTelegramMessage(
+  message: string,
+  options?: { parseMode?: "HTML" },
+): Promise<void> {
   try {
     const config = getTelegramConfig();
     if (!config || !message.trim()) return;
@@ -26,6 +29,7 @@ export async function sendTelegramMessage(message: string): Promise<void> {
         body: JSON.stringify({
           chat_id: config.chatId,
           text: message,
+          ...(options?.parseMode ? { parse_mode: options.parseMode } : {}),
           disable_web_page_preview: true,
           disable_notification: false,
         }),
