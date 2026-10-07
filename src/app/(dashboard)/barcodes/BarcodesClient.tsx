@@ -132,32 +132,38 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleVariant(variant.id)}
-                      className="h-4 w-4 accent-gold"
+                      className="h-4 w-4 shrink-0 accent-gold"
                     />
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium truncate">
                         {variant.product.nameAr || variant.product.name}
                       </p>
-                      <p className="text-xs text-muted">
-                        {variant.sku} · {variant.size} · {variant.color} ·{" "}
+                      <p className="break-words text-xs text-muted">
+                        <span dir="ltr">{variant.sku}</span> · {variant.size} · {variant.color}
+                      </p>
+                    </div>
+                    <div className="w-24 shrink-0 text-end">
+                      <p className="whitespace-nowrap text-sm text-gold">
                         {formatCurrency(variant.sellingPrice)}
                       </p>
                     </div>
                     {isSelected && (
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={selected[variant.id]}
-                        onChange={(e) =>
-                          updateQuantity(
-                            variant.id,
-                            parseInt(e.target.value, 10) || 1
-                          )
-                        }
-                        className="w-16 h-8 text-center"
-                        dir="ltr"
-                      />
+                      <div className="w-20 shrink-0">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={selected[variant.id]}
+                          onChange={(e) =>
+                            updateQuantity(
+                              variant.id,
+                              parseInt(e.target.value, 10) || 1
+                            )
+                          }
+                          className="h-8 text-center"
+                          dir="ltr"
+                        />
+                      </div>
                     )}
                   </div>
                 );
