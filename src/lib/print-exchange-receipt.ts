@@ -1,4 +1,6 @@
 import type { ExchangeReceiptData } from "@/components/pos/ExchangeReceiptInvoice";
+import JsBarcode from "jsbarcode";
+import { isCode128Compatible } from "@/lib/barcode";
 import { formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
 
 function escapeHtml(value: string) {
@@ -41,9 +43,15 @@ function renderItems(items: ExchangeReceiptData["returnedItems"], sign: "+" | "-
   `).join("");
 }
 
-export function buildExchangeReceiptPrintHtml(data: ExchangeReceiptData) {
+export function buildExchangeReceiptPrintHtml(
+  data: ExchangeReceiptData,
+  barcodeDataUrl?: string,
+) {
   const currencySymbol = data.currencySymbol || "ج.م";
   const fmt = (amount: number) => escapeHtml(formatCurrency(amount, currencySymbol));
+  const barcodeHtml = barcodeDataUrl
+    ? `<div class="barcode"><img src="${escapeHtml(barcodeDataUrl)}" alt="باركود فاتورة البديل ${escapeHtml(data.replacementInvoiceNumber)}" /><div class="barcode-number num">${escapeHtml(data.replacementInvoiceNumber)}</div></div>`
+    : "";
   const settlementDescription = data.settlementBalance > 0
     ? `المطلوب تحصيله: ${fmt(data.settlementBalance)}`
     : data.settlementBalance < 0
@@ -90,6 +98,9 @@ export function buildExchangeReceiptPrintHtml(data: ExchangeReceiptData) {
     .totals { margin-top: 4px; }
     .settlement { text-align: center; font-size: 12px; font-weight: 700; }
     .footer { text-align: center; font-size: 9px; }
+    .barcode { width: 100%; margin: 8px auto; text-align: center; }
+    .barcode img { display: block; width: min(100%, 68mm); height: auto; margin: 0 auto; }
+    .barcode-number { margin-top: 3px; font-size: 11px; font-weight: 700; }
     .num { direction: ltr; unicode-bidi: isolate; }
     @page { size: 80mm auto; margin: 0; }
     @media print { body { width: 80mm; } }
@@ -133,6 +144,7 @@ export function buildExchangeReceiptPrintHtml(data: ExchangeReceiptData) {
   <div class="settlement">${settlementDescription}</div>
   ${settlementMethod}
   <hr class="dash" />
+  ${barcodeHtml}
   <div class="footer">يرجى الاحتفاظ بفاتورة الاستبدال<br />*** نهاية الفاتورة ***</div>
 </body>
 </html>`;
@@ -142,8 +154,28 @@ export function printExchangeReceipt(data: ExchangeReceiptData): boolean {
   const printWindow = window.open("", "_blank", "width=420,height=720");
   if (!printWindow) return false;
 
+  let barcodeDataUrl: string | undefined;
+  if (isCode128Compatible(data.replacementInvoiceNumber)) {
+    try {
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      JsBarcode(svg, data.replacementInvoiceNumber.trim(), {
+        format: "CODE128",
+        width: 1.3,
+        height: 42,
+        displayValue: false,
+        margin: 2,
+        lineColor: "#000000",
+        background: "#ffffff",
+      });
+      const svgMarkup = new XMLSerializer().serializeToString(svg);
+      barcodeDataUrl = `data:image/svg+xml;base64,${window.btoa(svgMarkup)}`;
+    } catch (error) {
+      console.error("Failed to generate replacement invoice barcode:", error);
+    }
+  }
+
   printWindow.document.open();
-  printWindow.document.write(buildExchangeReceiptPrintHtml(data));
+  printWindow.document.write(buildExchangeReceiptPrintHtml(data, barcodeDataUrl));
   printWindow.document.close();
 
   window.setTimeout(() => {
