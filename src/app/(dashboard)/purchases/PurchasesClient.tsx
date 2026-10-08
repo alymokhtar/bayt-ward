@@ -15,10 +15,15 @@ import {
 } from "@/components/ui/Table";
 import { createPurchase, receivePurchase } from "@/lib/actions/purchases";
 import PurchaseDetailsModal from "@/app/(dashboard)/purchases/PurchaseDetailsModal";
+import PaginationNav from "@/components/ui/PaginationNav";
 import { searchVariants } from "@/lib/actions/products";
 import { useBarcodeScanner } from "@/lib/barcode-scanner";
 import { scanVariantCode } from "@/lib/variant-scan-client";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDateTime,
+  type PaginatedResult,
+} from "@/lib/utils";
 import { PackageCheck, Plus, Search, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -43,8 +48,9 @@ const statusLabels: Record<string, string> = {
 };
 
 interface PurchasesClientProps {
-  purchases: Purchase[];
+  purchases: PaginatedResult<Purchase>;
   suppliers: Supplier[];
+  status?: string;
 }
 
 type PurchaseItem = {
@@ -56,10 +62,12 @@ type PurchaseItem = {
 export default function PurchasesClient({
   purchases: initial,
   suppliers,
+  status,
 }: PurchasesClientProps) {
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
   const quantityRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const searchRequestRef = useRef(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [supplierId, setSupplierId] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([]);
@@ -69,6 +77,21 @@ export default function PurchasesClient({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [pendingSubmission, setPendingSubmission] = useState<{
+    idempotencyKey: string;
+    supplierId: string;
+    items: {
+      variantId: string;
+      quantity: number;
+      unitCost: number;
+      totalCost: number;
+    }[];
+    subtotal: number;
+    totalAmount: number;
+    notes?: string;
+  } | null>(null);
+  const [receivingPurchaseId, setReceivingPurchaseId] = useState<string | null>(null);
+  const [receivingError, setReceivingError] = useState("");
   const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
   const [focusVariantId, setFocusVariantId] = useState<string | null>(null);
   const [flashVariantId, setFlashVariantId] = useState<string | null>(null);
@@ -79,13 +102,28 @@ export default function PurchasesClient({
   );
 
   const doSearch = useCallback(async (q: string) => {
+    const requestId = ++searchRequestRef.current;
     if (!q.trim()) {
       setResults([]);
+      setSearching(false);
       return;
     }
     setSearching(true);
-    setResults(await searchVariants(q));
-    setSearching(false);
+    try {
+      const searchResults = await searchVariants(q);
+      if (requestId === searchRequestRef.current) {
+        setResults(searchResults);
+      }
+    } catch {
+      if (requestId === searchRequestRef.current) {
+        setResults([]);
+        setError("تعذر البحث عن المنتجات. تحقق من الاتصال ثم أعد المحاولة.");
+      }
+    } finally {
+      if (requestId === searchRequestRef.current) {
+        setSearching(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -157,7 +195,13 @@ export default function PurchasesClient({
   }, [items, focusVariantId, focusBarcodeInput]);
 
   async function resolveAndAdd(queryText: string) {
-    const result = await scanVariantCode(queryText);
+    let result: Awaited<ReturnType<typeof scanVariantCode>>;
+    try {
+      result = await scanVariantCode(queryText);
+    } catch {
+      setError("تعذر البحث عن المنتج. تحقق من الاتصال ثم أعد المحاولة.");
+      return;
+    }
 
     if (result.status === "found") {
       addItem(result.variant);
@@ -203,6 +247,7 @@ export default function PurchasesClient({
   }
 
   function openModal() {
+    if (pendingSubmission) return;
     setError("");
     setItems([]);
     setSupplierId("");
@@ -214,49 +259,103 @@ export default function PurchasesClient({
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!supplierId || items.length === 0) {
+    if (loading) return;
+    if (!pendingSubmission && (!supplierId || items.length === 0)) {
       setError("اختر المورد وأضف منتجات");
       return;
     }
 
     setLoading(true);
-    const result = await createPurchase({
-      supplierId,
-      items: items.map((i) => ({
-        variantId: i.variant.id,
-        quantity: i.quantity,
-        unitCost: i.unitCost,
-        totalCost: i.unitCost * i.quantity,
-      })),
-      subtotal,
-      totalAmount: subtotal,
-      notes: notes || undefined,
-    });
-    setLoading(false);
+    try {
+      const submission =
+        pendingSubmission ??
+        {
+          idempotencyKey: crypto.randomUUID(),
+          supplierId,
+          items: items.map((item) => ({
+            variantId: item.variant.id,
+            quantity: item.quantity,
+            unitCost: item.unitCost,
+            totalCost: item.unitCost * item.quantity,
+          })),
+          subtotal,
+          totalAmount: subtotal,
+          notes: notes || undefined,
+        };
+      setPendingSubmission(submission);
+      const result = await createPurchase(submission);
 
-    if (result.success) {
-      setModalOpen(false);
-      router.refresh();
-    } else {
-      setError(result.error ?? "حدث خطأ");
+      if (result.success) {
+        setPendingSubmission(null);
+        setModalOpen(false);
+        router.refresh();
+      } else {
+        setPendingSubmission(null);
+        setError(result.error ?? "تعذر حفظ أمر الشراء");
+      }
+    } catch {
+      setError(
+        "تعذر تأكيد نتيجة الحفظ بسبب مشكلة في الاتصال. أعد المحاولة بنفس البيانات لتجنب تكرار الفاتورة."
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
   async function handleReceive(id: string) {
     if (!confirm("تأكيد استلام المشتريات وتحديث المخزون؟")) return;
-    const result = await receivePurchase(id);
-    if (result.success) router.refresh();
-    else alert(result.error);
+    if (receivingPurchaseId) return;
+    setReceivingPurchaseId(id);
+    setReceivingError("");
+    try {
+      const result = await receivePurchase(id);
+      if (result.success) router.refresh();
+      else setReceivingError(result.error ?? "تعذر استلام أمر الشراء");
+    } catch {
+      setReceivingError("تعذر استلام أمر الشراء بسبب مشكلة في الاتصال");
+    } finally {
+      setReceivingPurchaseId(null);
+    }
   }
 
   return (
     <>
       <div className="flex justify-end mb-4">
-        <Button onClick={openModal}>
+        <Button onClick={openModal} disabled={Boolean(pendingSubmission)}>
           <Plus className="h-4 w-4" />
           أمر شراء جديد
         </Button>
       </div>
+
+      <form
+        action="/purchases"
+        method="get"
+        className="mb-4 flex flex-wrap items-end gap-3"
+      >
+        <Select
+          label="تصفية حسب الحالة"
+          name="status"
+          options={[
+            { value: "", label: "كل الحالات" },
+            { value: "PENDING", label: "قيد الانتظار" },
+            { value: "RECEIVED", label: "مستلم" },
+            { value: "CANCELLED", label: "ملغى" },
+          ]}
+          defaultValue={status ?? ""}
+        />
+        <Button type="submit" variant="outline">
+          تطبيق
+        </Button>
+      </form>
+
+      {receivingError && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger"
+        >
+          {receivingError}
+        </div>
+      )}
 
       <Table>
         <TableHeader>
@@ -271,7 +370,7 @@ export default function PurchasesClient({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {initial.map((p) => (
+          {initial.items.map((p) => (
             <TableRow key={p.id}>
               <TableCell>
                 <button
@@ -301,6 +400,8 @@ export default function PurchasesClient({
                     variant="outline"
                     size="sm"
                     onClick={() => handleReceive(p.id)}
+                    loading={receivingPurchaseId === p.id}
+                    disabled={receivingPurchaseId !== null}
                   >
                     <PackageCheck className="h-4 w-4" />
                     استلام
@@ -311,10 +412,23 @@ export default function PurchasesClient({
           ))}
         </TableBody>
       </Table>
+      {initial.items.length === 0 && (
+        <p className="py-8 text-center text-sm text-muted">
+          لا توجد فواتير مشتريات لهذه الصفحة أو الحالة.
+        </p>
+      )}
+      <PaginationNav
+        page={initial.page}
+        totalPages={initial.totalPages}
+        basePath="/purchases"
+        searchParams={{ status }}
+      />
 
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          if (!pendingSubmission) setModalOpen(false);
+        }}
         title="أمر شراء جديد"
         description="ابحث بالباركود أو اسم المنتج — يُضاف المخزون مباشرة عند الحفظ"
         size="xl"
@@ -323,6 +437,7 @@ export default function PurchasesClient({
             <Button
               type="button"
               variant="ghost"
+              disabled={Boolean(pendingSubmission)}
               onClick={() => setModalOpen(false)}
             >
               إلغاء
@@ -331,19 +446,36 @@ export default function PurchasesClient({
               type="submit"
               form="purchase-order-form"
               loading={loading}
-              disabled={items.length === 0}
+              disabled={loading || (!pendingSubmission && items.length === 0)}
             >
-              حفظ وإضافة للمخزون
+              {pendingSubmission ? "إعادة المحاولة بأمان" : "حفظ وإضافة للمخزون"}
             </Button>
           </div>
         }
       >
-        <form id="purchase-order-form" onSubmit={handleCreate} className="flex-1 overflow-y-auto overflow-x-hidden space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger">
-              {error}
-            </div>
-          )}
+        <form
+          id="purchase-order-form"
+          onSubmit={handleCreate}
+          className="flex-1 overflow-y-auto overflow-x-hidden space-y-4"
+        >
+          <fieldset
+            disabled={loading || Boolean(pendingSubmission)}
+            className="min-w-0 space-y-4"
+          >
+            {error && (
+              <div
+                role="alert"
+                className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger"
+              >
+                {error}
+              </div>
+            )}
+            {pendingSubmission && (
+              <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-brown">
+                بيانات الفاتورة مقفلة مؤقتاً. أعد المحاولة بنفس البيانات للتحقق
+                من نتيجة العملية السابقة.
+              </div>
+            )}
 
           <div className="sticky top-0 z-40 bg-white/95 pt-2 pb-3 px-4">
             <div className="space-y-2">
@@ -516,6 +648,7 @@ export default function PurchasesClient({
             onChange={(e) => setNotes(e.target.value)}
             className="w-full max-w-full"
           />
+          </fieldset>
         </form>
       </Modal>
 

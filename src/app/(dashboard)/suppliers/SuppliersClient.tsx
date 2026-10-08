@@ -133,7 +133,7 @@ export default function SuppliersClient({
             <TableHead>الاسم</TableHead>
             <TableHead>الهاتف</TableHead>
             <TableHead>عدد المشتريات</TableHead>
-            <TableHead>إجمالي المشتريات</TableHead>
+            <TableHead>إجمالي حجم التعاملات</TableHead>
             <TableHead>آخر عملية شراء</TableHead>
             <TableHead>الحالة</TableHead>
             <TableHead>الإجراءات</TableHead>

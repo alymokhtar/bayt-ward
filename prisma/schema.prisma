@@ -373,6 +373,7 @@ model SaleItem {
 model Purchase {
   id            String         @id @default(cuid())
   invoiceNumber String         @unique
+  idempotencyKey String?       @unique
   supplierId    String
   userId        String
   subtotal      Float

@@ -129,7 +129,7 @@ export default function SupplierDetailsModal({
               value={data.summary.purchaseCount.toString()}
             />
             <SummaryCard
-              label="إجمالي المشتريات"
+              label="إجمالي حجم التعاملات"
               value={formatCurrency(data.summary.totalPurchaseAmount)}
             />
             <SummaryCard

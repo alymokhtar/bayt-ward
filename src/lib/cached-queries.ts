@@ -772,24 +772,39 @@ export const getCachedPurchasesList = unstable_cache(
     const options = JSON.parse(paramsJson) as {
       status?: string;
       supplierId?: string;
-      limit?: number;
+      page?: number;
+      pageSize?: number;
     };
 
-    return prisma.purchase.findMany({
-      where: {
-        ...(options.status
-          ? { status: options.status as "PENDING" | "RECEIVED" | "CANCELLED" }
-          : {}),
-        ...(options.supplierId ? { supplierId: options.supplierId } : {}),
-      },
-      orderBy: { createdAt: "desc" },
-      take: options.limit ?? 50,
-      include: {
-        supplier: { select: { id: true, name: true, phone: true } },
-        user: { select: { id: true, name: true } },
-        _count: { select: { items: true } },
-      },
-    });
+    const pagination = resolvePagination(options.page, options.pageSize ?? 50);
+    const where: Prisma.PurchaseWhereInput = {
+      ...(options.status
+        ? { status: options.status as "PENDING" | "RECEIVED" | "CANCELLED" }
+        : {}),
+      ...(options.supplierId ? { supplierId: options.supplierId } : {}),
+    };
+
+    const [items, total] = await Promise.all([
+      prisma.purchase.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: pagination.skip,
+        take: pagination.take,
+        include: {
+          supplier: { select: { id: true, name: true, phone: true } },
+          user: { select: { id: true, name: true } },
+          _count: { select: { items: true } },
+        },
+      }),
+      prisma.purchase.count({ where }),
+    ]);
+
+    return toPaginatedResult(
+      items,
+      total,
+      pagination.page,
+      pagination.pageSize
+    );
   },
   ["purchases-list"],
   { tags: [CACHE_TAG.purchases], revalidate: READ_CACHE_SECONDS }

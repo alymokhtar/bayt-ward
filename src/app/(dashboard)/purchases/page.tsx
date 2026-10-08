@@ -3,7 +3,17 @@ import { Card, CardContent } from "@/components/ui/Card";
 import PurchasesSection from "@/app/(dashboard)/purchases/PurchasesSection";
 import TablePageLoading from "@/components/ui/TablePageLoading";
 
-export default function PurchasesPage() {
+interface PurchasesPageProps {
+  searchParams: Promise<{
+    page?: string;
+    status?: string;
+  }>;
+}
+
+export default async function PurchasesPage({
+  searchParams,
+}: PurchasesPageProps) {
+  const params = await searchParams;
   return (
     <div className="space-y-6">
       <div>
@@ -13,7 +23,10 @@ export default function PurchasesPage() {
       <Card>
         <CardContent className="pt-6">
           <Suspense fallback={<TablePageLoading />}>
-            <PurchasesSection />
+            <PurchasesSection
+              page={params.page ? Number(params.page) : 1}
+              status={params.status}
+            />
           </Suspense>
         </CardContent>
       </Card>

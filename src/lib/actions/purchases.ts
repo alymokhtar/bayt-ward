@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { generateInvoiceNumberSafe } from "@/lib/invoice-generator";
 import { invalidatePurchasesData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { getCachedPurchasesList } from "@/lib/cached-queries";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -16,6 +16,16 @@ export type PurchaseItemInput = {
   quantity: number;
   unitCost: number;
   totalCost: number;
+};
+
+type PurchaseCreateInput = {
+  idempotencyKey: string;
+  supplierId: string;
+  items: PurchaseItemInput[];
+  subtotal?: number;
+  taxAmount?: number;
+  totalAmount?: number;
+  notes?: string;
 };
 
 type PurchaseItemRow = {
@@ -118,12 +128,16 @@ async function applyPurchaseItemsToInventory(
   if (items.length === 0) return;
 
   for (const item of items) {
-    const currentVariant = await tx.productVariant.findUnique({
-      where: { id: item.variantId },
+    const currentVariant = await tx.productVariant.findFirst({
+      where: {
+        id: item.variantId,
+        isActive: true,
+        product: { isActive: true },
+      },
       select: { stockQuantity: true, costPrice: true },
     });
     if (!currentVariant) {
-      throw new Error("أحد المنتجات غير موجود");
+      throw new Error("أحد المنتجات غير موجود أو مؤرشف");
     }
 
     const currentStock = currentVariant.stockQuantity;
@@ -145,6 +159,8 @@ async function applyPurchaseItemsToInventory(
     const updatedVariants = await tx.productVariant.updateManyAndReturn({
       where: {
         id: item.variantId,
+        isActive: true,
+        product: { isActive: true },
         stockQuantity: currentStock,
         costPrice: currentCost,
       },
@@ -179,10 +195,14 @@ async function applyPurchaseItemsToInventory(
 export async function getPurchases(options?: {
   status?: string;
   supplierId?: string;
-  limit?: number;
+  page?: number;
+  pageSize?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
-  return getCachedPurchasesList(JSON.stringify(options ?? {}));
+  const status = ["PENDING", "RECEIVED", "CANCELLED"].includes(options?.status ?? "")
+    ? options?.status
+    : undefined;
+  return getCachedPurchasesList(JSON.stringify({ ...options, status }));
 }
 
 export async function getPurchase(id: string) {
@@ -212,16 +232,41 @@ export async function getPurchase(id: string) {
   return purchase;
 }
 
-export async function createPurchase(data: {
-  supplierId: string;
-  items: PurchaseItemInput[];
-  subtotal?: number;
-  taxAmount?: number;
-  totalAmount?: number;
-  notes?: string;
-}) {
+function findPurchaseByIdempotencyKey(idempotencyKey: string, userId: string) {
+  return prisma.purchase.findFirst({
+    where: { idempotencyKey, userId },
+    include: {
+      supplier: true,
+      items: { include: { variant: { include: { product: true } } } },
+      user: { select: { id: true, name: true } },
+    },
+  });
+}
+
+export async function createPurchase(data: PurchaseCreateInput) {
+  let userId: string | undefined;
+  let idempotencyKey: string | undefined;
   try {
     const user = await requireRole(["ADMIN", "MANAGER"]);
+    userId = user.id;
+    idempotencyKey = data.idempotencyKey;
+
+    if (
+      typeof idempotencyKey !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        idempotencyKey
+      )
+    ) {
+      return { success: false, error: "معرّف عملية الشراء غير صالح" };
+    }
+
+    const existingPurchase = await findPurchaseByIdempotencyKey(
+      idempotencyKey,
+      user.id
+    );
+    if (existingPurchase) {
+      return { success: true, data: existingPurchase };
+    }
 
     const validated = validatePurchaseInput(data);
 
@@ -232,42 +277,49 @@ export async function createPurchase(data: {
       return { success: false, error: "المورد غير موجود" };
     }
 
-    const variantIds = validated.items.map((item) => item.variantId);
-    const foundVariants = await prisma.productVariant.findMany({
-      where: { id: { in: variantIds } },
-      select: { id: true },
-    });
-    if (foundVariants.length !== variantIds.length) {
-      return { success: false, error: "أحد المنتجات غير موجود" };
-    }
-
     const invoiceNumber = await generateInvoiceNumberSafe("PUR");
     const now = new Date();
 
-    const purchase = await prisma.$transaction(
-      async (tx) => {
-        const created = await tx.purchase.create({
-          data: {
-            invoiceNumber,
-            supplierId: data.supplierId.trim(),
-            userId: user.id,
-            subtotal: validated.subtotal,
-            taxAmount: validated.taxAmount,
-            totalAmount: validated.totalAmount,
-            status: "RECEIVED",
-            receivedAt: now,
-            notes: data.notes,
-            items: {
-              create: validated.items.map((item) => ({
-                variantId: item.variantId,
-                quantity: item.quantity,
-                unitCost: item.unitCost,
-                totalCost: item.totalCost,
-              })),
+    let purchase;
+    try {
+      purchase = await prisma.$transaction(
+        async (tx) => {
+          const variantIds = validated.items.map((item) => item.variantId);
+          const foundVariants = await tx.productVariant.findMany({
+            where: {
+              id: { in: variantIds },
+              isActive: true,
+              product: { isActive: true },
             },
-          },
-          include: { items: true },
-        });
+            select: { id: true },
+          });
+          if (foundVariants.length !== variantIds.length) {
+            throw new Error("أحد المنتجات غير موجود أو مؤرشف");
+          }
+
+          const created = await tx.purchase.create({
+            data: {
+              invoiceNumber,
+              idempotencyKey,
+              supplierId: data.supplierId.trim(),
+              userId: user.id,
+              subtotal: validated.subtotal,
+              taxAmount: validated.taxAmount,
+              totalAmount: validated.totalAmount,
+              status: "RECEIVED",
+              receivedAt: now,
+              notes: data.notes,
+              items: {
+                create: validated.items.map((item) => ({
+                  variantId: item.variantId,
+                  quantity: item.quantity,
+                  unitCost: item.unitCost,
+                  totalCost: item.totalCost,
+                })),
+              },
+            },
+            include: { items: true },
+          });
 
         await applyPurchaseItemsToInventory(
           tx,
@@ -290,13 +342,41 @@ export async function createPurchase(data: {
             user: { select: { id: true, name: true } },
           },
         });
-      },
-      { maxWait: 15000, timeout: 30000 }
-    );
+        },
+        { maxWait: 15000, timeout: 30000 }
+      );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const duplicatePurchase = await findPurchaseByIdempotencyKey(
+          idempotencyKey,
+          user.id
+        );
+        if (duplicatePurchase) {
+          return { success: true, data: duplicatePurchase };
+        }
+      }
+      throw error;
+    }
 
     revalidatePurchasePaths();
     return { success: true, data: purchase };
   } catch (error) {
+    if (userId && idempotencyKey) {
+      try {
+        const existingPurchase = await findPurchaseByIdempotencyKey(
+          idempotencyKey,
+          userId
+        );
+        if (existingPurchase) {
+          return { success: true, data: existingPurchase };
+        }
+      } catch (lookupError) {
+        console.error("Failed to verify purchase idempotency result", lookupError);
+      }
+    }
     return handleActionError(error);
   }
 }
