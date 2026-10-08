@@ -305,6 +305,7 @@ model Supplier {
 model Sale {
   id                String         @id @default(cuid())
   invoiceNumber     String         @unique
+  idempotencyKey    String?        @unique
   channel           SalesChannel   @default(POS)
   customerId        String?
   userId            String

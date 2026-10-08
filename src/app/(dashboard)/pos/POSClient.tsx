@@ -77,6 +77,13 @@ export default function POSClient({
   activePromotions,
 }: POSClientProps) {
   const searchRef = useRef<HTMLInputElement>(null);
+  const productSearchRequestRef = useRef(0);
+  const customerSearchRequestRef = useRef(0);
+  const saleSubmissionRef = useRef<{
+    idempotencyKey: string;
+    payload: Omit<Parameters<typeof createSale>[0], "idempotencyKey">;
+  } | null>(null);
+  const saleSubmissionInFlightRef = useRef(false);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<VariantResult[]>([]);
@@ -99,6 +106,7 @@ export default function POSClient({
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
 
   const [loading, setLoading] = useState(false);
+  const [pendingRetry, setPendingRetry] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [receipt, setReceipt] = useState<ReceiptData | null>(null);
@@ -163,19 +171,37 @@ export default function POSClient({
 
 
   const doSearch = useCallback(async (q: string) => {
+    const requestId = ++productSearchRequestRef.current;
     if (!q.trim()) {
       setResults([]);
+      setSearching(false);
       return;
     }
     setSearching(true);
-    const data = await searchVariants(q);
-    setResults(data);
-    setSearching(false);
+    try {
+      const data = await searchVariants(q);
+      if (requestId === productSearchRequestRef.current) {
+        setResults(data);
+      }
+    } catch (searchError) {
+      console.error("POS product search failed", searchError);
+      if (requestId === productSearchRequestRef.current) {
+        setResults([]);
+        setError("تعذر البحث عن المنتجات. تحقق من الاتصال ثم حاول مرة أخرى.");
+      }
+    } finally {
+      if (requestId === productSearchRequestRef.current) {
+        setSearching(false);
+      }
+    }
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => doSearch(query), 300);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      productSearchRequestRef.current += 1;
+    };
   }, [query, doSearch]);
 
   const focusBarcodeInput = useCallback(() => {
@@ -205,13 +231,24 @@ export default function POSClient({
   }
 
   useEffect(() => {
+    const requestId = ++customerSearchRequestRef.current;
     const timer = setTimeout(async () => {
       if (!customerQuery.trim()) {
         setCustomerResults([]);
         return;
       }
-      const data = await searchCustomers(customerQuery);
-      setCustomerResults(data);
+      try {
+        const data = await searchCustomers(customerQuery);
+        if (requestId === customerSearchRequestRef.current) {
+          setCustomerResults(data);
+        }
+      } catch (searchError) {
+        console.error("POS customer search failed", searchError);
+        if (requestId === customerSearchRequestRef.current) {
+          setCustomerResults([]);
+          setError("تعذر البحث عن العملاء. تحقق من الاتصال ثم حاول مرة أخرى.");
+        }
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [customerQuery]);
@@ -243,7 +280,14 @@ export default function POSClient({
   }
 
   async function resolveScanAndAdd(code: string) {
-    const result = await scanVariantCode(code);
+    let result: Awaited<ReturnType<typeof scanVariantCode>>;
+    try {
+      result = await scanVariantCode(code);
+    } catch (scanError) {
+      console.error("POS barcode lookup failed", scanError);
+      setError("تعذر التحقق من الباركود. تحقق من الاتصال ثم حاول مرة أخرى.");
+      return;
+    }
 
     if (result.status === "found") {
       if (result.variant.stockQuantity <= 0) {
@@ -334,19 +378,20 @@ export default function POSClient({
   }
 
   async function handleCompleteSale() {
+    if (saleSubmissionInFlightRef.current) return;
     setError("");
     setSuccess("");
-    if (cart.length === 0) {
+    if (!saleSubmissionRef.current && cart.length === 0) {
       setError("أضف منتجات إلى السلة أولاً");
       return;
     }
 
-    if (splitPaymentEnabled) {
+    if (!saleSubmissionRef.current && splitPaymentEnabled) {
       if (!isSplitPaymentValid) {
         setError("مجموع المدفوعات المختلطة يجب أن يساوي الإجمالي بالضبط");
         return;
       }
-    } else {
+    } else if (!saleSubmissionRef.current) {
       if (paid < totalAmount) {
         setError("المبلغ المدفوع أقل من الإجمالي");
         return;
@@ -358,33 +403,54 @@ export default function POSClient({
       }
     }
 
-    setLoading(true);
-    const result = await createSale({
-      channel: orderChannel,
-      customerId: selectedCustomer?.id,
-      items: cart.map((item) => ({
-        variantId: item.variant.id,
-        quantity: item.quantity,
-      })),
-      subtotal,
-      manualDiscountAmount: discountAmount,
-      discountPercent,
-      totalAmount,
-      paidAmount: splitPaymentEnabled ? totalAmount : paid,
-      tenderedAmount: splitPaymentEnabled ? splitPaymentTotal : paid,
-      changeAmount: splitPaymentEnabled ? Math.max(0, splitPaymentTotal - totalAmount) : changeAmount,
-      paymentMethod: splitPaymentEnabled ? "MIXED" as PaymentMethod : (paymentMethod || "CASH") as PaymentMethod,
-      payments: splitPaymentEnabled ? splitPaymentEntries.map((entry) => ({
-        amount: entry.amount,
-        method: entry.method as PaymentMethod,
-      })) : [{ amount: paid, method: (paymentMethod || "CASH") as PaymentMethod }],
-      notes: notes || undefined,
-    });
+    if (!saleSubmissionRef.current) {
+      saleSubmissionRef.current = {
+        idempotencyKey: crypto.randomUUID(),
+        payload: {
+          channel: orderChannel,
+          customerId: selectedCustomer?.id,
+          items: cart.map((item) => ({
+            variantId: item.variant.id,
+            quantity: item.quantity,
+          })),
+          subtotal,
+          manualDiscountAmount: discountAmount,
+          discountPercent,
+          totalAmount,
+          paidAmount: splitPaymentEnabled ? totalAmount : paid,
+          paymentMethod: splitPaymentEnabled
+            ? "MIXED" as PaymentMethod
+            : (paymentMethod || "CASH") as PaymentMethod,
+          payments: splitPaymentEnabled
+            ? splitPaymentEntries.map((entry) => ({
+                amount: entry.amount,
+                method: entry.method as PaymentMethod,
+              }))
+            : [{ amount: paid, method: (paymentMethod || "CASH") as PaymentMethod }],
+          notes: notes || undefined,
+        },
+      };
+    }
 
-    setLoading(false);
+    saleSubmissionInFlightRef.current = true;
+    setLoading(true);
+    let result: Awaited<ReturnType<typeof createSale>>;
+    try {
+      result = await createSale({
+        ...saleSubmissionRef.current.payload,
+        idempotencyKey: saleSubmissionRef.current.idempotencyKey,
+      });
+    } catch (submissionError) {
+      console.error("POS sale submission could not be confirmed", submissionError);
+      setPendingRetry(true);
+      setError("لم يصل تأكيد البيع. أعد إرسال العملية نفسها قبل بدء بيع جديد.");
+      return;
+    } finally {
+      setLoading(false);
+      saleSubmissionInFlightRef.current = false;
+    }
 
     if (result.success && result.data) {
-      const customer = selectedCustomer;
       const invoiceNumber = result.data.invoiceNumber;
       const saleTotal = result.data.totalAmount;
       const savedAppliedPromotions = Array.isArray(result.data.appliedPromotions)
@@ -405,44 +471,40 @@ export default function POSClient({
             }];
           })
         : [];
-      const soldItems = [...cart];
-      const receiptTimestamp = new Date();
-
       const receiptData: ReceiptData = {
         invoiceNumber,
         channel: result.data.channel,
-        createdAt: receiptTimestamp,
+        createdAt: result.data.createdAt,
         storeNameAr,
         storePhone,
         currencySymbol,
         cashierName: result.data.user.name,
-        customerName: customer?.name,
-        customerPhone: customer?.phone,
-        paymentMethod: splitPaymentEnabled ? "مختلط" : paymentMethod,
-        payments: splitPaymentEnabled
-          ? splitPaymentEntries.map((entry) => ({
-              method: entry.method,
-              amount: entry.amount,
-            }))
-          : [{ method: paymentMethod || "CASH", amount: paid }],
-        items: soldItems.map((item) => ({
+        customerName: result.data.customer?.name ?? undefined,
+        customerPhone: result.data.customer?.phone ?? undefined,
+        paymentMethod: result.data.paymentMethod ?? "CASH",
+        payments: result.data.payments.map((payment) => ({
+          method: payment.method,
+          amount: payment.amount,
+        })),
+        items: result.data.items.map((item) => ({
           name: item.variant.product.nameAr || item.variant.product.name,
           size: item.variant.size,
           color: item.variant.color,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          totalPrice:
-            item.unitPrice * item.quantity - item.discountAmount,
+          totalPrice: item.totalPrice,
         })),
         subtotal: result.data.subtotal,
         discountAmount: result.data.discountAmount,
         appliedPromotions: savedAppliedPromotions,
         totalAmount: saleTotal,
-        paidAmount: result.data.paidAmount,
+        paidAmount: result.data.tenderedAmount,
         changeAmount: result.data.changeAmount,
-        notes: notes || undefined,
+        notes: result.data.notes ?? undefined,
       };
 
+      saleSubmissionRef.current = null;
+      setPendingRetry(false);
       setReceipt(receiptData);
       setSuccess(`تمت العملية بنجاح — ${invoiceNumber}`);
       setCart([]);
@@ -456,6 +518,8 @@ export default function POSClient({
       setSplitPaymentAmounts(DEFAULT_SPLIT_PAYMENT_VALUES);
 
     } else {
+      saleSubmissionRef.current = null;
+      setPendingRetry(false);
       setError(result.success ? "حدث خطأ" : (result.error ?? "حدث خطأ"));
     }
   }
@@ -469,7 +533,26 @@ export default function POSClient({
   return (
     <>
       <ReceiptModal receipt={receipt} onClose={handleCloseReceipt} />
-      <div className="grid gap-6 lg:grid-cols-5 min-h-[calc(100vh-10rem)] md:min-h-[calc(100vh-8rem)]">
+      {pendingRetry && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/30 p-4">
+          <div role="alert" className="w-full max-w-md space-y-4 rounded-xl bg-card p-6 text-center shadow-xl">
+            <p className="text-sm text-brown">
+              لم يصل تأكيد العملية السابقة. أعد المحاولة لإكمالها بأمان؛ لا تعدّل السلة أو تبدأ عملية أخرى الآن.
+            </p>
+            <Button
+              type="button"
+              loading={loading}
+              onClick={handleCompleteSale}
+            >
+              إعادة إرسال العملية نفسها
+            </Button>
+          </div>
+        </div>
+      )}
+      <div
+        inert={pendingRetry}
+        className="grid gap-6 lg:grid-cols-5 min-h-[calc(100vh-10rem)] md:min-h-[calc(100vh-8rem)]"
+      >
       <div className="lg:col-span-3 flex flex-col gap-4 min-h-0">
         <div className="relative">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted" />
@@ -882,7 +965,7 @@ export default function POSClient({
             className="w-full"
             size="lg"
             loading={loading}
-            disabled={cart.length === 0 || !isPaymentReady}
+            disabled={pendingRetry || cart.length === 0 || !isPaymentReady}
             onClick={handleCompleteSale}
           >
             إتمام البيع

@@ -14,7 +14,7 @@ import { normalizeSalePayments } from "@/lib/sales-payment-utils";
 import { calculateCartDiscounts } from "@/lib/promotions";
 import { getActivePromotionsData } from "@/lib/promotions-data";
 import { allocateInvoiceDiscount } from "@/lib/sale-pricing";
-import { Prisma, SaleStatus, SalesChannel, type PaymentMethod } from "@prisma/client";
+import { PaymentMethod, Prisma, SaleStatus, SalesChannel } from "@prisma/client";
 import { getBusinessDayBoundsFromDateKeys } from "@/lib/business-day";
 import {
   buildSalesChannelAnalytics,
@@ -35,6 +35,49 @@ export type SalePaymentInput = {
   amount: number;
   method: PaymentMethod;
 };
+
+const saleResponseSelect = {
+  id: true,
+  invoiceNumber: true,
+  channel: true,
+  subtotal: true,
+  discountAmount: true,
+  totalAmount: true,
+  paidAmount: true,
+  tenderedAmount: true,
+  changeAmount: true,
+  paymentMethod: true,
+  notes: true,
+  appliedPromotions: true,
+  createdAt: true,
+  payments: { select: { method: true, amount: true } },
+  items: {
+    select: {
+      id: true,
+      quantity: true,
+      unitPrice: true,
+      discountAmount: true,
+      totalPrice: true,
+      variant: {
+        select: {
+          sku: true,
+          size: true,
+          color: true,
+          product: { select: { name: true, nameAr: true } },
+        },
+      },
+    },
+  },
+  customer: { select: { id: true, name: true, phone: true } },
+  user: { select: { id: true, name: true } },
+} satisfies Prisma.SaleSelect;
+
+function findSaleByIdempotencyKey(idempotencyKey: string, userId: string) {
+  return prisma.sale.findFirst({
+    where: { idempotencyKey, userId },
+    select: saleResponseSelect,
+  });
+}
 
 function handleActionError(error: unknown): ActionResult<never> {
   if (error instanceof Error) {
@@ -434,6 +477,7 @@ export async function getSale(id: string) {
 }
 
 export async function createSale(data: {
+  idempotencyKey: string;
   channel?: SalesChannel;
   customerId?: string;
   items: SaleItemInput[];
@@ -441,17 +485,33 @@ export async function createSale(data: {
   discountAmount?: number;
   manualDiscountAmount?: number;
   discountPercent?: number;
-  taxAmount?: number;
   totalAmount: number;
   paidAmount: number;
-  tenderedAmount?: number;
-  changeAmount?: number;
   paymentMethod?: PaymentMethod;
   payments?: SalePaymentInput[];
   notes?: string;
 }) {
+  let userId: string | undefined;
+  let idempotencyKey: string | undefined;
   try {
     const user = await requireAuth();
+    userId = user.id;
+    idempotencyKey = data.idempotencyKey;
+
+    if (
+      typeof idempotencyKey !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        idempotencyKey,
+      )
+    ) {
+      return { success: false, error: "معرّف عملية البيع غير صالح" };
+    }
+
+    const existingSale = await findSaleByIdempotencyKey(idempotencyKey, user.id);
+    if (existingSale) {
+      return { success: true, data: existingSale };
+    }
+
     const channel = data.channel ?? SalesChannel.POS;
     if (!Object.values(SalesChannel).includes(channel)) {
       return { success: false, error: "قناة البيع غير صالحة" };
@@ -563,9 +623,38 @@ export async function createSale(data: {
       return { success: false, error: "إجمالي الفاتورة يجب أن يكون أكبر من صفر" };
     }
 
+    if (data.payments !== undefined && (!Array.isArray(data.payments) || data.payments.length === 0)) {
+      return { success: false, error: "يجب إدخال وسيلة دفع واحدة على الأقل" };
+    }
+
+    const submittedPayments = data.payments ?? [{
+      amount: data.paidAmount,
+      method: data.paymentMethod ?? PaymentMethod.CASH,
+    }];
+    if (
+      submittedPayments.some(
+        (payment) =>
+          !payment ||
+          !Number.isFinite(payment.amount) ||
+          payment.amount <= 0 ||
+          payment.method === PaymentMethod.MIXED ||
+          !Object.values(PaymentMethod).includes(payment.method),
+      )
+    ) {
+      return { success: false, error: "مبالغ أو وسائل الدفع غير صالحة" };
+    }
+
+    const rawTenderedTotal = submittedPayments.reduce(
+      (sum, payment) => sum + payment.amount,
+      0,
+    );
+    if (!Number.isFinite(rawTenderedTotal)) {
+      return { success: false, error: "إجمالي المدفوعات غير صالح" };
+    }
+
     const { normalizedPayments, effectivePaidAmount } = normalizeSalePayments({
-      payments: data.payments,
-      paidAmount: data.paidAmount,
+      payments: submittedPayments,
+      paidAmount: rawTenderedTotal,
       totalAmount,
       paymentMethod: data.paymentMethod,
     });
@@ -576,23 +665,17 @@ export async function createSale(data: {
         : normalizedPayments[0]?.method ?? (data.paymentMethod ?? "CASH");
 
     const paymentTotal = normalizedPayments.reduce((sum, payment) => sum + payment.amount, 0);
-    const rawTenderedTotal = (data.payments ?? []).reduce(
-      (sum, payment) => sum + Number(payment.amount ?? 0),
-      0,
-    );
     const actualPaidAmount = effectivePaidAmount;
-    const tenderedAmount = data.tenderedAmount !== undefined
-      ? data.tenderedAmount
-      : (data.payments?.length ? rawTenderedTotal : data.paidAmount);
-    const resolvedChangeAmount = data.tenderedAmount !== undefined
-      ? Math.max(0, data.tenderedAmount - totalAmount)
-      : (data.changeAmount ?? Math.max(0, tenderedAmount - totalAmount));
+    const tenderedAmount = rawTenderedTotal;
+    const resolvedChangeAmount = Math.max(0, tenderedAmount - totalAmount);
 
     if (normalizedPayments.length > 1) {
-      if (Math.abs(paymentTotal - totalAmount) > 0.01) {
+      const paymentTotalCents = Math.round((paymentTotal + Number.EPSILON) * 100);
+      const totalAmountCents = Math.round((totalAmount + Number.EPSILON) * 100);
+      if (paymentTotalCents !== totalAmountCents) {
         return { success: false, error: "مجموع المدفوعات المختلطة يجب أن يساوي الإجمالي" };
       }
-    } else if (data.paidAmount < totalAmount) {
+    } else if (actualPaidAmount < totalAmount) {
       return { success: false, error: "المبلغ المدفوع أقل من الإجمالي" };
     }
 
@@ -650,6 +733,7 @@ export async function createSale(data: {
 
       const createdSale = await tx.sale.create({
         data: {
+          idempotencyKey,
           invoiceNumber,
           channel,
           customerId: data.customerId,
@@ -662,7 +746,7 @@ export async function createSale(data: {
             title: promotion.title,
             discountValue: promotion.discountValue,
           })),
-          taxAmount: data.taxAmount ?? 0,
+          taxAmount: 0,
           totalAmount,
           tenderedAmount,
           paidAmount: actualPaidAmount,
@@ -687,43 +771,7 @@ export async function createSale(data: {
             })),
           },
         },
-        select: {
-          id: true,
-          invoiceNumber: true,
-          channel: true,
-          subtotal: true,
-          discountAmount: true,
-          totalAmount: true,
-          paidAmount: true,
-          changeAmount: true,
-          appliedPromotions: true,
-          payments: {
-            select: {
-              method: true,
-              amount: true,
-            },
-          },
-          items: {
-            select: {
-              id: true,
-              quantity: true,
-              unitPrice: true,
-              totalPrice: true,
-              variant: {
-                select: {
-                  sku: true,
-                  size: true,
-                  color: true,
-                  product: { select: { name: true, nameAr: true } },
-                },
-              },
-            },
-          },
-          customer: {
-            select: { id: true, name: true, phone: true },
-          },
-          user: { select: { id: true, name: true } },
-        },
+        select: saleResponseSelect,
       });
 
       for (const item of data.items) {
@@ -779,7 +827,11 @@ export async function createSale(data: {
     revalidateSalePaths();
     // Immediate cache invalidation for stock & storefront products
     if (sale.items.length > 0) {
-      updateTag('products-list');
+      try {
+        updateTag("products-list");
+      } catch (error) {
+        console.error("Failed to invalidate product cache after sale:", error);
+      }
     }
 
     void checkLowStockAndNotify(data.items.map((item) => item.variantId));
@@ -792,6 +844,17 @@ export async function createSale(data: {
     }
     return { success: true, data: sale };
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002" &&
+      idempotencyKey &&
+      userId
+    ) {
+      const existingSale = await findSaleByIdempotencyKey(idempotencyKey, userId);
+      if (existingSale) {
+        return { success: true, data: existingSale };
+      }
+    }
     return handleActionError(error);
   }
 }

@@ -2,6 +2,7 @@ import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
 import JsBarcode from "jsbarcode";
 import { isCode128Compatible } from "@/lib/barcode";
 import { formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
+import { formatReceiptDateTime } from "@/lib/receipt-format";
 
 function escapeHtml(value: string) {
   return value
@@ -9,25 +10,6 @@ function escapeHtml(value: string) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
-}
-
-function formatReceiptDateTime(date: Date | string) {
-  const source =
-    typeof date === "string" && !date.endsWith("Z")
-      ? `${date}Z`
-      : date;
-  const dateObj = date instanceof Date ? date : new Date(source);
-
-  return new Intl.DateTimeFormat("ar-EG", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Africa/Cairo",
-    numberingSystem: "latn",
-  }).format(dateObj);
 }
 
 function dashedLine() {
@@ -179,11 +161,16 @@ export function buildReceiptPrintHtml(
   ${row("المجموع", fmt(data.subtotal))}
   ${
     data.discountAmount > 0
-      ? row("الخصم", `- ${fmt(data.discountAmount)}`)
+      ? row("إجمالي الخصم", `- ${fmt(data.discountAmount)}`)
       : ""
   }
   ${(data.appliedPromotions ?? [])
-    .map((promotion) => row(escapeHtml(promotion.title), `- ${fmt(promotion.discountValue)}`))
+    .map((promotion) =>
+      row(
+        `ضمن الخصم الإجمالي: ${escapeHtml(promotion.title)}`,
+        fmt(promotion.discountValue),
+      ),
+    )
     .join("")}
   ${row("الإجمالي", fmt(data.totalAmount), true)}
   ${row("المدفوع", fmt(data.paidAmount))}

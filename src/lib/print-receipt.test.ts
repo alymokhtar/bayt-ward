@@ -57,3 +57,38 @@ test("prints an online order at full price without store-only discounts", () => 
   assert.match(html, /200 ج\.م/);
   assert.doesNotMatch(html, /<span>الخصم<\/span>/);
 });
+
+test("prints promotion detail as informational text without deducting it twice", () => {
+  const receipt: ReceiptData = {
+    invoiceNumber: "INV-PROMO-001",
+    createdAt: new Date("2026-10-04T10:00:00.000Z"),
+    storeNameAr: "بيت ورد",
+    currencySymbol: "ج.م",
+    cashierName: "الكاشير",
+    paymentMethod: "CASH",
+    subtotal: 200,
+    discountAmount: 20,
+    appliedPromotions: [{
+      id: "promo-1",
+      title: "خصم العرض",
+      discountValue: 20,
+    }],
+    items: [{
+      name: "فستان",
+      size: "M",
+      color: "أحمر",
+      quantity: 1,
+      unitPrice: 200,
+      totalPrice: 180,
+    }],
+    totalAmount: 180,
+    paidAmount: 180,
+    changeAmount: 0,
+  };
+
+  const html = buildReceiptPrintHtml(receipt);
+
+  assert.equal(html.split("- 20 ج.م").length - 1, 1);
+  assert.match(html, /ضمن الخصم الإجمالي: خصم العرض/);
+  assert.match(html, /<span>الإجمالي<\/span><span>180 ج\.م<\/span>/);
+});

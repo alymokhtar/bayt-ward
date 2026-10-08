@@ -1,6 +1,7 @@
 "use client";
 
 import { formatCurrency, formatNumber, getPaymentMethodLabel } from "@/lib/utils";
+import { formatReceiptDateTime } from "@/lib/receipt-format";
 
 export type ReceiptPayment = {
   method: string;
@@ -19,7 +20,7 @@ export type ReceiptItem = {
 export type ReceiptData = {
   invoiceNumber: string;
   channel?: "POS" | "ONLINE";
-  createdAt: Date;
+  createdAt: Date | string;
   storeNameAr: string;
   storePhone?: string;
   currencySymbol: string;
@@ -37,28 +38,6 @@ export type ReceiptData = {
   changeAmount: number;
   notes?: string;
 };
-
-function formatReceiptDateTime(date: Date | string) {
-  const source =
-    typeof date === "string" && !date.endsWith("Z")
-      ? `${date}Z`
-      : date;
-  const dateObj = date instanceof Date ? date : new Date(source);
-
-  const adjustedDate = new Date(dateObj);
-  adjustedDate.setHours(adjustedDate.getHours() + 7);
-
-  return new Intl.DateTimeFormat("ar-EG", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Africa/Cairo",
-    numberingSystem: "latn",
-  }).format(adjustedDate);
-}
 
 function DashedLine() {
   return (
@@ -157,14 +136,14 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
         </div>
         {data.discountAmount > 0 && (
           <div className="flex justify-between gap-2">
-            <span>الخصم</span>
+            <span>إجمالي الخصم</span>
             <span dir="ltr">- {fmt(data.discountAmount)}</span>
           </div>
         )}
         {data.appliedPromotions?.map((promotion) => (
           <div key={promotion.id} className="flex justify-between gap-2 text-[10px]">
-            <span>{promotion.title}</span>
-            <span dir="ltr">- {fmt(promotion.discountValue)}</span>
+            <span>ضمن الخصم الإجمالي: {promotion.title}</span>
+            <span dir="ltr">{fmt(promotion.discountValue)}</span>
           </div>
         ))}
         <div className="flex justify-between gap-2 text-sm font-bold">
