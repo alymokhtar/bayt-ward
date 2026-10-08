@@ -4,6 +4,7 @@ import {
   buildSalesChannelAnalytics,
   buildSalesChannelTrend,
   getSalesChannelWhere,
+  subtractChannelReturns,
 } from "./sales-analytics";
 
 test("builds the matching sales query filter for ALL, POS, and ONLINE", () => {
@@ -53,6 +54,24 @@ test("returns zero-valued metrics when a sales channel has no orders", () => {
     averageOrderValue: 0,
   });
   assert.equal(analytics.revenueMix[1]?.share, 0);
+});
+
+test("subtracts approved returns from channel revenue without changing order counts", () => {
+  const netSales = subtractChannelReturns(
+    [
+      { channel: "POS", revenue: 500, orders: 4 },
+      { channel: "ONLINE", revenue: 300, orders: 2 },
+    ],
+    [
+      { channel: "POS", refundAmount: 75 },
+      { channel: "ONLINE", refundAmount: 50 },
+    ],
+  );
+
+  assert.deepEqual(netSales, [
+    { channel: "POS", revenue: 425, orders: 4 },
+    { channel: "ONLINE", revenue: 250, orders: 2 },
+  ]);
 });
 
 test("aggregates daily revenue per channel using Cairo business dates", () => {

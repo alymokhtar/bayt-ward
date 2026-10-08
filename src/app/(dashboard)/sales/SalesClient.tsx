@@ -184,7 +184,7 @@ export default function SalesClient({
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]" aria-label="تحليلات المبيعات حسب القناة">
         <div className="grid gap-4 sm:grid-cols-3">
-          <MetricCard title="إجمالي الإيرادات" value={formatCurrency(selectedMetrics.revenue)} />
+          <MetricCard title="صافي الإيرادات بعد المرتجعات المعتمدة" value={formatCurrency(selectedMetrics.revenue)} />
           <MetricCard title="عدد الفواتير / الطلبات" value={selectedMetrics.orders.toLocaleString("ar-EG-u-nu-latn")} />
           <MetricCard title="متوسط قيمة السلة (AOV)" value={formatCurrency(selectedMetrics.averageOrderValue)} />
         </div>

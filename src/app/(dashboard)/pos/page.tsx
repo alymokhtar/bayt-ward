@@ -1,4 +1,5 @@
 import POSClient from "@/app/(dashboard)/pos/POSClient";
+import { requireAuth } from "@/lib/auth";
 import { getStoreSettings } from "@/lib/actions/settings";
 import { getEgyptBusinessDateKey } from "@/lib/business-day";
 import { prisma } from "@/lib/prisma";
@@ -6,9 +7,10 @@ import { getActivePromotionsData } from "@/lib/promotions-data";
 import { Store } from "lucide-react";
 
 export default async function POSPage() {
-  const [settings, activePromotions] = await Promise.all([
+  const [settings, activePromotions, user] = await Promise.all([
     getStoreSettings(),
     getActivePromotionsData(),
+    requireAuth(),
   ]);
 
   const todayKey = getEgyptBusinessDateKey();
@@ -44,6 +46,7 @@ export default async function POSPage() {
         storePhone={settings.store_phone}
         currencySymbol={settings.currency_symbol || "ج.م"}
         dailyDiscountPercent={dailyDiscountActive ? discountPercent : 0}
+        cashierDiscountLimit={user.role === "CASHIER" ? 10 : null}
         activePromotions={activePromotions}
       />
     </div>

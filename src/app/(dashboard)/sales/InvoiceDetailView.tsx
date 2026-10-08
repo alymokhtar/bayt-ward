@@ -297,6 +297,12 @@ export default function InvoiceDetailView({
                 <span>- {formatCurrency(sale.discountAmount)}</span>
               </div>
             )}
+            {sale.discountReason && (
+              <div className="flex justify-between gap-3">
+                <span className="text-muted">سبب الخصم</span>
+                <span className="text-end">{sale.discountReason}</span>
+              </div>
+            )}
             {sale.taxAmount > 0 && (
               <div className="flex justify-between">
                 <span className="text-muted">الضريبة</span>

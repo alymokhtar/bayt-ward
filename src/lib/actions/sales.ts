@@ -19,6 +19,7 @@ import { getBusinessDayBoundsFromDateKeys } from "@/lib/business-day";
 import {
   buildSalesChannelAnalytics,
   getSalesChannelWhere,
+  subtractChannelReturns,
   type SalesChannelFilter,
 } from "@/lib/sales-analytics";
 
@@ -42,6 +43,7 @@ const saleResponseSelect = {
   channel: true,
   subtotal: true,
   discountAmount: true,
+  discountReason: true,
   totalAmount: true,
   paidAmount: true,
   tenderedAmount: true,
@@ -216,28 +218,47 @@ export async function getSales(options?: {
 export async function getSalesChannelAnalytics(from?: string, to?: string) {
   await requireAuth();
 
+  const dateRange = from || to
+    ? getBusinessDayBoundsFromDateKeys(from, to)
+    : null;
   const where: Prisma.SaleWhereInput = {
     status: {
       in: [SaleStatus.COMPLETED, SaleStatus.PARTIALLY_REFUNDED, SaleStatus.REFUNDED],
     },
+    ...(dateRange
+      ? { createdAt: { gte: dateRange.start, lt: dateRange.end } }
+      : {}),
   };
-  if (from || to) {
-    const { start, end } = getBusinessDayBoundsFromDateKeys(from, to);
-    where.createdAt = { gte: start, lt: end };
-  }
 
-  const groups = await prisma.sale.groupBy({
-    by: ["channel"],
-    where,
-    _sum: { totalAmount: true },
-    _count: { _all: true },
-  });
-
-  return buildSalesChannelAnalytics(groups.map((group) => ({
+  const [groups, returnGroups] = await Promise.all([
+    prisma.sale.groupBy({
+      by: ["channel"],
+      where,
+      _sum: { totalAmount: true },
+      _count: { _all: true },
+    }),
+    prisma.$queryRaw<Array<{ channel: SalesChannel; refundAmount: number }>>`
+      SELECT s.channel::text AS channel,
+        COALESCE(SUM(r."refundAmount"), 0)::float AS "refundAmount"
+      FROM "Return" r
+      INNER JOIN "Sale" s ON s.id = r."saleId"
+      WHERE r.status = 'APPROVED'
+        ${dateRange
+          ? Prisma.sql`AND r."createdAt" >= ${dateRange.start} AND r."createdAt" < ${dateRange.end}`
+          : Prisma.empty}
+      GROUP BY s.channel
+    `,
+  ]);
+  const netRevenueGroups = subtractChannelReturns(groups.map((group) => ({
     channel: group.channel,
     revenue: group._sum.totalAmount,
     orders: group._count._all,
+  })), returnGroups.map((group) => ({
+    channel: group.channel,
+    refundAmount: group.refundAmount,
   })));
+
+  return buildSalesChannelAnalytics(netRevenueGroups);
 }
 
 export async function getSalesExport(options?: {
@@ -485,6 +506,7 @@ export async function createSale(data: {
   discountAmount?: number;
   manualDiscountAmount?: number;
   discountPercent?: number;
+  discountReason?: string;
   totalAmount: number;
   paidAmount: number;
   paymentMethod?: PaymentMethod;
@@ -591,19 +613,38 @@ export async function createSale(data: {
     );
     const submittedManualDiscount = data.manualDiscountAmount ?? data.discountAmount ?? 0;
     const submittedDiscountPercent = data.discountPercent ?? 0;
+    const discountReason =
+      typeof data.discountReason === "string" ? data.discountReason.trim() : "";
 
     if (
       !Number.isFinite(submittedManualDiscount) ||
       submittedManualDiscount < 0 ||
       !Number.isFinite(submittedDiscountPercent) ||
-      submittedDiscountPercent < 0
+      submittedDiscountPercent < 0 ||
+      (data.discountReason !== undefined &&
+        (typeof data.discountReason !== "string" || discountReason.length > 500))
     ) {
       return { success: false, error: "قيمة الخصم غير صالحة" };
     }
 
-    const manualPercent = Math.min(100, submittedDiscountPercent);
+    const maximumDiscountPercent = user.role === "CASHIER" ? 10 : 100;
+    if (submittedDiscountPercent > maximumDiscountPercent) {
+      return {
+        success: false,
+        error: `الحد الأقصى لنسبة الخصم هو ${maximumDiscountPercent}%`,
+      };
+    }
+
+    const manualPercent = submittedDiscountPercent;
     const manualFixed = submittedManualDiscount;
     const manualDiscount = grossSubtotal * manualPercent / 100 + manualFixed;
+    const maximumManualDiscount = grossSubtotal * maximumDiscountPercent / 100;
+    if (manualDiscount > maximumManualDiscount + 0.005) {
+      return {
+        success: false,
+        error: `إجمالي الخصم اليدوي لا يمكن أن يتجاوز ${maximumDiscountPercent}% من قيمة الأصناف`,
+      };
+    }
     const requestedDiscount = Math.min(
       grossSubtotal,
       promotionResult.discountAmount + manualDiscount,
@@ -746,6 +787,8 @@ export async function createSale(data: {
             title: promotion.title,
             discountValue: promotion.discountValue,
           })),
+          discountReason: discountReason || null,
+          // POS currently has no configured VAT calculation; sales are saved with zero tax.
           taxAmount: 0,
           totalAmount,
           tenderedAmount,
@@ -872,6 +915,10 @@ export async function cancelSale(id: string, reason?: string) {
         totalAmount: true,
         customerId: true,
         notes: true,
+        returns: {
+          where: { status: "APPROVED" },
+          select: { id: true },
+        },
         items: {
           select: {
             variantId: true,
@@ -889,11 +936,30 @@ export async function cancelSale(id: string, reason?: string) {
       return { success: false, error: "الفاتورة ملغاة بالفعل" };
     }
 
-    if (sale.status !== "COMPLETED" && sale.status !== "PARTIALLY_REFUNDED") {
+    if (sale.returns.length > 0) {
+      return {
+        success: false,
+        error: "لا يمكن إلغاء فاتورة لها مرتجعات معتمدة. أكمل التسوية من شاشة المرتجعات.",
+      };
+    }
+
+    if (sale.status !== "COMPLETED") {
       return { success: false, error: "لا يمكن إلغاء هذه الفاتورة" };
     }
 
     const cancelled = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.sale.updateMany({
+        where: {
+          id,
+          status: "COMPLETED",
+          returns: { none: { status: "APPROVED" } },
+        },
+        data: { status: "CANCELLED" },
+      });
+      if (claimed.count !== 1) {
+        throw new Error("تغيرت حالة الفاتورة أو سُجل لها مرتجع. حدّث الصفحة وأعد المحاولة");
+      }
+
       for (const item of sale.items) {
         const variant = await tx.productVariant.findUnique({
           where: { id: item.variantId },
@@ -940,7 +1006,6 @@ export async function cancelSale(id: string, reason?: string) {
       return tx.sale.update({
         where: { id },
         data: {
-          status: "CANCELLED",
           notes: reason
             ? `${sale.notes ? sale.notes + " | " : ""}سبب الإلغاء: ${reason}`
             : sale.notes,

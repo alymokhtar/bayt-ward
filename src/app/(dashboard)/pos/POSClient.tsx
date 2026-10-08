@@ -66,6 +66,7 @@ interface POSClientProps {
   storePhone?: string;
   currencySymbol?: string;
   dailyDiscountPercent?: number;
+  cashierDiscountLimit?: number | null;
   activePromotions: Promotion[];
 }
 
@@ -74,6 +75,7 @@ export default function POSClient({
   storePhone,
   currencySymbol = "ج.م",
   dailyDiscountPercent = 0,
+  cashierDiscountLimit = null,
   activePromotions,
 }: POSClientProps) {
   const searchRef = useRef<HTMLInputElement>(null);
@@ -92,6 +94,7 @@ export default function POSClient({
   const [orderChannel, setOrderChannel] = useState<SalesChannel>("POS");
   const [discountPercent, setDiscountPercent] = useState(dailyDiscountPercent);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [discountReason, setDiscountReason] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod | "">("");
   const [splitPaymentEnabled, setSplitPaymentEnabled] = useState(false);
   const [splitPaymentAmounts, setSplitPaymentAmounts] = useState<SplitPaymentValues>(DEFAULT_SPLIT_PAYMENT_VALUES);
@@ -416,6 +419,7 @@ export default function POSClient({
           subtotal,
           manualDiscountAmount: discountAmount,
           discountPercent,
+          discountReason: discountReason.trim() || undefined,
           totalAmount,
           paidAmount: splitPaymentEnabled ? totalAmount : paid,
           paymentMethod: splitPaymentEnabled
@@ -510,6 +514,7 @@ export default function POSClient({
       setCart([]);
       setDiscountPercent(0);
       setDiscountAmount(0);
+      setDiscountReason("");
       setPaidAmount("");
       setNotes("");
       setSelectedCustomer(null);
@@ -796,7 +801,7 @@ export default function POSClient({
               label="خصم %"
               type="number"
               min={0}
-              max={100}
+              max={cashierDiscountLimit ?? 100}
               value={discountPercent || ""}
               onChange={(e) =>
                 setDiscountPercent(parseFloat(e.target.value) || 0)
@@ -812,6 +817,19 @@ export default function POSClient({
               }
             />
           </div>
+          {cashierDiscountLimit !== null && (
+            <p className="text-xs text-muted">
+              الحد الأقصى لإجمالي الخصم اليدوي للكاشير {cashierDiscountLimit}% من قيمة الأصناف.
+            </p>
+          )}
+          {manualDiscount > 0 && (
+            <Input
+              label="سبب الخصم (اختياري)"
+              value={discountReason}
+              maxLength={500}
+              onChange={(e) => setDiscountReason(e.target.value)}
+            />
+          )}
 
           <div className="rounded-lg border border-border bg-cream-dark/40 p-3">
             <label className="flex items-center justify-between gap-3">

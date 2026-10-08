@@ -20,6 +20,20 @@ export interface SalesChannelAnalytics {
   revenueMix: Array<SalesChannelMetric & { share: number }>;
 }
 
+export function subtractChannelReturns(
+  sales: Array<{ channel: SalesChannelKey; revenue: number | null; orders: number }>,
+  returns: Array<{ channel: SalesChannelKey; refundAmount: number }>,
+) {
+  const returnsByChannel = new Map(
+    returns.map((item) => [item.channel, item.refundAmount]),
+  );
+
+  return sales.map((item) => ({
+    ...item,
+    revenue: (item.revenue ?? 0) - (returnsByChannel.get(item.channel) ?? 0),
+  }));
+}
+
 export function buildSalesChannelAnalytics(
   groups: Array<{ channel: SalesChannelKey; revenue: number | null; orders: number }>,
 ): SalesChannelAnalytics {

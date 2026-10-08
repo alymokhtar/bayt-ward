@@ -312,6 +312,7 @@ model Sale {
   subtotal          Float
   discountAmount    Float          @default(0)
   discountPercent   Float          @default(0)
+  discountReason    String?
   appliedPromotions Json           @default("[]")
   taxAmount         Float          @default(0)
   totalAmount       Float

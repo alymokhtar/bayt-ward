@@ -138,11 +138,22 @@ export async function createReturn(data: {
       return { success: false, error: "فاتورة البيع غير موجودة" };
     }
 
-    if (sale.status !== "COMPLETED" && sale.status !== "REFUNDED" && sale.status !== "PARTIALLY_REFUNDED") {
+    if (sale.status !== "COMPLETED" && sale.status !== "PARTIALLY_REFUNDED") {
       return { success: false, error: "لا يمكن إرجاع منتجات من هذه الفاتورة" };
     }
 
     const returnRecord = await prisma.$transaction(async (tx) => {
+      const claimedSale = await tx.sale.updateMany({
+        where: {
+          id: data.saleId,
+          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED"] },
+        },
+        data: { status: "PARTIALLY_REFUNDED" },
+      });
+      if (claimedSale.count !== 1) {
+        throw new Error("تغيرت حالة فاتورة البيع. حدّث الصفحة وأعد المحاولة");
+      }
+
       const saleItemsByVariant = new Map(sale.items.map((item) => [item.variantId, item]));
       const previousReturnItems = await tx.returnItem.findMany({
         where: {

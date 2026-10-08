@@ -18,7 +18,6 @@ import { invalidateProductsData } from "@/lib/revalidate-tags";
 import { syncProductColors } from "@/lib/product-color-sync";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";
 import {
-  flattenProductSearchResults,
   isLikelyVariantCodeQuery,
 } from "@/lib/product-search";
 
@@ -912,39 +911,24 @@ export async function searchVariants(query: string) {
     }));
   }
 
-  const products = await prisma.product.findMany({
+  const variants = await prisma.productVariant.findMany({
     where: {
       isActive: true,
+      product: { isActive: true },
       OR: [
-        { name: { contains: q } },
-        { nameAr: { contains: q } },
-        {
-          variants: {
-            some: {
-              isActive: true,
-              OR: [
-                { sku: isNumericQuery(q) ? q : { contains: q } },
-                { barcode: isNumericQuery(q) ? q : { contains: q } },
-              ],
-            },
-          },
-        },
+        { product: { name: { contains: q } } },
+        { product: { nameAr: { contains: q } } },
+        { sku: isNumericQuery(q) ? q : { contains: q } },
+        { barcode: isNumericQuery(q) ? q : { contains: q } },
       ],
     },
+    select: variantSearchSelect,
     take: 20,
-    orderBy: [{ name: "asc" }, { nameAr: "asc" }],
-    include: {
-      variants: {
-        where: { isActive: true },
-        orderBy: [{ size: "asc" }, { color: "asc" }, { sku: "asc" }],
-      },
-    },
+    orderBy: [{ sku: "asc" }],
   });
 
-  const results = flattenProductSearchResults(products);
-
-  if (isNumericQuery(q) && results.length > 0) {
-    const exactMatch = results.find(
+  if (isNumericQuery(q) && variants.length > 0) {
+    const exactMatch = variants.find(
       (variant) => variant.barcode === q || variant.sku === q
     );
 
@@ -953,7 +937,7 @@ export async function searchVariants(query: string) {
     }
   }
 
-  return results;
+  return variants;
 }
 
 const variantSearchSelect = {
