@@ -201,15 +201,24 @@ export default function ProductForm({
     let cancelled = false;
 
     async function assignInitialCodes() {
-      const result = await getNextVariantCodes(1);
-      if (cancelled || !result.success) return;
+      try {
+        const result = await getNextVariantCodes(1);
+        if (cancelled || !result.success) {
+          if (!cancelled && !result.success) setError(result.error);
+          return;
+        }
 
-      setVariants((prev) => {
-        if (prev.some((v) => v.sku.trim())) return prev;
-        return prev.map((v, i) =>
-          i === 0 ? { ...v, ...result.data[0] } : v
-        );
-      });
+        setVariants((prev) => {
+          if (prev.some((v) => v.sku.trim())) return prev;
+          return prev.map((v, i) =>
+            i === 0 ? { ...v, ...result.data[0] } : v
+          );
+        });
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "تعذر توليد أكواد المتغير");
+        }
+      }
     }
 
     void assignInitialCodes();
@@ -347,32 +356,37 @@ export default function ProductForm({
     setAddingVariant(true);
     setError("");
 
-    const pending = variants.map((v) => ({
-      sku: v.sku,
-      barcode: v.barcode || null,
-    }));
-    const result = await getNextVariantCodes(1, pending);
-    setAddingVariant(false);
+    try {
+      const pending = variants.map((v) => ({
+        sku: v.sku,
+        barcode: v.barcode || null,
+      }));
+      const result = await getNextVariantCodes(1, pending);
 
-    if (!result.success) {
-      setError(result.error ?? "تعذّر توليد أكواد المتغير");
-      return;
-    }
+      if (!result.success) {
+        setError(result.error ?? "تعذّر توليد أكواد المتغير");
+        return;
+      }
 
-    const codes = result.data[0];
-    const nextIndex = variants.length;
-    setHighlightedVariantIndex(nextIndex);
+      const codes = result.data[0];
+      const nextIndex = variants.length;
+      setHighlightedVariantIndex(nextIndex);
 
-    setVariants((prev) => {
-      const template = prev[0];
-      const nextVariants = [...prev, emptyVariant(template, codes)];
+      setVariants((prev) => {
+        const template = prev[0];
+        const nextVariants = [...prev, emptyVariant(template, codes)];
 
-      requestAnimationFrame(() => {
-        formFooterRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        requestAnimationFrame(() => {
+          formFooterRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        });
+
+        return nextVariants;
       });
-
-      return nextVariants;
-    });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر إضافة المتغير");
+    } finally {
+      setAddingVariant(false);
+    }
   }
 
   function removeVariant(index: number) {
@@ -446,58 +460,61 @@ export default function ProductForm({
     }
 
     setLoading(true);
+    try {
+      const existingVariantIds = product?.variants.map((variant) => variant.id) ?? [];
+      const incomingVariantIds = variants
+        .map((variant) => variant.id)
+        .filter((id): id is string => Boolean(id));
+      const resolvedDeletedVariantIds = getDeletedVariantIds(
+        existingVariantIds,
+        incomingVariantIds,
+        deletedVariantIds
+      );
 
-    const existingVariantIds = product?.variants.map((variant) => variant.id) ?? [];
-    const incomingVariantIds = variants
-      .map((variant) => variant.id)
-      .filter((id): id is string => Boolean(id));
-    const resolvedDeletedVariantIds = getDeletedVariantIds(
-      existingVariantIds,
-      incomingVariantIds,
-      deletedVariantIds
-    );
+      const payload = {
+        name,
+        nameAr: nameAr || undefined,
+        description: description || undefined,
+        brand: brand || undefined,
+        categoryId,
+        publishToWebsite,
+        featuredProduct,
+        deletedVariantIds: resolvedDeletedVariantIds,
+        variants: variants.map((v) => {
+          const mode = v.sizeMode ?? getVariantSizeMode(v.size);
+          const resolvedSize = resolveVariantSize(mode, mode === "custom" ? v.customSize : v.size);
 
-    const payload = {
-      name,
-      nameAr: nameAr || undefined,
-      description: description || undefined,
-      brand: brand || undefined,
-      categoryId,
-      publishToWebsite,
-      featuredProduct,
-      deletedVariantIds: resolvedDeletedVariantIds,
-      variants: variants.map((v) => {
-        const mode = v.sizeMode ?? getVariantSizeMode(v.size);
-        const resolvedSize = resolveVariantSize(mode, mode === "custom" ? v.customSize : v.size);
+          return {
+            id: v.id || undefined,
+            sku: String(v.sku).trim(),
+            barcode: v.barcode ? String(v.barcode).trim() : undefined,
+            size: String(resolvedSize).trim(),
+            color: String(v.color).trim(),
+            colorHex: v.colorHex ? String(v.colorHex).trim() : undefined,
+            globalColorId: v.globalColorId || undefined,
+            costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
+            sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
+            stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : parseInt(String(v.stockQuantity) || "0"),
+            minStockLevel: typeof v.minStockLevel === "number" ? v.minStockLevel : parseInt(String(v.minStockLevel) || "5"),
+            isActive: v.isActive ?? true,
+          };
+        }),
+      };
 
-        return {
-          id: v.id || undefined,
-          sku: String(v.sku).trim(),
-          barcode: v.barcode ? String(v.barcode).trim() : undefined,
-          size: String(resolvedSize).trim(),
-          color: String(v.color).trim(),
-          colorHex: v.colorHex ? String(v.colorHex).trim() : undefined,
-          globalColorId: v.globalColorId || undefined,
-          costPrice: typeof v.costPrice === "number" ? v.costPrice : parseFloat(String(v.costPrice) || "0"),
-          sellingPrice: typeof v.sellingPrice === "number" ? v.sellingPrice : parseFloat(String(v.sellingPrice) || "0"),
-          stockQuantity: typeof v.stockQuantity === "number" ? v.stockQuantity : parseInt(String(v.stockQuantity) || "0"),
-          minStockLevel: typeof v.minStockLevel === "number" ? v.minStockLevel : parseInt(String(v.minStockLevel) || "5"),
-          isActive: v.isActive ?? true,
-        };
-      }),
-    };
+      const result = isEdit
+        ? await updateProduct(product!.id, { ...payload, isActive, publishToWebsite, featuredProduct })
+        : await createProduct(payload);
 
-    const result = isEdit
-      ? await updateProduct(product!.id, { ...payload, isActive, publishToWebsite, featuredProduct })
-      : await createProduct(payload);
-
-    setLoading(false);
-
-    if (result.success) {
-      router.push("/products");
-      router.refresh();
-    } else {
-      setError(result.error ?? "حدث خطأ");
+      if (result.success) {
+        router.push("/products");
+        router.refresh();
+      } else {
+        setError(result.error ?? "حدث خطأ");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "تعذر حفظ المنتج");
+    } finally {
+      setLoading(false);
     }
   }
 

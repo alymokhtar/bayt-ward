@@ -41,6 +41,9 @@ type Movement = {
   quantity: number;
   previousQty: number;
   newQty: number;
+  previousCostPrice: number | null;
+  newCostPrice: number | null;
+  valuationDifference: number | null;
   reference: string | null;
   notes: string | null;
   createdAt: Date;
@@ -222,6 +225,7 @@ export default function InventoryClient({
               <TableHead>الكمية</TableHead>
               <TableHead>قبل</TableHead>
               <TableHead>بعد</TableHead>
+              <TableHead>تفاصيل التكلفة/الحركة</TableHead>
               <TableHead>بواسطة</TableHead>
             </TableRow>
           </TableHeader>
@@ -249,6 +253,17 @@ export default function InventoryClient({
                 </TableCell>
                 <TableCell>{m.previousQty}</TableCell>
                 <TableCell>{m.newQty}</TableCell>
+                <TableCell className="text-xs">
+                  {m.notes && <p>{m.notes}</p>}
+                  {m.previousCostPrice !== null && m.newCostPrice !== null && (
+                    <p className="mt-1">
+                      التكلفة: من {formatCurrency(m.previousCostPrice)} إلى {formatCurrency(m.newCostPrice)}
+                      {m.valuationDifference !== null && (
+                        <> · فرق التقييم: {formatCurrency(m.valuationDifference)}</>
+                      )}
+                    </p>
+                  )}
+                </TableCell>
                 <TableCell>{m.user.name}</TableCell>
               </TableRow>
             ))}

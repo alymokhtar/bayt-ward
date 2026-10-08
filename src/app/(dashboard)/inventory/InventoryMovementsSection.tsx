@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { getStockMovements } from "@/lib/actions/inventory";
-import { formatDateTime } from "@/lib/utils";
+import { formatCurrency, formatDateTime } from "@/lib/utils";
 
 const movementLabels: Record<string, string> = {
   PURCHASE: "مشتريات",
@@ -34,6 +34,7 @@ export default async function InventoryMovementsSection() {
             <TableHead>الكمية</TableHead>
             <TableHead>قبل</TableHead>
             <TableHead>بعد</TableHead>
+            <TableHead>تفاصيل التكلفة/الحركة</TableHead>
             <TableHead>بواسطة</TableHead>
           </TableRow>
         </TableHeader>
@@ -59,6 +60,17 @@ export default async function InventoryMovementsSection() {
               </TableCell>
               <TableCell>{m.previousQty}</TableCell>
               <TableCell>{m.newQty}</TableCell>
+              <TableCell className="text-xs">
+                {m.notes && <p>{m.notes}</p>}
+                {m.previousCostPrice !== null && m.newCostPrice !== null && (
+                  <p className="mt-1">
+                    التكلفة: من {formatCurrency(m.previousCostPrice)} إلى {formatCurrency(m.newCostPrice)}
+                    {m.valuationDifference !== null && (
+                      <> · فرق التقييم: {formatCurrency(m.valuationDifference)}</>
+                    )}
+                  </p>
+                )}
+              </TableCell>
               <TableCell>{m.user.name}</TableCell>
             </TableRow>
           ))}

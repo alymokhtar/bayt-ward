@@ -475,14 +475,13 @@ export async function uploadProductImage(
 }
 
 export async function deleteProductImage(
-  imageId: string,
-  publicId: string
-): Promise<ActionResult> {
+  imageId: string
+): Promise<ActionResult<{ primaryImageId: string | null }>> {
   try {
     await requireMediaManager();
 
-    if (!imageId || !publicId) {
-      return { success: false, error: "معرّف الصورة و public_id مطلوبان" };
+    if (!imageId) {
+      return { success: false, error: "معرّف الصورة مطلوب" };
     }
 
     const image = await prisma.image.findUnique({
@@ -501,12 +500,15 @@ export async function deleteProductImage(
       return { success: false, error: "الصورة غير موجودة" };
     }
 
-    if (isCloudinaryConfigured() && !publicId.startsWith("migrated/")) {
-      await deleteImageByPublicId(publicId);
+    if (!image.publicId.startsWith("migrated/") && !isCloudinaryConfigured()) {
+      return { success: false, error: "إعدادات Cloudinary غير مكتملة" };
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.image.delete({ where: { id: image.id } });
+      await tx.image.update({
+        where: { id: image.id },
+        data: { isActive: false, isPrimary: false },
+      });
 
       if (image.isPrimary) {
         const nextPrimary = await tx.image.findFirst({
@@ -527,11 +529,105 @@ export async function deleteProductImage(
         }
       }
     });
-
     revalidateProductMediaPaths();
-    return { success: true, data: undefined };
+
+    if (!image.publicId.startsWith("migrated/")) {
+      await deleteImageByPublicId(image.publicId);
+    }
+
+    const primaryImage = await prisma.$transaction(async (tx) => {
+      await tx.image.delete({ where: { id: image.id } });
+      return tx.image.findFirst({
+        where: {
+          productId: image.productId,
+          productVariantId: image.productVariantId,
+          isActive: true,
+          isPrimary: true,
+        },
+        select: { id: true },
+      });
+    });
+    revalidateProductMediaPaths();
+    return { success: true, data: { primaryImageId: primaryImage?.id ?? null } };
   } catch (error) {
     console.error("Error in deleteProductImage:", error);
+    return handleActionError(error);
+  }
+}
+
+export async function toggleProductImageActive(
+  imageId: string,
+  isActive: boolean
+): Promise<ActionResult<{ image: ProductImageItem; primaryImageId: string | null }>> {
+  try {
+    await requireMediaManager();
+
+    if (typeof isActive !== "boolean") {
+      return { success: false, error: "حالة الصورة غير صالحة" };
+    }
+
+    const existing = await prisma.image.findUnique({
+      where: { id: imageId },
+      select: {
+        id: true,
+        productId: true,
+        productVariantId: true,
+        isPrimary: true,
+      },
+    });
+    if (!existing) {
+      return { success: false, error: "الصورة غير موجودة" };
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const ownerWhere = existing.productId
+        ? { productId: existing.productId, productVariantId: null }
+        : { productVariantId: existing.productVariantId, productId: null };
+
+      await tx.image.update({
+        where: { id: imageId },
+        data: { isActive, ...(isActive ? {} : { isPrimary: false }) },
+      });
+
+      if (isActive) {
+        const activePrimary = await tx.image.findFirst({
+          where: { ...ownerWhere, isActive: true, isPrimary: true },
+          select: { id: true },
+        });
+        if (!activePrimary) {
+          await tx.image.update({
+            where: { id: imageId },
+            data: { isPrimary: true },
+          });
+        }
+      } else if (existing.isPrimary) {
+        const nextPrimary = await tx.image.findFirst({
+          where: { ...ownerWhere, isActive: true },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: { id: true },
+        });
+        if (nextPrimary) {
+          await tx.image.update({
+            where: { id: nextPrimary.id },
+            data: { isPrimary: true },
+          });
+        }
+      }
+
+      const [image, primary] = await Promise.all([
+        tx.image.findUniqueOrThrow({ where: { id: imageId }, select: imageSelect }),
+        tx.image.findFirst({
+          where: { ...ownerWhere, isActive: true, isPrimary: true },
+          select: { id: true },
+        }),
+      ]);
+      return { image, primaryImageId: primary?.id ?? null };
+    });
+
+    revalidateProductMediaPaths();
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error in toggleProductImageActive:", error);
     return handleActionError(error);
   }
 }

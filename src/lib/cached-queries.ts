@@ -671,6 +671,9 @@ type MovementRow = {
   quantity: number;
   previousQty: number;
   newQty: number;
+  previousCostPrice: number | null;
+  newCostPrice: number | null;
+  valuationDifference: number | null;
   reference: string | null;
   notes: string | null;
   createdAt: Date;
@@ -712,6 +715,9 @@ export const getCachedStockMovementsPage = unstable_cache(
         sm.quantity,
         sm."previousQty" AS "previousQty",
         sm."newQty" AS "newQty",
+        sm."previousCostPrice" AS "previousCostPrice",
+        sm."newCostPrice" AS "newCostPrice",
+        sm."valuationDifference" AS "valuationDifference",
         sm.reference,
         sm.notes,
         sm."createdAt" AS "createdAt",
@@ -738,6 +744,9 @@ export const getCachedStockMovementsPage = unstable_cache(
       quantity: row.quantity,
       previousQty: row.previousQty,
       newQty: row.newQty,
+      previousCostPrice: row.previousCostPrice,
+      newCostPrice: row.newCostPrice,
+      valuationDifference: row.valuationDifference,
       reference: row.reference,
       notes: row.notes,
       createdAt: row.createdAt,

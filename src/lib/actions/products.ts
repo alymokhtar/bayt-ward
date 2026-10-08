@@ -4,7 +4,13 @@ import { updateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
 import { normalizeScanCode, resolveStoredBarcode } from "@/lib/barcode";
-import { computeNextVariantCodes, validateVariantCodesPayload } from "@/lib/variant-codes";
+import {
+  BARCODE_PREFIX,
+  computeNextVariantCodes,
+  SKU_PREFIX,
+  validateVariantCodesPayload,
+  type VariantCodeRow,
+} from "@/lib/variant-codes";
 import {
   getCachedProductsPage,
 } from "@/lib/cached-queries";
@@ -144,37 +150,93 @@ export async function getNextVariantCodes(
       return { success: false, error: "عدد الأكواد غير صالح" };
     }
 
-    const rows = await prisma.productVariant.findMany({
-      select: { sku: true, barcode: true },
-    });
-
-    const merged = [
-      ...rows,
-      ...pending
-        .filter((item) => item.sku.trim())
-        .map((item) => ({
-          sku: item.sku.trim(),
-          barcode: item.barcode?.trim() || null,
-        })),
-    ];
-
-    return { success: true, data: computeNextVariantCodes(merged, count) };
+    return { success: true, data: await allocateVariantCodes(count, pending) };
   } catch (error) {
     return handleActionError(error);
   }
 }
 
-function prepareVariantsForSave(
-  variants: VariantSaveInput[],
-  existingRows: { id?: string; sku: string; barcode: string | null }[]
-): (VariantSaveInput & { barcode: string; stockQuantity: number; minStockLevel: number })[] {
-  const needsAllocation = variants.filter((v) => !v.sku?.trim()).length;
-  const freshCodes =
-    needsAllocation > 0
-      ? computeNextVariantCodes(existingRows, needsAllocation)
-      : [];
-  let codeIndex = 0;
+async function allocateVariantCodes(
+  count: number,
+  pending: { sku: string; barcode?: string | null }[] = []
+): Promise<VariantCodePair[]> {
+  const prefixes = await Promise.all([
+    prisma.productVariant.findFirst({
+      where: { sku: { startsWith: SKU_PREFIX } },
+      orderBy: { sku: "desc" },
+      select: { sku: true, barcode: true },
+    }),
+    prisma.productVariant.findFirst({
+      where: { sku: { startsWith: BARCODE_PREFIX } },
+      orderBy: { sku: "desc" },
+      select: { sku: true, barcode: true },
+    }),
+    prisma.productVariant.findFirst({
+      where: { barcode: { startsWith: SKU_PREFIX } },
+      orderBy: { barcode: "desc" },
+      select: { sku: true, barcode: true },
+    }),
+    prisma.productVariant.findFirst({
+      where: { barcode: { startsWith: BARCODE_PREFIX } },
+      orderBy: { barcode: "desc" },
+      select: { sku: true, barcode: true },
+    }),
+  ]);
+  const knownRows = prefixes.filter((row): row is VariantCodeRow => row !== null);
+  const reservedCodes = new Set<string>();
+  for (const variant of pending) {
+    if (variant.sku.trim()) reservedCodes.add(variant.sku.trim().toLowerCase());
+    if (variant.barcode?.trim()) reservedCodes.add(variant.barcode.trim().toLowerCase());
+  }
 
+  const allocated: VariantCodePair[] = [];
+  for (let index = 0; index < count; index += 1) {
+    let candidate = computeNextVariantCodes(
+      [...knownRows, ...pending.map((variant) => ({
+        sku: variant.sku.trim(),
+        barcode: variant.barcode?.trim() || null,
+      })), ...allocated],
+      1
+    )[0];
+
+    while (true) {
+      const candidateCodes = [candidate.sku, candidate.barcode];
+      const conflictsWithPending = candidateCodes.some((code) =>
+        reservedCodes.has(code.toLowerCase())
+      );
+      const existing = conflictsWithPending
+        ? true
+        : await prisma.productVariant.findFirst({
+            where: {
+              OR: [
+                { sku: { in: candidateCodes } },
+                { barcode: { in: candidateCodes } },
+              ],
+            },
+            select: { id: true },
+          });
+      if (!existing) break;
+      knownRows.push(candidate);
+      candidate = computeNextVariantCodes(
+        [...knownRows, ...pending.map((variant) => ({
+          sku: variant.sku.trim(),
+          barcode: variant.barcode?.trim() || null,
+        })), ...allocated],
+        1
+      )[0];
+    }
+
+    allocated.push(candidate);
+    reservedCodes.add(candidate.sku.toLowerCase());
+    reservedCodes.add(candidate.barcode.toLowerCase());
+  }
+
+  return allocated;
+}
+
+function prepareVariantsForSave(
+  variants: VariantSaveInput[]
+): (VariantSaveInput & { barcode: string; stockQuantity: number; minStockLevel: number })[] {
   const prepared = variants.map((variant) => {
     if (!variant || typeof variant !== "object") {
       throw new Error("بيانات المتغير غير صالحة");
@@ -192,13 +254,11 @@ function prepareVariantsForSave(
       throw new Error("يرجى اختيار لون مركزي لكل متغير");
     }
 
-    let sku = variant.sku?.trim() ?? "";
+    const sku = variant.sku?.trim() ?? "";
     let barcode = variant.barcode?.trim() ?? "";
 
     if (!sku) {
-      const allocated = freshCodes[codeIndex++];
-      sku = allocated.sku;
-      if (!barcode) barcode = allocated.barcode;
+      throw new Error("لم يتم تخصيص أكواد SKU للمتغيرات الجديدة");
     } else if (!barcode) {
       barcode = resolveStoredBarcode(sku, "");
     } else {
@@ -241,8 +301,51 @@ function prepareVariantsForSave(
     };
   });
 
-  validateVariantCodesPayload(prepared, existingRows);
+  validateVariantCodesPayload(prepared, []);
   return prepared;
+}
+
+async function assignMissingVariantCodes(variants: VariantSaveInput[]) {
+  const missingCount = variants.filter((variant) => !variant.sku?.trim()).length;
+  if (missingCount === 0) return variants;
+
+  const pending = variants
+    .filter((variant) => variant.sku?.trim())
+    .map((variant) => ({ sku: variant.sku.trim(), barcode: variant.barcode || null }));
+  const codes = await allocateVariantCodes(missingCount, pending);
+  let index = 0;
+
+  return variants.map((variant) => {
+    if (variant.sku?.trim()) return variant;
+    const allocated = codes[index++];
+    return {
+      ...variant,
+      sku: allocated.sku,
+      barcode: variant.barcode?.trim() || allocated.barcode,
+    };
+  });
+}
+
+async function validateVariantCodesAgainstStore(
+  variants: Array<{ id?: string; sku: string; barcode: string }>,
+  excludedIds: string[] = []
+) {
+  for (const variant of variants) {
+    const codes = [variant.sku.trim(), variant.barcode.trim()];
+    const existing = await prisma.productVariant.findFirst({
+      where: {
+        OR: [
+          { sku: { in: codes } },
+          { barcode: { in: codes } },
+        ],
+        ...(excludedIds.length > 0 ? { id: { notIn: excludedIds } } : {}),
+      },
+      select: { id: true },
+    });
+    if (existing) {
+      throw new Error("رمز SKU أو الباركود مستخدم بالفعل");
+    }
+  }
 }
 
 async function validateProductCategory(categoryId: string) {
@@ -323,11 +426,10 @@ export async function createProduct(data: {
     }
 
     await validateProductCategory(data.categoryId);
-    const existingRows = await prisma.productVariant.findMany({
-      select: { id: true, sku: true, barcode: true },
-    });
-    const preparedVariants = prepareVariantsForSave(data.variants, existingRows);
+    const assignedVariants = await assignMissingVariantCodes(data.variants);
+    const preparedVariants = prepareVariantsForSave(assignedVariants);
     assertUniqueVariantCombinations(preparedVariants);
+    await validateVariantCodesAgainstStore(preparedVariants);
     await validateGlobalColors(preparedVariants);
 
     const product = await prisma.$transaction(
@@ -440,7 +542,7 @@ export async function updateProduct(
   }
 ) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const user = await requireRole(["ADMIN", "MANAGER"]);
 
     if (data.name !== undefined && (typeof data.name !== "string" || !data.name.trim())) {
       return { success: false, error: "اسم المنتج مطلوب" };
@@ -481,11 +583,13 @@ export async function updateProduct(
         return { success: false, error: "أحد المتغيرات المراد أرشفتها غير صالح" };
       }
 
-      const allRows = await prisma.productVariant.findMany({
-        select: { id: true, sku: true, barcode: true },
-      });
-      preparedVariants = prepareVariantsForSave(data.variants, allRows);
+      const assignedVariants = await assignMissingVariantCodes(data.variants);
+      preparedVariants = prepareVariantsForSave(assignedVariants);
       assertUniqueVariantCombinations(preparedVariants);
+      await validateVariantCodesAgainstStore(
+        preparedVariants,
+        preparedVariants.map((variant) => variant.id).filter((variantId): variantId is string => Boolean(variantId))
+      );
       await validateGlobalColors(preparedVariants);
     }
 
@@ -532,22 +636,61 @@ export async function updateProduct(
 
         await syncProductColors(tx, id, preparedVariants, existing.variants);
 
-        const variantOperations = preparedVariants.map((variant) => {
+        const variantOperations = preparedVariants.map(async (variant) => {
           if (variant.id && existingIds.has(variant.id)) {
+            const original = existing.variants.find((row) => row.id === variant.id);
             const updateData: Record<string, string | boolean | number | null | undefined> = {
               sku: variant.sku,
               barcode: variant.barcode,
               size: variant.size?.trim() || "",
               color: variant.color?.trim() || "",
               globalColorId: variant.globalColorId || undefined,
-              costPrice: variant.costPrice,
               sellingPrice: variant.sellingPrice,
               minStockLevel: variant.minStockLevel,
               isActive: variant.isActive ?? true,
             };
+            if (!original || original.costPrice !== variant.costPrice) {
+              updateData.costPrice = variant.costPrice;
+            }
 
             if (variant.colorHex !== undefined) {
               updateData.colorHex = variant.colorHex?.trim() || null;
+            }
+
+            if (original && original.stockQuantity > 0 && original.costPrice !== variant.costPrice) {
+              const updatedVariants = await tx.productVariant.updateManyAndReturn({
+                where: {
+                  id: variant.id,
+                  stockQuantity: original.stockQuantity,
+                  costPrice: original.costPrice,
+                },
+                data: updateData,
+                select: { stockQuantity: true },
+              });
+              const updated = updatedVariants[0];
+              if (!updated) {
+                throw new Error("تغير رصيد أو تكلفة المنتج أثناء التعديل. أعد المحاولة");
+              }
+              await tx.stockMovement.create({
+                data: {
+                  variantId: variant.id,
+                  userId: user.id,
+                  type: "ADJUSTMENT",
+                  quantity: 0,
+                  previousQty: original.stockQuantity,
+                  newQty: updated.stockQuantity,
+                  previousCostPrice: original.costPrice,
+                  newCostPrice: variant.costPrice,
+                  valuationDifference:
+                    Math.round(
+                      (variant.costPrice - original.costPrice) *
+                        original.stockQuantity *
+                        100
+                    ) / 100,
+                  notes: "تعديل تكلفة يدوي من نموذج المنتج",
+                },
+              });
+              return updated;
             }
 
             return tx.productVariant.update({

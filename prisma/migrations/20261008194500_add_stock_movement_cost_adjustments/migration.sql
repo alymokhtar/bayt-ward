@@ -1,0 +1,4 @@
+ALTER TABLE "StockMovement"
+ADD COLUMN "previousCostPrice" DOUBLE PRECISION,
+ADD COLUMN "newCostPrice" DOUBLE PRECISION,
+ADD COLUMN "valuationDifference" DOUBLE PRECISION;
