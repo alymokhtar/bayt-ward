@@ -10,6 +10,7 @@ import {
 } from "@/lib/cached-queries";
 import { invalidateInventoryData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { sendTelegramMessage } from "@/lib/telegram";
+import type { DashboardResult } from "@/lib/dashboard-result";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -107,9 +108,21 @@ export async function checkLowStockAndNotify(variantIds?: string[]) {
   }
 }
 
-export async function getLowStockPreview(limit = 8) {
+export async function getLowStockPreview(
+  limit = 8
+): Promise<
+  DashboardResult<Awaited<ReturnType<typeof getCachedLowStockPreview>>>
+> {
   await requireRole(["ADMIN", "MANAGER"]);
-  return getCachedLowStockPreview(limit);
+  try {
+    return { success: true, data: await getCachedLowStockPreview(limit) };
+  } catch (error) {
+    console.error("Failed to load dashboard low-stock preview", error);
+    return {
+      success: false,
+      error: { message: "تعذر تحميل تنبيهات المخزون." },
+    };
+  }
 }
 
 export async function getInventory(options?: {

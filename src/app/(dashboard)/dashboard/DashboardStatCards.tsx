@@ -1,16 +1,18 @@
 import { Card, CardContent } from "@/components/ui/Card";
 import Badge from "@/components/ui/Badge";
 import { getDashboardKpis } from "@/lib/actions/dashboard";
-import { getSession } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
 import { Package, Receipt, RotateCcw, ShoppingCart, TrendingUp, Users, Wallet, type LucideIcon } from "lucide-react";
+import DashboardDataError from "@/app/(dashboard)/dashboard/DashboardDataError";
 
 export default async function DashboardStatCards() {
-  const [kpis, session] = await Promise.all([
-    getDashboardKpis(),
-    getSession(),
-  ]);
-  const isCashier = session?.role === "CASHIER";
+  const result = await getDashboardKpis();
+  if (!result.success) {
+    return <DashboardDataError message={result.error.message} />;
+  }
+
+  const { role, kpis } = result.data;
+  const isCashier = role === "CASHIER";
 
   const statCards: {
     title: string;
@@ -42,9 +44,9 @@ export default async function DashboardStatCards() {
       color: "bg-orange-100 text-orange-700",
     },
     {
-      title: "صافي مبيعات اليوم",
+      title: "الصافي بعد المصروفات",
       value: formatCurrency(kpis.todayNetSales),
-      sub: "بعد خصم المرتجعات والمصروفات",
+      sub: "المبيعات − المرتجعات − المصروفات",
       icon: Wallet,
       color: "bg-green-100 text-green-700",
       isPrimary: true,

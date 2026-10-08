@@ -108,7 +108,7 @@ export default function SalesChart({ data }: SalesChartProps) {
               label === "total"
                 ? `${formatNumber(num)} ج.م`
                 : num,
-              label === "total" ? "المبيعات" : "العدد",
+              label === "total" ? "إجمالي المبيعات" : "عدد الفواتير",
             ];
           }}
           labelFormatter={(label) => label}

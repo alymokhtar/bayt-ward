@@ -4,6 +4,7 @@ import { getLowStockPreview } from "@/lib/actions/inventory";
 import { getSession } from "@/lib/auth";
 import { AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import DashboardDataError from "@/app/(dashboard)/dashboard/DashboardDataError";
 
 export default async function LowStockPanel() {
   const session = await getSession();
@@ -11,12 +12,7 @@ export default async function LowStockPanel() {
     return null;
   }
 
-  let lowStockItems: Awaited<ReturnType<typeof getLowStockPreview>> = [];
-  try {
-    lowStockItems = await getLowStockPreview(8);
-  } catch {
-    lowStockItems = [];
-  }
+  const result = await getLowStockPreview(8);
 
   return (
     <Card>
@@ -27,9 +23,11 @@ export default async function LowStockPanel() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {lowStockItems.length > 0 ? (
+        {!result.success ? (
+          <DashboardDataError message={result.error.message} />
+        ) : result.data.length > 0 ? (
           <ul className="space-y-2 max-h-52 overflow-y-auto">
-            {lowStockItems.map((v) => (
+            {result.data.map((v) => (
               <li
                 key={v.id}
                 className="flex items-center justify-between text-sm border-b border-border pb-2 last:border-0"

@@ -131,18 +131,7 @@ const getCachedDashboardKpisForBusinessDate = unstable_cache(
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
-      return {
-        todayGrossSales: 0,
-        todayReturns: 0,
-        todayExpenses: 0,
-        todayNetSales: 0,
-        todaySalesCount: 0,
-        monthSales: 0,
-        monthSalesCount: 0,
-        totalProducts: 0,
-        totalCustomers: 0,
-        lowStockCount: 0,
-      };
+      throw error;
     }
   },
   ["dashboard-kpis"],
@@ -210,17 +199,7 @@ const getCachedSalesChartDataForBusinessDate = unstable_cache(
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
-      // إرجاع بيانات فارغة للـ 7 أيام الماضية
-      const now = getBusinessDayBoundsForDateKey(businessDateKey).start;
-      const emptyChartData = [];
-      for (let i = 6; i >= 0; i--) {
-        emptyChartData.push({
-          date: getOffsetBusinessDateKey(-i, now),
-          total: 0,
-          count: 0,
-        });
-      }
-      return emptyChartData;
+      throw error;
     }
   },
   ["dashboard-chart"],

@@ -1,5 +1,6 @@
 "use server";
 
+import type { UserRole } from "@prisma/client";
 import { requireAuth } from "@/lib/auth";
 import {
   getCachedDashboardKpis,
@@ -7,49 +8,89 @@ import {
   getCachedRecentSales,
   getCachedSalesChartData,
 } from "@/lib/cached-queries";
+import type { DashboardResult } from "@/lib/dashboard-result";
 
-function handleError(error: unknown): never {
-  if (error instanceof Error) {
-    if (error.message === "UNAUTHORIZED") {
-      throw new Error("يجب تسجيل الدخول أولاً");
+type DashboardKpis = Awaited<ReturnType<typeof getCachedDashboardKpis>>;
+type DashboardKpisForRole =
+  | {
+      role: "CASHIER";
+      kpis: Omit<DashboardKpis, "monthSales" | "monthSalesCount">;
     }
-    throw error;
+  | {
+      role: Exclude<UserRole, "CASHIER">;
+      kpis: DashboardKpis;
+    };
+
+function filterDashboardKpis(
+  role: UserRole,
+  kpis: DashboardKpis
+): DashboardKpisForRole {
+  if (role === "CASHIER") {
+    return {
+      role,
+      kpis: {
+        todayGrossSales: kpis.todayGrossSales,
+        todayReturns: kpis.todayReturns,
+        todayExpenses: kpis.todayExpenses,
+        todayNetSales: kpis.todayNetSales,
+        todaySalesCount: kpis.todaySalesCount,
+        totalProducts: kpis.totalProducts,
+        totalCustomers: kpis.totalCustomers,
+        lowStockCount: kpis.lowStockCount,
+      },
+    };
   }
-  throw new Error("حدث خطأ غير متوقع");
+
+  return { role, kpis };
+}
+
+function reportDashboardError(section: string, error: unknown) {
+  console.error(`Failed to load dashboard ${section}`, error);
+  return { success: false as const, error: { message: "تعذر تحميل البيانات." } };
 }
 
 export async function getDashboardStats() {
+  const user = await requireAuth();
   try {
-    await requireAuth();
-    return getCachedDashboardStats();
+    const stats = await getCachedDashboardStats();
+    const { recentSales, salesChartData, ...kpis } = stats;
+    return {
+      success: true as const,
+      data: {
+        ...filterDashboardKpis(user.role, kpis),
+        recentSales,
+        salesChartData,
+      },
+    };
   } catch (error) {
-    handleError(error);
+    return reportDashboardError("stats", error);
   }
 }
 
-export async function getDashboardKpis() {
+export async function getDashboardKpis(): Promise<
+  DashboardResult<DashboardKpisForRole>
+> {
+  const user = await requireAuth();
   try {
-    await requireAuth();
-    return getCachedDashboardKpis();
+    return {
+      success: true,
+      data: filterDashboardKpis(user.role, await getCachedDashboardKpis()),
+    };
   } catch (error) {
-    handleError(error);
+    return reportDashboardError("KPIs", error);
   }
 }
 
 export async function getDashboardChartData() {
+  await requireAuth();
   try {
-    await requireAuth();
-    return getCachedSalesChartData();
+    return { success: true as const, data: await getCachedSalesChartData() };
   } catch (error) {
-    handleError(error);
+    return reportDashboardError("sales chart", error);
   }
 }
 
 export async function getDashboardRecentSales() {
-  try {
-    await requireAuth();
-    return getCachedRecentSales();
-  } catch (error) {
-    handleError(error);
-  }
+  await requireAuth();
+  return getCachedRecentSales();
 }

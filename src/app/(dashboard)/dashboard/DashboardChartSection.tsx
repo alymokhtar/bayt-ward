@@ -1,6 +1,7 @@
 import dynamic from "next/dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { getDashboardChartData } from "@/lib/actions/dashboard";
+import DashboardDataError from "@/app/(dashboard)/dashboard/DashboardDataError";
 
 const SalesChart = dynamic(
   () => import("@/app/(dashboard)/dashboard/SalesChart"),
@@ -12,15 +13,23 @@ const SalesChart = dynamic(
 );
 
 export default async function DashboardChartSection() {
-  const salesChartData = await getDashboardChartData();
+  const result = await getDashboardChartData();
 
   return (
     <Card className="lg:col-span-2">
       <CardHeader>
-        <CardTitle>مبيعات آخر 7 أيام</CardTitle>
+        <CardTitle>إجمالي المبيعات خلال آخر 7 أيام</CardTitle>
       </CardHeader>
       <CardContent>
-        <SalesChart data={salesChartData} />
+        {result.success ? (
+          <SalesChart data={result.data} />
+        ) : (
+          <div className="flex h-[280px] items-center">
+            <div className="w-full">
+              <DashboardDataError message={result.error.message} />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
