@@ -10,6 +10,7 @@ interface ExpensesPageProps {
     category?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }
 
@@ -28,7 +29,7 @@ export default async function ExpensesPage({
 }: ExpensesPageProps) {
   const params = await searchParams;
   const category = params.category as ExpenseCategory | undefined;
-  const filterKey = `${params.category ?? ""}-${params.from ?? ""}-${params.to ?? ""}`;
+  const filterKey = `${params.category ?? ""}-${params.from ?? ""}-${params.to ?? ""}-${params.page ?? ""}`;
 
   return (
     <div className="space-y-6">
@@ -71,6 +72,7 @@ export default async function ExpensesPage({
               category={category}
               from={params.from}
               to={params.to}
+              page={Math.max(1, Number(params.page) || 1)}
             />
           </Suspense>
         </CardContent>

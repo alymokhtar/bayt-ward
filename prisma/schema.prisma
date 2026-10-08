@@ -518,6 +518,7 @@ model Expense {
   id              String          @id @default(cuid())
   title           String
   amount          Float
+  idempotencyKey  String?         @unique
   category        ExpenseCategory @default(OTHER)
   description     String?
   userId          String

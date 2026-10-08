@@ -1328,40 +1328,57 @@ export const getCachedExpensesList = unstable_cache(
       category?: string;
       from?: string;
       to?: string;
-      limit?: number;
+      page?: number;
+      pageSize?: number;
     };
 
-    return prisma.expense.findMany({
-      where: {
-        ...(options.category
-          ? { category: options.category as ExpenseCategory }
-          : {}),
-        ...(options.from || options.to
-          ? (() => {
-              const { start, end } = getBusinessDayBoundsFromDateKeys(
-                options.from,
-                options.to
-              );
-              return { expenseDate: { gte: start, lt: end } };
-            })()
-          : {}),
-      },
-      orderBy: { expenseDate: "desc" },
-      take: options.limit ?? 100,
-      select: {
-        id: true,
-        title: true,
-        amount: true,
-        category: true,
-        description: true,
-        expenseDate: true,
-        baseSalary: true,
-        deductionsTotal: true,
-        paymentMethod: true,
-        user: { select: { id: true, name: true } },
-        employee: { select: { id: true, name: true } },
-      },
-    });
+    const where: Prisma.ExpenseWhereInput = {
+      ...(options.category
+        ? { category: options.category as ExpenseCategory }
+        : {}),
+      ...(options.from || options.to
+        ? (() => {
+            const { start, end } = getBusinessDayBoundsFromDateKeys(
+              options.from,
+              options.to
+            );
+            return { expenseDate: { gte: start, lt: end } };
+          })()
+        : {}),
+    };
+    const page = Math.max(1, options.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 50));
+
+    const [items, total] = await Promise.all([
+      prisma.expense.findMany({
+        where,
+        orderBy: [{ expenseDate: "desc" }, { id: "desc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          title: true,
+          amount: true,
+          category: true,
+          description: true,
+          expenseDate: true,
+          baseSalary: true,
+          deductionsTotal: true,
+          paymentMethod: true,
+          user: { select: { id: true, name: true } },
+          employee: { select: { id: true, name: true } },
+        },
+      }),
+      prisma.expense.count({ where }),
+    ]);
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    };
   },
   ["expenses-list"],
   { tags: [CACHE_TAG.expenses], revalidate: READ_CACHE_SECONDS }

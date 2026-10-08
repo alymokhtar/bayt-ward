@@ -28,7 +28,8 @@ import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES, DISPLAY_LOCALE, PAYMENT_MET
 import { formatCurrency, formatDate, getPaymentMethodLabel } from "@/lib/utils";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import PaginationNav from "@/components/ui/PaginationNav";
+import { useEffect, useRef, useState } from "react";
 
 type PayrollEmployee = {
   id: string;
@@ -55,11 +56,21 @@ type PayrollSummary = Awaited<ReturnType<typeof getEmployeePayrollSummary>>;
 interface ExpensesClientProps {
   expenses: Expense[];
   payrollEmployees: PayrollEmployee[];
+  total: number;
+  page: number;
+  totalPages: number;
+  searchParams: Record<string, string | undefined>;
+  canDelete: boolean;
 }
 
 export default function ExpensesClient({
   expenses: initial,
   payrollEmployees,
+  total: totalCount,
+  page,
+  totalPages,
+  searchParams,
+  canDelete,
 }: ExpensesClientProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
@@ -75,10 +86,13 @@ export default function ExpensesClient({
   );
   const [loadingPayroll, setLoadingPayroll] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submissionUncertain, setSubmissionUncertain] = useState(false);
   const [error, setError] = useState("");
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const idempotencyKey = useRef<string | null>(null);
 
   const total = initial.reduce((s, e) => s + e.amount, 0);
   const isSalaryExpense = category === "SALARIES";
@@ -134,6 +148,8 @@ export default function ExpensesClient({
     setExpenseDate(getEgyptBusinessDateKey());
     setPayrollSummary(null);
     setError("");
+    setSubmissionUncertain(false);
+    idempotencyKey.current = null;
     setModalOpen(true);
   }
 
@@ -149,46 +165,62 @@ export default function ExpensesClient({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
 
-    const result = await createExpense({
-      title,
-      amount: parseFloat(amount) || 0,
-      category: category as
-        | "RENT"
-        | "UTILITIES"
-        | "SALARIES"
-        | "MARKETING"
-        | "SUPPLIES"
-        | "MAINTENANCE"
-        | "OTHER",
-      description: description || undefined,
-      expenseDate: dateKeyToUtcNoon(expenseDate),
-      employeeId: isSalaryExpense ? employeeId : undefined,
-      paymentMethod,
-    });
+    idempotencyKey.current ??= crypto.randomUUID();
+    try {
+      const result = await createExpense({
+        title,
+        amount: parseFloat(amount) || 0,
+        category: category as
+          | "RENT"
+          | "UTILITIES"
+          | "SALARIES"
+          | "MARKETING"
+          | "SUPPLIES"
+          | "MAINTENANCE"
+          | "OTHER",
+        description: description || undefined,
+        expenseDate: dateKeyToUtcNoon(expenseDate),
+        employeeId: isSalaryExpense ? employeeId : undefined,
+        paymentMethod,
+        idempotencyKey: idempotencyKey.current,
+      });
 
-    setLoading(false);
-
-    if (result.success) {
-      setModalOpen(false);
-      router.refresh();
-    } else {
-      setError(result.error ?? "حدث خطأ");
+      if (result.success) {
+        idempotencyKey.current = null;
+        setSubmissionUncertain(false);
+        setModalOpen(false);
+        router.refresh();
+      } else {
+        setError(result.error ?? "حدث خطأ");
+      }
+    } catch {
+      setSubmissionUncertain(true);
+      setError("تعذر حفظ المصروف بسبب مشكلة في الاتصال. أعد المحاولة.");
+    } finally {
+      setLoading(false);
     }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const result = await deleteExpense(deleteTarget.id);
-    setDeleting(false);
-    if (result.success) {
-      setDeleteTarget(null);
-      router.refresh();
-    } else {
-      alert(result.error);
+    setDeleteError("");
+    try {
+      const result = await deleteExpense(deleteTarget.id);
+      if (result.success) {
+        setDeleteTarget(null);
+        router.refresh();
+      } else {
+        setDeleteError(result.error ?? "تعذر حذف المصروف");
+      }
+    } catch {
+      setDeleteError("تعذر حذف المصروف بسبب مشكلة في الاتصال. أعد المحاولة.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -196,10 +228,11 @@ export default function ExpensesClient({
     <>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted">
-          الإجمالي:{" "}
+          إجمالي الصفحة:{" "}
           <span className="font-bold text-gold text-lg">
             {formatCurrency(total)}
           </span>
+          <span className="ms-2">({totalCount} سجل إجمالاً)</span>
         </p>
         <Button onClick={openModal}>
           <Plus className="h-4 w-4" />
@@ -217,7 +250,7 @@ export default function ExpensesClient({
             <TableHead>طريقة الدفع</TableHead>
             <TableHead>التاريخ</TableHead>
             <TableHead>بواسطة</TableHead>
-            <TableHead></TableHead>
+            {canDelete && <TableHead></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -253,19 +286,41 @@ export default function ExpensesClient({
               </TableCell>
               <TableCell>{formatDate(e.expenseDate)}</TableCell>
               <TableCell>{e.user.name}</TableCell>
-              <TableCell>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setDeleteTarget(e)}
-                >
-                  <Trash2 className="h-4 w-4 text-danger" />
-                </Button>
-              </TableCell>
+              {canDelete && (
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setDeleteError("");
+                      setDeleteTarget(e);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 text-danger" />
+                  </Button>
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {deleteError && (
+        <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-danger">
+          {deleteError}
+        </div>
+      )}
+      {initial.length === 0 && (
+        <p className="py-8 text-center text-sm text-muted">
+          لا توجد مصروفات مطابقة للفلاتر.
+        </p>
+      )}
+      <PaginationNav
+        page={page}
+        totalPages={totalPages}
+        basePath="/expenses"
+        searchParams={searchParams}
+      />
 
       <ConfirmDeleteDialog
         isOpen={!!deleteTarget}
@@ -283,21 +338,28 @@ export default function ExpensesClient({
 
       <Modal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          if (!loading && !submissionUncertain) setModalOpen(false);
+        }}
         title="مصروف جديد"
         size="lg"
         footer={
           <div className="flex gap-2 justify-end">
-            <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
-              إلغاء
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={loading || submissionUncertain}
+              onClick={() => setModalOpen(false)}
+            >
+              {submissionUncertain ? "أعد المحاولة لحسم العملية" : "إلغاء"}
             </Button>
             <Button
               type="submit"
               form="modal-form-expense"
               loading={loading}
-              disabled={isSalaryExpense && (!employeeId || loadingPayroll)}
+              disabled={loading || (isSalaryExpense && (!employeeId || loadingPayroll))}
             >
-              حفظ
+              {submissionUncertain ? "إعادة المحاولة الآمنة" : "حفظ"}
             </Button>
           </div>
         }
@@ -313,6 +375,7 @@ export default function ExpensesClient({
             label="التصنيف"
             options={EXPENSE_CATEGORIES}
             value={category}
+            disabled={loading || submissionUncertain}
             onChange={(e) => handleCategoryChange(e.target.value)}
           />
 
@@ -324,6 +387,7 @@ export default function ExpensesClient({
                 label: `${e.name} — ${formatCurrency(e.salary)}`,
               }))}
               value={employeeId}
+              disabled={loading || submissionUncertain}
               onChange={(e) => setEmployeeId(e.target.value)}
               placeholder="اختر الموظف"
               required
@@ -394,6 +458,7 @@ export default function ExpensesClient({
           <Input
             label="العنوان"
             value={title}
+            disabled={loading || submissionUncertain}
             onChange={(e) => setTitle(e.target.value)}
             required
           />
@@ -403,6 +468,7 @@ export default function ExpensesClient({
             min={0}
             step={0.01}
             value={amount}
+            disabled={loading || submissionUncertain}
             onChange={(e) => setAmount(e.target.value)}
             required
             readOnly={isSalaryExpense && !!employeeId}
@@ -416,17 +482,20 @@ export default function ExpensesClient({
             label="طريقة الدفع"
             options={PAYMENT_METHODS}
             value={paymentMethod}
+            disabled={loading || submissionUncertain}
             onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
           />
           <Input
             label="التاريخ"
             type="date"
             value={expenseDate}
+            disabled={loading || submissionUncertain}
             onChange={(e) => setExpenseDate(e.target.value)}
           />
           <Input
             label="الوصف"
             value={description}
+            disabled={loading || submissionUncertain}
             onChange={(e) => setDescription(e.target.value)}
           />
         </form>

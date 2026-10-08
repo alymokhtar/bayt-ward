@@ -29,6 +29,16 @@ function revalidateExpensePaths() {
   invalidateExpensesData();
 }
 
+function findExpenseByIdempotencyKey(idempotencyKey: string) {
+  return prisma.expense.findUnique({
+    where: { idempotencyKey },
+    include: {
+      user: { select: { id: true, name: true } },
+      employee: { select: { id: true, name: true } },
+    },
+  });
+}
+
 function buildExpenseTelegramMessage(expense: {
   title: string;
   amount: number;
@@ -63,15 +73,19 @@ export async function getExpenses(options?: {
   category?: ExpenseCategory;
   from?: string;
   to?: string;
-  limit?: number;
+  page?: number;
+  pageSize?: number;
 }) {
   await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  const page = Math.max(1, Math.trunc(options?.page ?? 1));
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(options?.pageSize ?? 50)));
   return getCachedExpensesList(
     JSON.stringify({
       category: options?.category,
       from: options?.from,
       to: options?.to,
-      limit: options?.limit,
+      page,
+      pageSize,
     })
   );
 }
@@ -113,122 +127,167 @@ export async function createExpense(data: {
   expenseDate?: Date;
   employeeId?: string;
   paymentMethod?: PaymentMethod;
+  idempotencyKey?: string;
 }) {
+  let userId: string | undefined;
+  let idempotencyKey: string | undefined;
   try {
     const user = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+    userId = user.id;
+    idempotencyKey = data.idempotencyKey;
+
+    if (
+      idempotencyKey !== undefined &&
+      (typeof idempotencyKey !== "string" ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          idempotencyKey
+        ))
+    ) {
+      return { success: false, error: "معرّف عملية المصروف غير صالح" };
+    }
+
+    if (idempotencyKey) {
+      const existingExpense = await findExpenseByIdempotencyKey(idempotencyKey);
+      if (existingExpense) {
+        if (existingExpense.userId !== user.id) {
+          return { success: false, error: "معرّف العملية مستخدم مسبقاً" };
+        }
+        return { success: true, data: existingExpense };
+      }
+    }
 
     if (!data.title?.trim()) {
       return { success: false, error: "عنوان المصروف مطلوب" };
     }
 
-    if (!data.amount || data.amount <= 0) {
+    if (!Number.isFinite(data.amount) || data.amount <= 0) {
       return { success: false, error: "المبلغ يجب أن يكون أكبر من صفر" };
     }
 
-    if (data.category === "SALARIES") {
-      if (!data.employeeId) {
-        return { success: false, error: "يجب اختيار الموظف لمصروف الراتب" };
-      }
+    const expense = await prisma.$transaction(async (tx) => {
+      let employee:
+        | {
+            id: string;
+            salary: number;
+            isActive: boolean;
+            employeeAdjustments: { id: string; amount: number }[];
+          }
+        | null = null;
+      let deductionsTotal = 0;
 
-      const employee = await prisma.user.findUnique({
-        where: { id: data.employeeId },
-        select: {
-          id: true,
-          name: true,
-          salary: true,
-          isActive: true,
-          employeeAdjustments: {
-            where: { settled: false },
-            select: { id: true, amount: true },
-          },
-        },
-      });
+      if (data.category === "SALARIES") {
+        if (!data.employeeId) {
+          throw new Error("يجب اختيار الموظف لمصروف الراتب");
+        }
 
-      if (!employee || !employee.isActive) {
-        return { success: false, error: "الموظف غير موجود" };
-      }
-
-      const deductionsTotal = employee.employeeAdjustments.reduce(
-        (sum, item) => sum + item.amount,
-        0
-      );
-      const expectedNet = employee.salary - deductionsTotal;
-
-      if (Math.abs(data.amount - expectedNet) > 0.01) {
-        return {
-          success: false,
-          error: `صافي الراتب المتوقع هو ${expectedNet.toFixed(2)} ج.م`,
-        };
-      }
-
-      const expense = await prisma.$transaction(async (tx) => {
-        const created = await tx.expense.create({
-          data: {
-            title: data.title.trim(),
-            amount: data.amount,
-            category: "SALARIES",
-            description: data.description?.trim(),
-            expenseDate: data.expenseDate ?? new Date(),
-            userId: user.id,
-            employeeId: employee.id,
-            baseSalary: employee.salary,
-            deductionsTotal,
-            paymentMethod: data.paymentMethod ?? "CASH",
-          },
-          include: {
-            user: { select: { id: true, name: true } },
-            employee: { select: { id: true, name: true } },
+        employee = await tx.user.findUnique({
+          where: { id: data.employeeId },
+          select: {
+            id: true,
+            salary: true,
+            isActive: true,
+            employeeAdjustments: {
+              where: { settled: false },
+              select: { id: true, amount: true },
+            },
           },
         });
 
+        if (!employee || !employee.isActive) {
+          throw new Error("الموظف غير موجود");
+        }
+
+        deductionsTotal = employee.employeeAdjustments.reduce(
+          (sum, item) => sum + item.amount,
+          0
+        );
+        const expectedNet = employee.salary - deductionsTotal;
+        if (Math.abs(data.amount - expectedNet) > 0.01) {
+          throw new Error(
+            `صافي الراتب المتوقع هو ${expectedNet.toFixed(2)} ج.م`
+          );
+        }
+
         if (employee.employeeAdjustments.length > 0) {
-          await tx.employeeAdjustment.updateMany({
+          const claimed = await tx.employeeAdjustment.updateMany({
             where: {
-              id: { in: employee.employeeAdjustments.map((a) => a.id) },
+              id: { in: employee.employeeAdjustments.map((item) => item.id) },
+              userId: employee.id,
+              settled: false,
             },
             data: {
               settled: true,
               settledAt: new Date(),
-              expenseId: created.id,
             },
           });
-        }
 
-        return created;
+          if (claimed.count !== employee.employeeAdjustments.length) {
+            throw new Error(
+              "تغيرت الاستقطاعات أثناء تسجيل الراتب. أعد تحميل البيانات وحاول مرة أخرى"
+            );
+          }
+        }
+      }
+
+      const created = await tx.expense.create({
+        data: {
+          title: data.title.trim(),
+          amount: data.amount,
+          category: data.category ?? "OTHER",
+          description: data.description?.trim(),
+          expenseDate: data.expenseDate ?? new Date(),
+          userId: user.id,
+          employeeId: employee?.id,
+          baseSalary: employee?.salary,
+          deductionsTotal: employee ? deductionsTotal : undefined,
+          paymentMethod: data.paymentMethod ?? "CASH",
+          idempotencyKey,
+        },
+        include: {
+          user: { select: { id: true, name: true } },
+          employee: { select: { id: true, name: true } },
+        },
       });
 
-      revalidateExpensePaths();
-      void sendTelegramMessage(buildExpenseTelegramMessage(expense));
-      return { success: true, data: expense };
-    }
+      if (employee && employee.employeeAdjustments.length > 0) {
+        const linked = await tx.employeeAdjustment.updateMany({
+          where: {
+            id: { in: employee.employeeAdjustments.map((item) => item.id) },
+            settled: true,
+            expenseId: null,
+          },
+          data: { expenseId: created.id },
+        });
+        if (linked.count !== employee.employeeAdjustments.length) {
+          throw new Error(
+            "تعذر ربط الاستقطاعات بمصروف الراتب. أعد المحاولة"
+          );
+        }
+      }
 
-    const expense = await prisma.expense.create({
-      data: {
-        title: data.title.trim(),
-        amount: data.amount,
-        category: data.category ?? "OTHER",
-        description: data.description?.trim(),
-        expenseDate: data.expenseDate ?? new Date(),
-        userId: user.id,
-        paymentMethod: data.paymentMethod ?? "CASH",
-      },
-      include: {
-        user: { select: { id: true, name: true } },
-        employee: { select: { id: true, name: true } },
-      },
+      return created;
     });
 
     revalidateExpensePaths();
     void sendTelegramMessage(buildExpenseTelegramMessage(expense));
     return { success: true, data: expense };
   } catch (error) {
+    if (idempotencyKey && userId) {
+      const existingExpense = await findExpenseByIdempotencyKey(idempotencyKey);
+      if (existingExpense?.userId === userId) {
+        return { success: true, data: existingExpense };
+      }
+      if (existingExpense) {
+        return { success: false, error: "معرّف العملية مستخدم مسبقاً" };
+      }
+    }
     return handleActionError(error);
   }
 }
 
 export async function deleteExpense(id: string) {
   try {
-    await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+    await requireRole(["ADMIN"]);
 
     const existing = await prisma.expense.findUnique({ where: { id } });
     if (!existing) {
@@ -246,6 +305,12 @@ export async function deleteExpense(id: string) {
     revalidateExpensePaths();
     return { success: true, data: undefined };
   } catch (error) {
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return {
+        success: false,
+        error: "يقتصر حذف المصروفات على مدير النظام فقط",
+      };
+    }
     return handleActionError(error);
   }
 }

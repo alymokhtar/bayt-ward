@@ -2,7 +2,7 @@
 
 import { updateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, requireRole } from "@/lib/auth";
 import { generateInvoiceNumberSafe } from "@/lib/invoice-generator";
 import { formatCurrency, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
 import { getCachedSalesPage } from "@/lib/cached-queries";
@@ -172,7 +172,7 @@ export async function sendVaultReconciliationTelegram(data: {
   from: string;
   to: string;
 }) {
-  const user = await requireAuth();
+  const user = await requireRole(["ADMIN", "MANAGER"]);
   const lines = data.paymentBreakdown.map((item) =>
     `- ${getPaymentMethodLabel(item.method)}: ${formatCurrency(item.net)}`
   );
