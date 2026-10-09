@@ -82,6 +82,12 @@ export const NAV_ITEMS = [
     roles: ["ADMIN", "MANAGER", "CASHIER"],
   },
   {
+    title: "مراجعة الخزنة",
+    href: "/sales/cash-register",
+    icon: Wallet,
+    roles: ["ADMIN", "MANAGER", "CASHIER"],
+  },
+  {
     title: "المرتجعات",
     href: "/returns",
     icon: RotateCcw,
