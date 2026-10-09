@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-export const BACKUP_VERSION = 4 as const;
+export const BACKUP_VERSION = 5 as const;
 
 type BackupRow = Record<string, unknown>;
 
@@ -10,6 +10,7 @@ export interface BackupPayload {
   data: {
     settings: BackupRow[];
     users: BackupRow[];
+    coupons: BackupRow[];
     categories: BackupRow[];
     globalColors: BackupRow[];
     products: BackupRow[];
@@ -41,6 +42,7 @@ interface BackupPayloadLike {
 export interface BackupRestoreCounts {
   settings: number;
   users: number;
+  coupons: number;
   categories: number;
   globalColors: number;
   products: number;
@@ -95,6 +97,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
   const [
     settings,
     users,
+    coupons,
     categories,
     globalColors,
     products,
@@ -131,6 +134,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
         updatedAt: true,
       },
     }),
+    prisma.coupon.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.category.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.globalColor.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.product.findMany({ orderBy: { createdAt: "asc" } }),
@@ -158,6 +162,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
     data: {
       settings: cloneRecords(settings),
       users: cloneRecords(users),
+      coupons: cloneRecords(coupons),
       categories: cloneRecords(categories),
       globalColors: cloneRecords(globalColors),
       products: cloneRecords(products),
@@ -183,7 +188,7 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
 
 function normalizeBackupPayload(payload: BackupPayload | BackupPayloadLike): BackupPayload["data"] {
   const version = Number(payload.version ?? 0);
-  if (version !== BACKUP_VERSION && version !== 3 && version !== 2 && version !== 1) {
+  if (version !== BACKUP_VERSION && version !== 4 && version !== 3 && version !== 2 && version !== 1) {
     throw new Error("UNSUPPORTED_BACKUP_VERSION");
   }
 
@@ -196,6 +201,7 @@ function normalizeBackupPayload(payload: BackupPayload | BackupPayloadLike): Bac
   return {
     settings: Array.isArray(data.settings) ? data.settings : [],
     users: Array.isArray(data.users) ? data.users : [],
+    coupons: Array.isArray(data.coupons) ? data.coupons : [],
     categories: Array.isArray(data.categories) ? data.categories : [],
     globalColors: Array.isArray(data.globalColors) ? data.globalColors : [],
     products: Array.isArray(data.products) ? data.products : [],
@@ -230,6 +236,22 @@ export async function restoreBackupSnapshot(
   const settings = data.settings.map((row) => ({
     key: String(row.key),
     value: String(row.value),
+  }));
+
+  const coupons = data.coupons.map((row) => ({
+    id: String(row.id),
+    code: String(row.code).trim().toUpperCase(),
+    type: row.type as "PERCENTAGE" | "FIXED_AMOUNT",
+    discountPercent: toNullableNumber(row.discountPercent),
+    discountAmount: toNullableNumber(row.discountAmount),
+    minOrderAmount: toNullableNumber(row.minOrderAmount),
+    usageLimit: row.usageLimit == null ? null : Number(row.usageLimit),
+    usageCount: Number(row.usageCount ?? 0),
+    expiresAt: toNullableDate(row.expiresAt),
+    isActive: Boolean(row.isActive),
+    stackable: Boolean(row.stackable),
+    createdAt: toDate(row.createdAt),
+    updatedAt: toDate(row.updatedAt),
   }));
 
   const existingUsers = await prisma.user.findMany({
@@ -376,10 +398,13 @@ export async function restoreBackupSnapshot(
     id: String(row.id),
     invoiceNumber: String(row.invoiceNumber),
     customerId: toNullableString(row.customerId),
+    couponId: toNullableString(row.couponId),
+    couponCode: toNullableString(row.couponCode),
     userId: String(row.userId),
     subtotal: Number(row.subtotal ?? 0),
     discountAmount: Number(row.discountAmount ?? 0),
     discountPercent: Number(row.discountPercent ?? 0),
+    appliedPromotions: Array.isArray(row.appliedPromotions) ? row.appliedPromotions : [],
     taxAmount: Number(row.taxAmount ?? 0),
     totalAmount: Number(row.totalAmount ?? 0),
     tenderedAmount: Number(row.tenderedAmount ?? row.paidAmount ?? 0),
@@ -553,6 +578,7 @@ export async function restoreBackupSnapshot(
     await tx.return.deleteMany();
     await tx.purchase.deleteMany();
     await tx.sale.deleteMany();
+    await tx.coupon.deleteMany();
     await tx.productMedia.deleteMany();
     await tx.productColor.deleteMany();
     await tx.productVariant.deleteMany();
@@ -566,6 +592,7 @@ export async function restoreBackupSnapshot(
 
     await tx.setting.createMany({ data: settings });
     await tx.user.createMany({ data: users as never[] });
+    await tx.coupon.createMany({ data: coupons as never[] });
     await tx.category.createMany({ data: categories as never[] });
     await tx.supplier.createMany({ data: suppliers as never[] });
     await tx.customer.createMany({ data: customers as never[] });
@@ -590,6 +617,7 @@ export async function restoreBackupSnapshot(
   return {
     settings: settings.length,
     users: users.length,
+    coupons: coupons.length,
     categories: categories.length,
     globalColors: globalColors.length,
     products: products.length,

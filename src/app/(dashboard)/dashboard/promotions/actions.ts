@@ -5,12 +5,24 @@ import { revalidatePath, updateTag } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { parseCairoCalendarDate } from "@/lib/promotion-date";
-import { getPromotionDateRangeBounds } from "@/lib/promotions";
-import type { PromotionInput, PromotionRecord, PromotionType, PromotionView } from "./types";
+import {
+  calculateCouponDiscount,
+  getPromotionDateRangeBounds,
+} from "@/lib/promotions";
+import type {
+  CouponInput,
+  CouponRecord,
+  CouponType,
+  PromotionInput,
+  PromotionRecord,
+  PromotionType,
+  PromotionView,
+} from "./types";
 
 type ActionResult = { success: true } | { success: false; error: string };
 
 const PROMOTION_TYPES: PromotionType[] = Object.values(PrismaPromotionType);
+const COUPON_TYPES: CouponType[] = ["PERCENTAGE", "FIXED_AMOUNT"];
 
 function revalidatePromotionViews() {
   revalidatePath("/dashboard/promotions");
@@ -116,6 +128,175 @@ function toPromotionData(input: PromotionInput) {
 
 function normalizeIds(ids: string[]): string[] {
   return [...new Set(ids.filter((id) => typeof id === "string" && id.trim()).map((id) => id.trim()))];
+}
+
+function validateCouponInput(input: CouponInput): string | null {
+  if (typeof input.code !== "string" || !/^[A-Z0-9_-]{3,40}$/.test(input.code.trim().toUpperCase())) {
+    return "رمز الكوبون يجب أن يتكون من 3 إلى 40 حرفاً أو رقماً";
+  }
+  if (!COUPON_TYPES.includes(input.type)) return "نوع الكوبون غير صالح";
+  if (typeof input.isActive !== "boolean" || typeof input.stackable !== "boolean") {
+    return "إعدادات الكوبون غير صالحة";
+  }
+  if (
+    input.minOrderAmount != null &&
+    (!Number.isFinite(input.minOrderAmount) || input.minOrderAmount < 0)
+  ) {
+    return "الحد الأدنى للطلب يجب أن يكون صفراً أو أكثر";
+  }
+  if (
+    input.usageLimit != null &&
+    (!Number.isInteger(input.usageLimit) || input.usageLimit < 1)
+  ) {
+    return "حد الاستخدام يجب أن يكون عدداً صحيحاً أكبر من صفر";
+  }
+  if (input.type === "PERCENTAGE" &&
+      (!Number.isFinite(input.discountPercent) ||
+        input.discountPercent == null ||
+        input.discountPercent <= 0 ||
+        input.discountPercent > 100)) {
+    return "نسبة خصم الكوبون يجب أن تكون أكبر من صفر وحتى 100";
+  }
+  if (input.type === "FIXED_AMOUNT" &&
+      (!Number.isFinite(input.discountAmount) ||
+        input.discountAmount == null ||
+        input.discountAmount <= 0)) {
+    return "قيمة خصم الكوبون يجب أن تكون أكبر من صفر";
+  }
+  if (input.expiresAt && !parseCairoCalendarDate(input.expiresAt, true)) {
+    return "تاريخ انتهاء الكوبون غير صالح";
+  }
+  return null;
+}
+
+function toCouponData(input: CouponInput) {
+  return {
+    code: input.code.trim().toUpperCase(),
+    type: input.type,
+    discountPercent: input.type === "PERCENTAGE" ? input.discountPercent : null,
+    discountAmount: input.type === "FIXED_AMOUNT" ? input.discountAmount : null,
+    minOrderAmount: input.minOrderAmount,
+    usageLimit: input.usageLimit,
+    expiresAt: input.expiresAt ? parseCairoCalendarDate(input.expiresAt, true) : null,
+    isActive: input.isActive,
+    stackable: input.stackable,
+  };
+}
+
+export async function getCoupons(): Promise<CouponRecord[]> {
+  await requireRole(["ADMIN", "MANAGER"]);
+  return prisma.coupon.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 300,
+  });
+}
+
+export async function createCoupon(input: CouponInput): Promise<ActionResult> {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+    const validationError = validateCouponInput(input);
+    if (validationError) return { success: false, error: validationError };
+
+    await prisma.coupon.create({ data: toCouponData(input) });
+    revalidatePromotionViews();
+    revalidatePath("/pos");
+    return { success: true };
+  } catch (error) {
+    return actionError(error, "تعذر إنشاء الكوبون. تحقق من عدم تكرار الرمز");
+  }
+}
+
+export async function updateCoupon(
+  id: string,
+  input: CouponInput,
+): Promise<ActionResult> {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+    if (!id?.trim()) return { success: false, error: "معرّف الكوبون غير صالح" };
+    const validationError = validateCouponInput(input);
+    if (validationError) return { success: false, error: validationError };
+
+    await prisma.coupon.update({
+      where: { id },
+      data: toCouponData(input),
+    });
+    revalidatePromotionViews();
+    revalidatePath("/pos");
+    return { success: true };
+  } catch (error) {
+    return actionError(error, "تعذر حفظ تعديلات الكوبون");
+  }
+}
+
+export async function toggleCouponStatus(id: string): Promise<ActionResult> {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+    const coupon = await prisma.coupon.findUnique({
+      where: { id },
+      select: { isActive: true },
+    });
+    if (!coupon) return { success: false, error: "الكوبون غير موجود" };
+    await prisma.coupon.update({
+      where: { id },
+      data: { isActive: !coupon.isActive },
+    });
+    revalidatePromotionViews();
+    revalidatePath("/pos");
+    return { success: true };
+  } catch (error) {
+    return actionError(error, "تعذر تغيير حالة الكوبون");
+  }
+}
+
+export async function deleteCoupon(id: string): Promise<ActionResult> {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+    if (!id?.trim()) return { success: false, error: "معرّف الكوبون غير صالح" };
+    await prisma.coupon.delete({ where: { id } });
+    revalidatePromotionViews();
+    revalidatePath("/pos");
+    return { success: true };
+  } catch (error) {
+    return actionError(error, "تعذر حذف الكوبون");
+  }
+}
+
+export async function getCouponQuote(
+  rawCode: string,
+  subtotal: number,
+): Promise<{
+  success: true;
+  data: { code: string; discountAmount: number; stackable: boolean };
+} | { success: false; error: string }> {
+  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  const code = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : "";
+  if (!code || !Number.isFinite(subtotal) || subtotal <= 0) {
+    return { success: false, error: "رمز الكوبون أو قيمة الطلب غير صالحة" };
+  }
+
+  const coupon = await prisma.coupon.findUnique({ where: { code } });
+  if (!coupon || !coupon.isActive) {
+    return { success: false, error: "الكوبون غير صالح أو غير مفعل" };
+  }
+  if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+    return { success: false, error: "انتهت صلاحية الكوبون" };
+  }
+  if (coupon.usageLimit != null && coupon.usageCount >= coupon.usageLimit) {
+    return { success: false, error: "تم استنفاد مرات استخدام الكوبون" };
+  }
+  const discountAmount = calculateCouponDiscount(coupon, subtotal);
+  if (discountAmount <= 0) {
+    return {
+      success: false,
+      error: coupon.minOrderAmount != null && subtotal < coupon.minOrderAmount
+        ? `الحد الأدنى لاستخدام الكوبون هو ${coupon.minOrderAmount}`
+        : "تعذر تطبيق الكوبون",
+    };
+  }
+  return {
+    success: true,
+    data: { code: coupon.code, discountAmount, stackable: coupon.stackable },
+  };
 }
 
 export async function getPromotions(view: PromotionView = "current"): Promise<PromotionRecord[]> {

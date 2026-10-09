@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   calculateCartDiscounts,
+  calculateCouponDiscount,
   getPromotionDateRangeBounds,
   isPromotionDateRangeActive,
   type CartItem,
@@ -312,5 +313,27 @@ test("returns a zero result for empty carts and ignores malformed cart rows", ()
     discountAmount: 0,
     finalTotal: 0,
     appliedPromotions: [],
+  });
+
+  test("calculates percentage coupons against subtotal and enforces their minimum", () => {
+    const coupon = {
+      type: "PERCENTAGE" as const,
+      discountPercent: 15,
+      minOrderAmount: 200,
+    };
+
+    assert.equal(calculateCouponDiscount(coupon, 199.99), 0);
+    assert.equal(calculateCouponDiscount(coupon, 230), 34.5);
+  });
+
+  test("caps fixed coupon discounts at the subtotal and rejects invalid values", () => {
+    assert.equal(
+      calculateCouponDiscount({ type: "FIXED_AMOUNT", discountAmount: 500 }, 230),
+      230,
+    );
+    assert.equal(
+      calculateCouponDiscount({ type: "PERCENTAGE", discountPercent: 101 }, 230),
+      0,
+    );
   });
 });

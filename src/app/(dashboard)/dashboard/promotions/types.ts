@@ -48,3 +48,33 @@ export interface PromotionFormOptions {
   categories: { id: string; name: string }[];
   products: { id: string; name: string; categoryId: string; skus: string[] }[];
 }
+
+export type CouponType = "PERCENTAGE" | "FIXED_AMOUNT";
+
+export interface CouponInput {
+  code: string;
+  type: CouponType;
+  discountPercent: number | null;
+  discountAmount: number | null;
+  minOrderAmount: number | null;
+  usageLimit: number | null;
+  expiresAt: string;
+  isActive: boolean;
+  stackable: boolean;
+}
+
+export interface CouponRecord {
+  id: string;
+  code: string;
+  type: CouponType;
+  discountPercent: number | null;
+  discountAmount: number | null;
+  minOrderAmount: number | null;
+  usageLimit: number | null;
+  usageCount: number;
+  expiresAt: Date | null;
+  isActive: boolean;
+  stackable: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}

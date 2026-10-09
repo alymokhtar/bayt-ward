@@ -11,7 +11,7 @@ import { invalidateSalesData, revalidateInventoryCache } from "@/lib/revalidate-
 import { sendTelegramMessage } from "@/lib/telegram";
 import { checkLowStockAndNotify } from "@/lib/actions/inventory";
 import { normalizeSalePayments } from "@/lib/sales-payment-utils";
-import { calculateCartDiscounts } from "@/lib/promotions";
+import { calculateCartDiscounts, calculateCouponDiscount } from "@/lib/promotions";
 import { getActivePromotionsData } from "@/lib/promotions-data";
 import { allocateInvoiceDiscount } from "@/lib/sale-pricing";
 import { PaymentMethod, Prisma, SaleStatus, SalesChannel } from "@prisma/client";
@@ -507,6 +507,7 @@ export async function createSale(data: {
   manualDiscountAmount?: number;
   discountPercent?: number;
   discountReason?: string;
+  couponCode?: string;
   totalAmount: number;
   paidAmount: number;
   paymentMethod?: PaymentMethod;
@@ -611,6 +612,38 @@ export async function createSale(data: {
       activePromotions,
       { channel },
     );
+    const submittedCouponCode =
+      typeof data.couponCode === "string" ? data.couponCode.trim().toUpperCase() : "";
+    if (submittedCouponCode.length > 40) {
+      return { success: false, error: "رمز الكوبون غير صالح" };
+    }
+    const coupon = submittedCouponCode
+      ? await prisma.coupon.findUnique({ where: { code: submittedCouponCode } })
+      : null;
+    let couponDiscountAmount = 0;
+    if (submittedCouponCode) {
+      if (!coupon || !coupon.isActive) {
+        return { success: false, error: "الكوبون غير صالح أو غير مفعل" };
+      }
+      if (coupon.expiresAt && coupon.expiresAt < new Date()) {
+        return { success: false, error: "انتهت صلاحية الكوبون" };
+      }
+      if (coupon.usageLimit != null && coupon.usageCount >= coupon.usageLimit) {
+        return { success: false, error: "تم استنفاد مرات استخدام الكوبون" };
+      }
+      if (promotionResult.discountAmount > 0 && !coupon.stackable) {
+        return { success: false, error: "لا يمكن جمع هذا الكوبون مع العروض التلقائية" };
+      }
+      couponDiscountAmount = calculateCouponDiscount(coupon, grossSubtotal);
+      if (couponDiscountAmount <= 0) {
+        return {
+          success: false,
+          error: coupon.minOrderAmount != null && grossSubtotal < coupon.minOrderAmount
+            ? `الحد الأدنى لاستخدام الكوبون هو ${coupon.minOrderAmount}`
+            : "تعذر تطبيق الكوبون",
+        };
+      }
+    }
     const submittedManualDiscount = data.manualDiscountAmount ?? data.discountAmount ?? 0;
     const submittedDiscountPercent = data.discountPercent ?? 0;
     const discountReason =
@@ -647,7 +680,7 @@ export async function createSale(data: {
     }
     const requestedDiscount = Math.min(
       grossSubtotal,
-      promotionResult.discountAmount + manualDiscount,
+      promotionResult.discountAmount + couponDiscountAmount + manualDiscount,
     );
     const salePricing = allocateInvoiceDiscount(
       trustedItems.map((item) => ({
@@ -770,6 +803,55 @@ export async function createSale(data: {
         }
       }
 
+      if (coupon) {
+        const currentCoupon = await tx.coupon.findUnique({ where: { id: coupon.id } });
+        if (
+          !currentCoupon ||
+          !currentCoupon.isActive ||
+          currentCoupon.code !== coupon.code ||
+          currentCoupon.type !== coupon.type ||
+          currentCoupon.discountPercent !== coupon.discountPercent ||
+          currentCoupon.discountAmount !== coupon.discountAmount ||
+          currentCoupon.minOrderAmount !== coupon.minOrderAmount ||
+          currentCoupon.usageLimit !== coupon.usageLimit ||
+          currentCoupon.expiresAt?.getTime() !== coupon.expiresAt?.getTime() ||
+          currentCoupon.stackable !== coupon.stackable ||
+          (currentCoupon.expiresAt !== null && currentCoupon.expiresAt < new Date()) ||
+          (promotionResult.discountAmount > 0 && !currentCoupon.stackable) ||
+          calculateCouponDiscount(currentCoupon, grossSubtotal) !== couponDiscountAmount
+        ) {
+          throw new Error("تغيرت صلاحية الكوبون أو شروطه. أعد المحاولة");
+        }
+
+        const now = new Date();
+        const couponClaim = await tx.coupon.updateMany({
+          where: {
+            id: currentCoupon.id,
+            code: currentCoupon.code,
+            isActive: true,
+            usageLimit: currentCoupon.usageLimit,
+            AND: [
+              {
+                OR: [
+                  { expiresAt: null },
+                  { expiresAt: { gte: now } },
+                ],
+              },
+              {
+                OR: [
+                  { usageLimit: null },
+                  { usageCount: { lt: currentCoupon.usageLimit ?? 0 } },
+                ],
+              },
+            ],
+          },
+          data: { usageCount: { increment: 1 } },
+        });
+        if (couponClaim.count !== 1) {
+          throw new Error("تم استنفاد مرات استخدام الكوبون. اختر طريقة دفع أخرى");
+        }
+      }
+
       const invoiceNumber = await generateInvoiceNumberSafe("INV");
 
       const createdSale = await tx.sale.create({
@@ -786,7 +868,13 @@ export async function createSale(data: {
             id: promotion.id,
             title: promotion.title,
             discountValue: promotion.discountValue,
-          })),
+          })).concat(coupon ? [{
+            id: `COUPON:${coupon.id}`,
+            title: `كوبون ${coupon.code}`,
+            discountValue: couponDiscountAmount,
+          }] : []),
+          couponId: coupon?.id,
+          couponCode: coupon?.code,
           discountReason: discountReason || null,
           // POS currently has no configured VAT calculation; sales are saved with zero tax.
           taxAmount: 0,
@@ -914,6 +1002,7 @@ export async function cancelSale(id: string, reason?: string) {
         status: true,
         totalAmount: true,
         customerId: true,
+        couponId: true,
         notes: true,
         returns: {
           where: { status: "APPROVED" },
@@ -958,6 +1047,13 @@ export async function cancelSale(id: string, reason?: string) {
       });
       if (claimed.count !== 1) {
         throw new Error("تغيرت حالة الفاتورة أو سُجل لها مرتجع. حدّث الصفحة وأعد المحاولة");
+      }
+
+      if (sale.couponId) {
+        await tx.coupon.updateMany({
+          where: { id: sale.couponId, usageCount: { gt: 0 } },
+          data: { usageCount: { decrement: 1 } },
+        });
       }
 
       for (const item of sale.items) {

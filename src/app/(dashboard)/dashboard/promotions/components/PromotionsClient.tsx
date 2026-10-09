@@ -21,6 +21,7 @@ import {
   type PromotionType,
   type PromotionView,
 } from "../types";
+import CouponsClient from "./CouponsClient";
 import PromotionForm from "./PromotionForm";
 
 interface PromotionsClientProps {
@@ -85,6 +86,7 @@ export default function PromotionsClient({ promotions, options }: PromotionsClie
   const [deleteTarget, setDeleteTarget] = useState<PromotionRecord | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
+  const [showCoupons, setShowCoupons] = useState(false);
 
   async function refreshRows(nextView = view) {
     setLoadingList(true);
@@ -104,6 +106,10 @@ export default function PromotionsClient({ promotions, options }: PromotionsClie
     const timeout = window.setTimeout(() => setNotice(null), 3500);
     return () => window.clearTimeout(timeout);
   }, [notice]);
+
+  if (showCoupons) {
+    return <CouponsClient onBack={() => setShowCoupons(false)} />;
+  }
 
   function openCreate() {
     setEditing(null);
@@ -169,6 +175,12 @@ export default function PromotionsClient({ promotions, options }: PromotionsClie
 
   return (
     <div className="space-y-4" dir="rtl">
+      <div className="flex justify-end">
+        <Button type="button" variant="ghost" onClick={() => setShowCoupons(true)}>
+          <Tag className="h-4 w-4" />
+          إدارة الكوبونات
+        </Button>
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div
           role="tablist"

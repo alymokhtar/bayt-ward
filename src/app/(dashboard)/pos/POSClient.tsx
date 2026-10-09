@@ -7,6 +7,7 @@ import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
 import { createSale } from "@/lib/actions/sales";
 import { createCustomer, searchCustomers } from "@/lib/actions/customers";
 import { searchVariants } from "@/lib/actions/products";
+import { getCouponQuote } from "@/app/(dashboard)/dashboard/promotions/actions";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency } from "@/lib/utils";
 import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
@@ -95,6 +96,15 @@ export default function POSClient({
   const [discountPercent, setDiscountPercent] = useState(dailyDiscountPercent);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountReason, setDiscountReason] = useState("");
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountAmount: number;
+    stackable: boolean;
+    subtotal: number;
+  } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod | "">("");
   const [splitPaymentEnabled, setSplitPaymentEnabled] = useState(false);
   const [splitPaymentAmounts, setSplitPaymentAmounts] = useState<SplitPaymentValues>(DEFAULT_SPLIT_PAYMENT_VALUES);
@@ -136,8 +146,12 @@ export default function POSClient({
   );
   const manualDiscount = discountAmount + percentDiscount;
   const promotionDiscount = promotionResult.discountAmount;
-  const totalDiscount = manualDiscount + promotionDiscount;
+  const couponDiscount =
+    appliedCoupon?.subtotal === subtotal ? appliedCoupon.discountAmount : 0;
+  const totalDiscount = Math.min(subtotal, manualDiscount + promotionDiscount + couponDiscount);
   const totalAmount = Math.max(0, subtotal - totalDiscount);
+  const couponConflictsWithPromotion =
+    !!appliedCoupon && promotionDiscount > 0 && !appliedCoupon.stackable;
   const paid = parseFloat(paidAmount) || 0;
   const splitPaymentEntries = Object.entries(splitPaymentAmounts)
     .filter(([, value]) => value !== "" && parseFloat(value) > 0)
@@ -155,6 +169,29 @@ export default function POSClient({
     Math.abs(splitPaymentTotal - totalAmount) < 0.01;
   const isSinglePaymentValid = !!paymentMethod && paid >= totalAmount && totalAmount > 0;
   const isPaymentReady = splitPaymentEnabled ? isSplitPaymentValid : isSinglePaymentValid;
+
+  async function handleApplyCoupon() {
+    setCouponLoading(true);
+    setCouponError("");
+    try {
+      const quote = await getCouponQuote(couponInput, subtotal);
+      if (!quote.success) {
+        setAppliedCoupon(null);
+        setCouponError(quote.error);
+      } else if (promotionDiscount > 0 && !quote.data.stackable) {
+        setAppliedCoupon(null);
+        setCouponError("هذا الكوبون لا يقبل الجمع مع العرض المطبق");
+      } else {
+        setAppliedCoupon({ ...quote.data, subtotal });
+      }
+    } catch (couponRequestError) {
+      console.error("Coupon validation failed", couponRequestError);
+      setCouponError("تعذر التحقق من الكوبون. حاول مرة أخرى");
+      setAppliedCoupon(null);
+    } finally {
+      setCouponLoading(false);
+    }
+  }
 
   function looksLikePhoneNumber(value: string) {
     const trimmed = value.trim();
@@ -384,6 +421,14 @@ export default function POSClient({
     if (saleSubmissionInFlightRef.current) return;
     setError("");
     setSuccess("");
+    if (couponConflictsWithPromotion) {
+      setError("لا يمكن جمع هذا الكوبون مع العروض التلقائية");
+      return;
+    }
+    if (appliedCoupon && appliedCoupon.subtotal !== subtotal) {
+      setError("تغيرت قيمة السلة. أعد تطبيق الكوبون قبل إتمام البيع");
+      return;
+    }
     if (!saleSubmissionRef.current && cart.length === 0) {
       setError("أضف منتجات إلى السلة أولاً");
       return;
@@ -420,6 +465,7 @@ export default function POSClient({
           manualDiscountAmount: discountAmount,
           discountPercent,
           discountReason: discountReason.trim() || undefined,
+          couponCode: appliedCoupon?.code,
           totalAmount,
           paidAmount: splitPaymentEnabled ? totalAmount : paid,
           paymentMethod: splitPaymentEnabled
@@ -515,6 +561,9 @@ export default function POSClient({
       setDiscountPercent(0);
       setDiscountAmount(0);
       setDiscountReason("");
+      setCouponInput("");
+      setAppliedCoupon(null);
+      setCouponError("");
       setPaidAmount("");
       setNotes("");
       setSelectedCustomer(null);
@@ -817,6 +866,46 @@ export default function POSClient({
               }
             />
           </div>
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <div className="flex items-end gap-2">
+              <Input
+                label="كود الكوبون"
+                value={couponInput}
+                onChange={(event) => {
+                  setCouponInput(event.target.value.toUpperCase());
+                  setCouponError("");
+                }}
+                dir="ltr"
+                maxLength={40}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={couponLoading || !couponInput.trim() || subtotal <= 0}
+                onClick={() => void handleApplyCoupon()}
+              >
+                {couponLoading ? "جارٍ التحقق" : "تطبيق"}
+              </Button>
+            </div>
+            {couponError && <p role="alert" className="text-xs text-danger">{couponError}</p>}
+            {appliedCoupon && (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-green-800">
+                <span>كوبون {appliedCoupon.code}</span>
+                {appliedCoupon.subtotal === subtotal ? (
+                  <span>- {formatCurrency(appliedCoupon.discountAmount)}</span>
+                ) : (
+                  <span className="text-amber-700">تغيرت السلة؛ أعد تطبيق الكوبون</span>
+                )}
+                <button
+                  type="button"
+                  className="text-danger underline"
+                  onClick={() => setAppliedCoupon(null)}
+                >
+                  إزالة
+                </button>
+              </div>
+            )}
+          </div>
           {cashierDiscountLimit !== null && (
             <p className="text-xs text-muted">
               الحد الأقصى لإجمالي الخصم اليدوي للكاشير {cashierDiscountLimit}% من قيمة الأصناف.
@@ -924,6 +1013,12 @@ export default function POSClient({
                   );
                 })}
               </div>
+            </div>
+          )}
+          {couponDiscount > 0 && appliedCoupon && (
+            <div className="flex justify-between text-danger">
+              <span>كوبون {appliedCoupon.code}</span>
+              <span>- {formatCurrency(couponDiscount)}</span>
             </div>
           )}
 

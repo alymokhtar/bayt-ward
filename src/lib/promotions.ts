@@ -39,6 +39,42 @@ export interface Promotion {
   categories?: readonly PromotionTarget[];
 }
 
+export interface CouponDiscount {
+  type: "PERCENTAGE" | "FIXED_AMOUNT";
+  discountPercent?: number | null;
+  discountAmount?: number | null;
+  minOrderAmount?: number | null;
+}
+
+export function calculateCouponDiscount(
+  coupon: CouponDiscount,
+  cartSubtotal: number,
+): number {
+  if (!Number.isFinite(cartSubtotal) || cartSubtotal <= 0) return 0;
+  if (
+    coupon.minOrderAmount != null &&
+    (!Number.isFinite(coupon.minOrderAmount) || cartSubtotal < coupon.minOrderAmount)
+  ) {
+    return 0;
+  }
+
+  if (coupon.type === "PERCENTAGE") {
+    if (
+      !Number.isFinite(coupon.discountPercent) ||
+      coupon.discountPercent! <= 0 ||
+      coupon.discountPercent! > 100
+    ) {
+      return 0;
+    }
+    return roundMoney(cartSubtotal * coupon.discountPercent! / 100);
+  }
+
+  if (!Number.isFinite(coupon.discountAmount) || coupon.discountAmount! <= 0) {
+    return 0;
+  }
+  return roundMoney(Math.min(coupon.discountAmount!, cartSubtotal));
+}
+
 export interface AppliedPromotion {
   id: string;
   title: string;

@@ -84,6 +84,11 @@ enum PromotionType {
   FIXED_AMOUNT
 }
 
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
+}
+
 model User {
   id        String    @id @default(cuid())
   name      String
@@ -143,6 +148,26 @@ model Promotion {
 
   @@index([type, isActive])
   @@index([startDate, endDate])
+}
+
+model Coupon {
+  id              String     @id @default(cuid())
+  code            String     @unique
+  type            CouponType
+  discountPercent Float?
+  discountAmount  Float?
+  minOrderAmount  Float?
+  usageLimit      Int?
+  usageCount      Int        @default(0)
+  expiresAt       DateTime?
+  isActive        Boolean    @default(true)
+  stackable       Boolean    @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  sales Sale[]
+
+  @@index([isActive, expiresAt])
 }
 
 model Product {
@@ -314,6 +339,8 @@ model Sale {
   discountPercent   Float          @default(0)
   discountReason    String?
   appliedPromotions Json           @default("[]")
+  couponId          String?
+  couponCode        String?
   taxAmount         Float          @default(0)
   totalAmount       Float
   tenderedAmount    Float          @default(0)
@@ -326,6 +353,7 @@ model Sale {
   updatedAt         DateTime       @updatedAt
 
   customer              Customer?  @relation(fields: [customerId], references: [id])
+  coupon                Coupon?    @relation(fields: [couponId], references: [id], onDelete: SetNull)
   user                  User       @relation(fields: [userId], references: [id])
   items                 SaleItem[]
   returns               Return[]
@@ -334,6 +362,7 @@ model Sale {
   exchangeAsReplacement Exchange?  @relation("ExchangeReplacementSale")
 
   @@index([customerId])
+  @@index([couponId])
   @@index([userId])
   @@index([status])
   @@index([createdAt])
@@ -372,19 +401,19 @@ model SaleItem {
 }
 
 model Purchase {
-  id            String         @id @default(cuid())
-  invoiceNumber String         @unique
-  idempotencyKey String?       @unique
-  supplierId    String
-  userId        String
-  subtotal      Float
-  taxAmount     Float          @default(0)
-  totalAmount   Float
-  status        PurchaseStatus @default(PENDING)
-  notes         String?
-  receivedAt    DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id             String         @id @default(cuid())
+  invoiceNumber  String         @unique
+  idempotencyKey String?        @unique
+  supplierId     String
+  userId         String
+  subtotal       Float
+  taxAmount      Float          @default(0)
+  totalAmount    Float
+  status         PurchaseStatus @default(PENDING)
+  notes          String?
+  receivedAt     DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   supplier Supplier       @relation(fields: [supplierId], references: [id])
   user     User           @relation(fields: [userId], references: [id])
