@@ -695,6 +695,7 @@ export const getCachedStockMovementsPage = unstable_cache(
     const options = JSON.parse(paramsJson) as {
       variantId?: string;
       type?: string;
+      search?: string;
       page?: number;
       pageSize?: number;
     };
@@ -711,6 +712,15 @@ export const getCachedStockMovementsPage = unstable_cache(
 
     const typeClause = options.type
       ? Prisma.sql`AND sm.type = ${options.type}::"StockMovementType"`
+      : Prisma.empty;
+    const search = options.search?.trim();
+    const searchClause = search
+      ? Prisma.sql`AND (
+          pv.sku ILIKE ${"%" + search + "%"}
+          OR pv.barcode ILIKE ${"%" + search + "%"}
+          OR p.name ILIKE ${"%" + search + "%"}
+          OR p."nameAr" ILIKE ${"%" + search + "%"}
+        )`
       : Prisma.empty;
 
     const rows = await prisma.$queryRaw<MovementRow[]>`
@@ -738,6 +748,7 @@ export const getCachedStockMovementsPage = unstable_cache(
       WHERE 1=1
       ${variantClause}
       ${typeClause}
+      ${searchClause}
       ORDER BY sm."createdAt" DESC
       LIMIT ${take} OFFSET ${skip}
     `;
@@ -1125,8 +1136,15 @@ export const getCachedProfitReport = unstable_cache(
         ...channelWhere,
       };
 
-    const [salesAgg, cogsRows, returnedCogsRows, returns, expenses, purchases] =
-      await Promise.all([
+    const [
+      salesAgg,
+      cogsRows,
+      returnedCogsRows,
+      returns,
+      expenses,
+      purchases,
+      inventoryLossRows,
+    ] = await Promise.all([
         prisma.sale.aggregate({
           where: completedSalesWhere,
           _sum: { totalAmount: true },
@@ -1173,6 +1191,14 @@ export const getCachedProfitReport = unstable_cache(
           _sum: { totalAmount: true },
           _count: true,
         }),
+        prisma.$queryRaw<[{ inventoryLoss: number }]>`
+          SELECT COALESCE(SUM(GREATEST(-COALESCE(sm."valuationDifference", 0), 0)), 0)::float AS "inventoryLoss"
+          FROM "StockMovement" sm
+          WHERE sm.type IN ('DAMAGE', 'ADJUSTMENT')
+            AND sm.quantity < 0
+            AND sm."createdAt" >= ${start}
+            AND sm."createdAt" < ${end}
+        `,
       ]);
 
     const revenue = salesAgg._sum.totalAmount ?? 0;
@@ -1181,11 +1207,12 @@ export const getCachedProfitReport = unstable_cache(
     const costOfGoodsSold = calculateCostOfGoodsSoldFromSnapshots(totalCogs, returnedCogs);
     const totalReturns = returns._sum.refundAmount ?? 0;
     const totalExpenses = expenses._sum.amount ?? 0;
+    const inventoryLoss = inventoryLossRows[0]?.inventoryLoss ?? 0;
     const { netRevenue, grossProfit, netProfit, profitMargin } = calculateProfitMetrics({
       revenue,
       totalReturns,
       costOfGoodsSold,
-      totalExpenses,
+      totalExpenses: totalExpenses + inventoryLoss,
     });
 
     return {
@@ -1196,6 +1223,7 @@ export const getCachedProfitReport = unstable_cache(
       grossProfit,
       totalReturns,
       totalExpenses,
+      inventoryLoss,
       expensesCount: expenses._count,
       netProfit,
       profitMargin,

@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import type { StockMovementType } from "@prisma/client";
+import { Prisma, type StockMovementType } from "@prisma/client";
 import {
   getCachedLowStockPreview,
   getCachedInventoryPage,
@@ -11,6 +11,10 @@ import {
 import { invalidateInventoryData, revalidateInventoryCache } from "@/lib/revalidate-tags";
 import { sendTelegramMessage } from "@/lib/telegram";
 import type { DashboardResult } from "@/lib/dashboard-result";
+import {
+  calculateStockReductionValue,
+  validateManualStockAdjustment,
+} from "@/lib/inventory-adjustments";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
@@ -32,6 +36,62 @@ function handleActionError(error: unknown): ActionResult<never> {
 function revalidateInventoryPaths() {
   invalidateInventoryData();
   revalidateInventoryCache();
+}
+
+const stockMovementResponseSelect = {
+  id: true,
+  type: true,
+  quantity: true,
+  previousQty: true,
+  newQty: true,
+  previousCostPrice: true,
+  newCostPrice: true,
+  valuationDifference: true,
+  reference: true,
+  notes: true,
+  createdAt: true,
+  variant: {
+    select: {
+      sku: true,
+      product: { select: { name: true, nameAr: true } },
+    },
+  },
+  user: { select: { id: true, name: true } },
+} satisfies Prisma.StockMovementSelect;
+
+const stockMovementIdempotencySelect = {
+  ...stockMovementResponseSelect,
+  variantId: true,
+  userId: true,
+  idempotencyKey: true,
+} satisfies Prisma.StockMovementSelect;
+
+type StoredManualMovement = Prisma.StockMovementGetPayload<{
+  select: typeof stockMovementIdempotencySelect;
+}>;
+
+type ManualMovementResponse = Prisma.StockMovementGetPayload<{
+  select: typeof stockMovementResponseSelect;
+}>;
+
+function toManualMovementResponse(
+  movement: StoredManualMovement,
+): ManualMovementResponse {
+  return {
+    id: movement.id,
+    type: movement.type,
+    quantity: movement.quantity,
+    previousQty: movement.previousQty,
+    newQty: movement.newQty,
+    previousCostPrice: movement.previousCostPrice,
+    newCostPrice: movement.newCostPrice,
+    valuationDifference: movement.valuationDifference,
+    reference: movement.reference,
+    notes: movement.notes,
+    createdAt: movement.createdAt,
+    variant: movement.variant,
+    user: movement.user,
+  };
 }
 
 type LowStockNotificationItem = {
@@ -181,87 +241,154 @@ export async function findInventoryVariantByCode(code: string) {
 export async function adjustStock(data: {
   variantId: string;
   quantity: number;
-  type?: StockMovementType;
+  type: StockMovementType;
   notes?: string;
+  idempotencyKey: string;
 }) {
   try {
     const user = await requireRole(["ADMIN", "MANAGER"]);
+    const type = data.type;
 
     if (!data.variantId) {
       return { success: false, error: "المتغير مطلوب" };
     }
 
-    if (!Number.isInteger(data.quantity) || data.quantity === 0) {
-      return { success: false, error: "الكمية يجب أن تكون رقماً صحيحاً مختلفاً عن صفر" };
+    const validationError = validateManualStockAdjustment(type, data.quantity);
+    if (validationError) {
+      return { success: false, error: validationError };
     }
 
-    const movement = await prisma.$transaction(async (tx) => {
-      const updatedVariants = await tx.productVariant.updateManyAndReturn({
-        where: {
-          id: data.variantId,
-          isActive: true,
-          product: { isActive: true },
-          ...(data.quantity < 0
-            ? { stockQuantity: { gte: Math.abs(data.quantity) } }
-            : {}),
-        },
-        data: { stockQuantity: { increment: data.quantity } },
-        select: { id: true, stockQuantity: true },
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        data.idempotencyKey,
+      )
+    ) {
+      return { success: false, error: "مفتاح طلب التسوية غير صالح" };
+    }
+
+    const findExistingMovement = () =>
+      prisma.stockMovement.findUnique({
+        where: { idempotencyKey: data.idempotencyKey },
+        select: stockMovementIdempotencySelect,
       });
 
-      const updatedVariant = updatedVariants[0];
-      if (!updatedVariant) {
-        const variant = await tx.productVariant.findUnique({
-          where: { id: data.variantId },
-          select: {
-            id: true,
-            isActive: true,
-            stockQuantity: true,
-            product: { select: { isActive: true } },
-          },
+    const matchesRequest = (
+      movement: NonNullable<Awaited<ReturnType<typeof findExistingMovement>>>,
+    ) =>
+      movement.variantId === data.variantId &&
+      movement.userId === user.id &&
+      movement.type === type &&
+      movement.quantity === data.quantity &&
+      movement.notes === (data.notes || null);
+
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        const existing = await tx.stockMovement.findUnique({
+          where: { idempotencyKey: data.idempotencyKey },
+          select: stockMovementIdempotencySelect,
         });
-        if (!variant || !variant.isActive || !variant.product.isActive) {
-          throw new Error("المنتج غير موجود");
+        if (existing) {
+          if (!matchesRequest(existing)) {
+            throw new Error("مفتاح الطلب مستخدم لتسوية مختلفة");
+          }
+          return {
+            movement: toManualMovementResponse(existing),
+            replayed: true,
+          };
         }
-        throw new Error("الكمية الناتجة لا يمكن أن تكون سالبة");
+
+        const updatedVariants = await tx.productVariant.updateManyAndReturn({
+          where: {
+            id: data.variantId,
+            isActive: true,
+            product: { isActive: true },
+            ...(data.quantity < 0
+              ? { stockQuantity: { gte: Math.abs(data.quantity) } }
+              : {}),
+          },
+          data: { stockQuantity: { increment: data.quantity } },
+          select: { id: true, stockQuantity: true, costPrice: true },
+        });
+
+        const updatedVariant = updatedVariants[0];
+        if (!updatedVariant) {
+          const variant = await tx.productVariant.findUnique({
+            where: { id: data.variantId },
+            select: {
+              id: true,
+              isActive: true,
+              stockQuantity: true,
+              product: { select: { isActive: true } },
+            },
+          });
+          if (!variant || !variant.isActive || !variant.product.isActive) {
+            throw new Error("المنتج غير موجود");
+          }
+          throw new Error("الكمية الناتجة لا يمكن أن تكون سالبة");
+        }
+
+        const newQty = updatedVariant.stockQuantity;
+        const previousQty = newQty - data.quantity;
+        const costImpact =
+          data.quantity < 0 &&
+          (type === "DAMAGE" || type === "ADJUSTMENT")
+            ? calculateStockReductionValue(
+                data.quantity,
+                updatedVariant.costPrice,
+              )
+            : null;
+
+        const movement = await tx.stockMovement.create({
+          data: {
+            variantId: data.variantId,
+            userId: user.id,
+            idempotencyKey: data.idempotencyKey,
+            type,
+            quantity: data.quantity,
+            previousQty,
+            newQty,
+            ...(costImpact !== null
+              ? {
+                  previousCostPrice: updatedVariant.costPrice,
+                  newCostPrice: updatedVariant.costPrice,
+                  valuationDifference: costImpact,
+                }
+              : {}),
+            notes: data.notes,
+          },
+          select: stockMovementResponseSelect,
+        });
+        return { movement, replayed: false };
+      });
+
+      if (result.replayed) {
+        return { success: true, data: result.movement };
       }
 
-      const newQty = updatedVariant.stockQuantity;
-      const previousQty = newQty - data.quantity;
-
-      return tx.stockMovement.create({
-        data: {
-          variantId: data.variantId,
-          userId: user.id,
-          type: data.type ?? "ADJUSTMENT",
-          quantity: data.quantity,
-          previousQty,
-          newQty,
-          notes: data.notes,
-        },
-        select: {
-          id: true,
-          type: true,
-          quantity: true,
-          previousQty: true,
-          newQty: true,
-          reference: true,
-          notes: true,
-          createdAt: true,
-          variant: {
-            select: {
-              sku: true,
-              product: { select: { name: true, nameAr: true } },
-            },
-          },
-          user: { select: { id: true, name: true } },
-        },
-      });
-    });
-
-    revalidateInventoryPaths();
-    void checkLowStockAndNotify([data.variantId]);
-    return { success: true, data: movement };
+      revalidateInventoryPaths();
+      void checkLowStockAndNotify([data.variantId]);
+      return { success: true, data: result.movement };
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const existing = await findExistingMovement();
+        if (existing) {
+          if (matchesRequest(existing)) {
+            return {
+              success: true,
+              data: toManualMovementResponse(existing),
+            };
+          }
+          return {
+            success: false,
+            error: "مفتاح الطلب مستخدم لتسوية مختلفة",
+          };
+        }
+      }
+      throw error;
+    }
   } catch (error) {
     return handleActionError(error);
   }
@@ -273,12 +400,30 @@ export async function getStockMovements(options?: {
   limit?: number;
   page?: number;
   pageSize?: number;
+  search?: string;
 }) {
   await requireRole(["ADMIN", "MANAGER"]);
+  const supportedTypes: StockMovementType[] = [
+    "PURCHASE",
+    "SALE",
+    "RETURN",
+    "ADJUSTMENT",
+    "DAMAGE",
+    "TRANSFER",
+  ];
+  const type =
+    options?.type && supportedTypes.includes(options.type)
+      ? options.type
+      : undefined;
+  if (options?.type && !type) {
+    throw new Error("نوع حركة المخزون غير صالح");
+  }
+
   return getCachedStockMovementsPage(
     JSON.stringify({
       variantId: options?.variantId,
-      type: options?.type,
+      type,
+      search: options?.search?.trim().slice(0, 100) || undefined,
       page: options?.page,
       pageSize: options?.pageSize ?? options?.limit ?? 50,
     })

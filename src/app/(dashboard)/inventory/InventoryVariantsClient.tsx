@@ -52,7 +52,7 @@ export default function InventoryVariantsClient({
   const [adjustModal, setAdjustModal] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [quantity, setQuantity] = useState("");
-  const [adjustType, setAdjustType] = useState("ADJUSTMENT");
+  const [adjustType, setAdjustType] = useState<"ADJUSTMENT" | "DAMAGE">("ADJUSTMENT");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -61,6 +61,9 @@ export default function InventoryVariantsClient({
   const [quickScanMessage, setQuickScanMessage] = useState("");
   const [quickScanError, setQuickScanError] = useState(false);
   const [quickScanLoading, setQuickScanLoading] = useState(false);
+  const adjustmentRequest = useRef<{ fingerprint: string; key: string } | null>(
+    null,
+  );
   const quickScanRef = useRef<HTMLInputElement>(null);
 
   function focusQuickScan() {
@@ -115,7 +118,7 @@ export default function InventoryVariantsClient({
 
   async function handleAdjust(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedVariant) return;
+    if (!selectedVariant || loading) return;
 
     const qty = parseInt(quantity);
     if (!qty || qty === 0) {
@@ -124,19 +127,37 @@ export default function InventoryVariantsClient({
     }
 
     setLoading(true);
-    const result = await adjustStock({
+    const request = {
       variantId: selectedVariant.id,
       quantity: qty,
-      type: adjustType as "ADJUSTMENT" | "DAMAGE" | "TRANSFER",
+      type: adjustType,
       notes: notes || undefined,
-    });
-    setLoading(false);
+    };
+    const fingerprint = JSON.stringify(request);
+    if (adjustmentRequest.current?.fingerprint !== fingerprint) {
+      adjustmentRequest.current = {
+        fingerprint,
+        key: crypto.randomUUID(),
+      };
+    }
 
-    if (result.success) {
-      closeAdjustModal();
-      router.refresh();
-    } else {
-      setError(result.error ?? "حدث خطأ");
+    try {
+      const result = await adjustStock({
+        ...request,
+        idempotencyKey: adjustmentRequest.current.key,
+      });
+
+      if (result.success) {
+        adjustmentRequest.current = null;
+        closeAdjustModal();
+        router.refresh();
+      } else {
+        setError(result.error ?? "تعذر حفظ التسوية. حاول مرة أخرى.");
+      }
+    } catch {
+      setError("تعذر الاتصال بالخادم لحفظ التسوية. أعد المحاولة.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -279,10 +300,13 @@ export default function InventoryVariantsClient({
             options={[
               { value: "ADJUSTMENT", label: "تعديل" },
               { value: "DAMAGE", label: "تلف" },
-              { value: "TRANSFER", label: "نقل" },
             ]}
             value={adjustType}
-            onChange={(e) => setAdjustType(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value === "ADJUSTMENT" || e.target.value === "DAMAGE") {
+                setAdjustType(e.target.value);
+              }
+            }}
           />
           <Input
             label="الكمية (+ للإضافة، - للخصم)"

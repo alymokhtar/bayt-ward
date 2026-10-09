@@ -14,7 +14,14 @@ export async function getDailySummary() {
   try {
     const { start, end } = getEgyptBusinessDayBounds();
 
-  const [salesAgg, returnsAgg, costOfGoodsSoldRows, returnedCogsRows, expensesAgg] =
+  const [
+    salesAgg,
+    returnsAgg,
+    costOfGoodsSoldRows,
+    returnedCogsRows,
+    expensesAgg,
+    inventoryLossRows,
+  ] =
     await Promise.all([
       prisma.sale.aggregate({
         where: {
@@ -54,12 +61,21 @@ export async function getDailySummary() {
         },
         _sum: { amount: true },
       }),
+      prisma.$queryRaw<[{ inventoryLoss: number }]>`
+        SELECT COALESCE(SUM(GREATEST(-COALESCE(sm."valuationDifference", 0), 0)), 0)::float AS "inventoryLoss"
+        FROM "StockMovement" sm
+        WHERE sm.type IN ('DAMAGE', 'ADJUSTMENT')
+          AND sm.quantity < 0
+          AND sm."createdAt" >= ${start}
+          AND sm."createdAt" < ${end}
+      `,
     ]);
 
   const totalSales = salesAgg._sum.totalAmount ?? 0;
   const totalReturns = returnsAgg._sum.refundAmount ?? 0;
   const invoicesCount = salesAgg._count;
   const totalExpenses = expensesAgg._sum.amount ?? 0;
+  const inventoryLoss = inventoryLossRows[0]?.inventoryLoss ?? 0;
   const totalCogs = costOfGoodsSoldRows[0]?.costOfGoodsSold ?? 0;
   const returnedCogs = returnedCogsRows[0]?.returnedCogs ?? 0;
   const costOfGoodsSold = calculateCostOfGoodsSoldFromSnapshots(totalCogs, returnedCogs);
@@ -71,10 +87,11 @@ export async function getDailySummary() {
     totalReturns,
     invoicesCount,
     totalExpenses,
+    inventoryLoss,
     netRevenue,
     costOfGoodsSold,
     grossProfit,
-    netProfit: grossProfit - totalExpenses,
+    netProfit: grossProfit - totalExpenses - inventoryLoss,
   };
   } catch (error) {
     console.error("❌ Error in getDailySummary:", {
@@ -104,6 +121,7 @@ export function formatDailySummaryMessage(
     `تكلفة البضاعة: ${formatCurrency(summary.costOfGoodsSold)}`,
     `إجمالي الربح: ${formatCurrency(summary.grossProfit)}`,
     `إجمالي المصروفات: ${formatCurrency(summary.totalExpenses)}`,
+    `خسائر التالف/النقص: ${formatCurrency(summary.inventoryLoss)}`,
     `صافي الربح: ${formatCurrency(summary.netProfit)}`,
     "",
     ...footerLines,

@@ -5,12 +5,14 @@ interface PaginationNavProps {
   totalPages: number;
   basePath: string;
   searchParams?: Record<string, string | undefined>;
+  pageParam?: string;
 }
 
 function buildHref(
   basePath: string,
   page: number,
-  searchParams?: Record<string, string | undefined>
+  searchParams?: Record<string, string | undefined>,
+  pageParam = "page",
 ) {
   const params = new URLSearchParams();
   if (searchParams) {
@@ -18,8 +20,8 @@ function buildHref(
       if (value) params.set(key, value);
     }
   }
-  if (page > 1) params.set("page", String(page));
-  else params.delete("page");
+  if (page > 1) params.set(pageParam, String(page));
+  else params.delete(pageParam);
   const qs = params.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 }
@@ -29,6 +31,7 @@ export default function PaginationNav({
   totalPages,
   basePath,
   searchParams,
+  pageParam = "page",
 }: PaginationNavProps) {
   if (totalPages <= 1) return null;
 
@@ -40,7 +43,7 @@ export default function PaginationNav({
       <div className="flex gap-2">
         {page > 1 ? (
           <Link
-            href={buildHref(basePath, page - 1, searchParams)}
+            href={buildHref(basePath, page - 1, searchParams, pageParam)}
             className="h-9 px-4 inline-flex items-center rounded-lg border border-border text-sm hover:bg-brown/5"
           >
             السابق
@@ -52,7 +55,7 @@ export default function PaginationNav({
         )}
         {page < totalPages ? (
           <Link
-            href={buildHref(basePath, page + 1, searchParams)}
+            href={buildHref(basePath, page + 1, searchParams, pageParam)}
             className="h-9 px-4 inline-flex items-center rounded-lg border border-border text-sm hover:bg-brown/5"
           >
             التالي

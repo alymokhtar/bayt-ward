@@ -6,7 +6,14 @@ import InventoryMovementsSection from "@/app/(dashboard)/inventory/InventoryMove
 import { Search } from "lucide-react";
 
 interface InventoryPageProps {
-  searchParams: Promise<{ search?: string; lowStock?: string; page?: string }>;
+  searchParams: Promise<{
+    search?: string;
+    lowStock?: string;
+    page?: string;
+    movementSearch?: string;
+    movementType?: string;
+    movementPage?: string;
+  }>;
 }
 
 function TableSkeleton() {
@@ -22,7 +29,14 @@ function TableSkeleton() {
 export default async function InventoryPage({
   searchParams,
 }: InventoryPageProps) {
-  const { search, lowStock, page } = await searchParams;
+  const {
+    search,
+    lowStock,
+    page,
+    movementSearch,
+    movementType,
+    movementPage,
+  } = await searchParams;
   const lowStockOnly = lowStock === "true";
   const currentPage = page ? Number(page) : 1;
 
@@ -65,7 +79,14 @@ export default async function InventoryPage({
           </Suspense>
 
           <Suspense fallback={<TableSkeleton />}>
-            <InventoryMovementsSection />
+            <InventoryMovementsSection
+              search={movementSearch}
+              type={movementType}
+              page={movementPage ? Number(movementPage) : 1}
+              inventorySearch={search}
+              lowStock={lowStock}
+              inventoryPage={page}
+            />
           </Suspense>
         </CardContent>
       </Card>

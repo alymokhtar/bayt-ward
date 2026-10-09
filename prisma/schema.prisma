@@ -494,6 +494,7 @@ model StockMovement {
   id                  String            @id @default(cuid())
   variantId           String
   userId              String
+  idempotencyKey      String?           @unique
   type                StockMovementType
   quantity            Int
   previousQty         Int

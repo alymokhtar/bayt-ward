@@ -205,6 +205,10 @@ export default async function ReportsContentSection({
           value={formatCurrency(profitReport.totalExpenses)}
         />
         <StatCard
+          title="خسائر التالف/النقص المخزني"
+          value={formatCurrency(profitReport.inventoryLoss)}
+        />
+        <StatCard
           title="صافي الربح"
           value={formatCurrency(profitReport.netProfit)}
           highlight
