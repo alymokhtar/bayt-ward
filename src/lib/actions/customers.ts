@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireAuth, requireRole } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 import { getCachedCustomersPage } from "@/lib/cached-queries";
 import { invalidateCustomersData } from "@/lib/revalidate-tags";
 
@@ -39,11 +40,16 @@ export async function getCustomers(options?: {
 }
 
 export async function getCustomer(id: string) {
-  await requireAuth();
+  await requireRole(["ADMIN", "MANAGER"]);
 
   const customer = await prisma.customer.findUnique({
     where: { id },
     include: {
+      _count: {
+        select: {
+          sales: { where: { status: { not: "CANCELLED" } } },
+        },
+      },
       sales: {
         orderBy: { createdAt: "desc" },
         take: 20,
@@ -151,27 +157,38 @@ export async function deleteCustomer(id: string) {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
 
-    const existing = await prisma.customer.findUnique({
-      where: { id },
-      include: { _count: { select: { sales: true, returns: true } } },
-    });
+    await prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.customer.findUnique({
+          where: { id },
+          include: { _count: { select: { sales: true, returns: true } } },
+        });
 
-    if (!existing) {
-      return { success: false, error: "العميل غير موجود" };
-    }
+        if (!existing) {
+          throw new Error("العميل غير موجود");
+        }
 
-    if (existing._count.sales > 0 || existing._count.returns > 0) {
-      return {
-        success: false,
-        error: "لا يمكن حذف عميل لديه مبيعات أو مرتجعات",
-      };
-    }
+        if (existing._count.sales > 0 || existing._count.returns > 0) {
+          throw new Error("لا يمكن حذف عميل لديه مبيعات أو مرتجعات مرتبطة");
+        }
 
-    await prisma.customer.delete({ where: { id } });
+        await tx.customer.delete({ where: { id } });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
 
     revalidateCustomerPaths();
     return { success: true, data: undefined };
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2003" || error.code === "P2034")
+    ) {
+      return {
+        success: false,
+        error: "لا يمكن حذف العميل لارتباطه بسجل مبيعات أو مرتجعات. حدّث الصفحة وحاول مجددًا.",
+      };
+    }
     return handleActionError(error);
   }
 }
@@ -185,12 +202,17 @@ export async function searchCustomers(query: string) {
   return prisma.customer.findMany({
     where: {
       OR: [
-        { name: { contains: q } },
+        { name: { contains: q, mode: "insensitive" } },
         { phone: { contains: q } },
-        { email: { contains: q } },
+        { email: { contains: q, mode: "insensitive" } },
       ],
     },
     take: 10,
     orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+    },
   });
 }

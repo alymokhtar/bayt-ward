@@ -71,7 +71,7 @@ export default async function CustomerDetailPage({
             <CardContent className="pt-6 text-center">
               <p className="text-sm text-muted">عدد المبيعات</p>
               <p className="text-2xl font-bold text-brown mt-1">
-                {customer.sales.length}
+                {customer._count.sales}
               </p>
             </CardContent>
           </Card>
@@ -113,7 +113,9 @@ export default async function CustomerDetailPage({
           </CardHeader>
           <CardContent>
             {customer.sales.length === 0 ? (
-              <p className="text-center text-muted py-8">لا توجد مشتريات بعد</p>
+              <p className="text-center text-muted py-8">
+                لا توجد فواتير غير ملغاة بعد
+              </p>
             ) : (
               <Table>
                 <TableHeader>

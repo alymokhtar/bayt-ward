@@ -70,6 +70,7 @@ export default function CustomersClient({
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const hasSearch = Boolean(search?.trim());
 
@@ -97,33 +98,44 @@ export default function CustomersClient({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
 
-    const result = editing
-      ? await updateCustomer(editing.id, { name, phone, email, address, notes })
-      : await createCustomer({ name, phone, email, address, notes });
+    try {
+      const result = editing
+        ? await updateCustomer(editing.id, { name, phone, email, address, notes })
+        : await createCustomer({ name, phone, email, address, notes });
 
-    setLoading(false);
-
-    if (result.success) {
-      setModalOpen(false);
-      router.refresh();
-    } else {
-      setError(result.error ?? "حدث خطأ");
+      if (result.success) {
+        setModalOpen(false);
+        router.refresh();
+      } else {
+        setError(result.error ?? "حدث خطأ");
+      }
+    } catch {
+      setError("تعذر حفظ بيانات العميل بسبب مشكلة في الاتصال. حاول مرة أخرى.");
+    } finally {
+      setLoading(false);
     }
   }
 
   async function handleDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    const result = await deleteCustomer(deleteTarget.id);
-    setDeleting(false);
-    if (result.success) {
-      setDeleteTarget(null);
-      router.refresh();
-    } else {
-      alert(result.error);
+    setDeleteError("");
+    try {
+      const result = await deleteCustomer(deleteTarget.id);
+      if (result.success) {
+        setDeleteTarget(null);
+        router.refresh();
+      } else {
+        setDeleteError(result.error ?? "تعذر حذف العميل");
+      }
+    } catch {
+      setDeleteError("تعذر حذف العميل بسبب مشكلة في الاتصال. حاول مرة أخرى.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -198,13 +210,17 @@ export default function CustomersClient({
                 {customers.map((c) => (
                   <TableRow key={c.id}>
                     <TableCell>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCustomerId(c.id)}
-                        className="font-medium text-gold hover:underline"
-                      >
-                        {c.name}
-                      </button>
+                      {canManage ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCustomerId(c.id)}
+                          className="font-medium text-gold hover:underline"
+                        >
+                          {c.name}
+                        </button>
+                      ) : (
+                        <span className="font-medium">{c.name}</span>
+                      )}
                     </TableCell>
                     <TableCell dir="ltr" className="text-start">
                       {c.phone}
@@ -220,13 +236,13 @@ export default function CustomersClient({
                           customerName={c.name}
                           customerPhone={c.phone}
                         />
-                        <Link href={`/customers/${c.id}`}>
-                          <Button variant="ghost" size="icon">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
                         {canManage && (
                           <>
+                            <Link href={`/customers/${c.id}`}>
+                              <Button variant="ghost" size="icon">
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Link>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -237,7 +253,10 @@ export default function CustomersClient({
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => setDeleteTarget(c)}
+                              onClick={() => {
+                                setDeleteError("");
+                                setDeleteTarget(c);
+                              }}
                             >
                               <Trash2 className="h-4 w-4 text-danger" />
                             </Button>
@@ -258,6 +277,12 @@ export default function CustomersClient({
           />
         </CardContent>
       </Card>
+
+      {deleteError && (
+        <p role="alert" className="text-sm text-danger">
+          {deleteError}
+        </p>
+      )}
 
       <ConfirmDeleteDialog
         isOpen={!!deleteTarget}

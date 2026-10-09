@@ -124,7 +124,7 @@ export default function CustomerDetailsModal({
             <div className="rounded-xl border border-border bg-cream/50 p-4 text-center">
               <p className="text-xs text-muted">عدد المبيعات</p>
               <p className="mt-1 text-lg font-bold text-brown">
-                {data.sales.length}
+                {data._count.sales}
               </p>
             </div>
           </div>
@@ -156,7 +156,7 @@ export default function CustomerDetailsModal({
 
           <div>
             <p className="mb-2 text-sm font-medium text-brown">
-              سجل المشتريات ({data.sales.length})
+              سجل المشتريات ({data._count.sales} فاتورة غير ملغاة؛ أحدث 20 فاتورة معروضة)
             </p>
 
             {data.sales.length === 0 ? (

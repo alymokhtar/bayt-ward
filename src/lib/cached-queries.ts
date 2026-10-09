@@ -353,7 +353,12 @@ export const getCachedCustomersPage = unstable_cache(
           notes: true,
           totalSpent: true,
           visitCount: true,
-          _count: { select: { sales: true, returns: true } },
+          _count: {
+            select: {
+              sales: { where: { status: { not: "CANCELLED" } } },
+              returns: true,
+            },
+          },
         },
       }),
       prisma.customer.count({ where }),
