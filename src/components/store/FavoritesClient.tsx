@@ -6,7 +6,19 @@ import { Heart, Trash2 } from "lucide-react";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 
 export default function FavoritesClient() {
-  const { favoriteItems, removeFavorite } = useStorefrontState();
+  const { favoriteItems, isHydrated, removeFavorite } = useStorefrontState();
+
+  if (!isHydrated) {
+    return (
+      <div
+        className="rounded-[2rem] border border-dashed border-[var(--store-border)] bg-white/80 px-6 py-16 text-center text-sm text-[var(--store-muted)] shadow-sm"
+        role="status"
+        aria-live="polite"
+      >
+        جارٍ تحميل المفضلة...
+      </div>
+    );
+  }
 
   if (favoriteItems.length === 0) {
     return (

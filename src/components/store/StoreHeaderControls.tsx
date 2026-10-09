@@ -62,6 +62,7 @@ export default function StoreHeaderControls({
   const [searchOpen, setSearchOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [whatsappOpenError, setWhatsappOpenError] = useState("");
   const mounted = useSyncExternalStore(
     subscribeToNothing,
     getClientSnapshot,
@@ -154,10 +155,27 @@ export default function StoreHeaderControls({
     });
 
     const whatsappUrl = getWhatsAppUrl(whatsappNumber, message);
+    setWhatsappOpenError("");
+
+    let whatsappWindow: Window | null = null;
+    try {
+      whatsappWindow = window.open("about:blank", "_blank");
+      if (!whatsappWindow) {
+        setWhatsappOpenError("تعذر فتح واتساب. اسمحي بالنوافذ المنبثقة ثم حاولي مرة أخرى.");
+        return;
+      }
+
+      whatsappWindow.opener = null;
+      whatsappWindow.location.href = whatsappUrl;
+    } catch (error) {
+      console.error("Unable to open the WhatsApp order link.", error);
+      whatsappWindow?.close();
+      setWhatsappOpenError("تعذر فتح رابط واتساب. لم يتم تفريغ السلة؛ حاولي مرة أخرى.");
+      return;
+    }
 
     clearCart();
     setCartOpen(false);
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   }
 
   const actions = (
@@ -331,6 +349,11 @@ export default function StoreHeaderControls({
               </div>
 
               <div className="border-t border-[var(--store-border)] bg-white px-5 py-4">
+                {whatsappOpenError && (
+                  <p className="mb-3 text-sm text-red-700" role="alert">
+                    {whatsappOpenError}
+                  </p>
+                )}
                 <div className="flex items-center justify-between text-sm text-[var(--store-muted)]">
                   <span>المجموع الفرعي</span>
                   <span dir="ltr">{formatCurrency(cartSubtotal, cartItems[0]?.currencySymbol || currencySymbol)}</span>

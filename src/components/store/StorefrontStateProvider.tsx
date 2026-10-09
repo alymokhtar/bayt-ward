@@ -38,6 +38,7 @@ export type StoreCartItem = {
 type StorefrontState = {
   cartItems: StoreCartItem[];
   favoriteItems: StoreFavoriteItem[];
+  isHydrated: boolean;
   cartCount: number;
   favoritesCount: number;
   activePromotions: Promotion[];
@@ -55,16 +56,95 @@ const FAVORITES_STORAGE_KEY = "bayt-ward-store-favorites";
 
 const StorefrontStateContext = createContext<StorefrontState | null>(null);
 
-function readStoredItems<T>(key: string): T[] {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isOptionalString(value: unknown) {
+  return value === undefined || typeof value === "string";
+}
+
+function isStoreCartItem(value: unknown): value is StoreCartItem {
+  if (!isRecord(value)) return false;
+  const {
+    id,
+    productId,
+    categoryId,
+    variantId,
+    name,
+    href,
+    imageUrl,
+    color,
+    size,
+    unitPrice,
+    currencySymbol,
+    quantity,
+    stockQuantity,
+  } = value;
+
+  return (
+    typeof productId === "string" &&
+    productId.length > 0 &&
+    typeof variantId === "string" &&
+    variantId.length > 0 &&
+    id === getCartItemId(productId, variantId) &&
+    typeof categoryId === "string" &&
+    typeof name === "string" &&
+    typeof href === "string" &&
+    href.length > 0 &&
+    (typeof imageUrl === "string" || imageUrl === null) &&
+    isOptionalString(color) &&
+    isOptionalString(size) &&
+    typeof unitPrice === "number" &&
+    Number.isFinite(unitPrice) &&
+    unitPrice >= 0 &&
+    typeof currencySymbol === "string" &&
+    typeof quantity === "number" &&
+    Number.isSafeInteger(quantity) &&
+    quantity > 0 &&
+    (stockQuantity === undefined ||
+      (typeof stockQuantity === "number" &&
+        Number.isSafeInteger(stockQuantity) &&
+        stockQuantity >= 0))
+  );
+}
+
+function isStoreFavoriteItem(value: unknown): value is StoreFavoriteItem {
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    value.id.length > 0 &&
+    typeof value.name === "string" &&
+    typeof value.href === "string" &&
+    value.href.length > 0 &&
+    (typeof value.imageUrl === "string" || value.imageUrl === null) &&
+    typeof value.priceLabel === "string"
+  );
+}
+
+function readStoredItems<T>(
+  key: string,
+  isValidItem: (value: unknown) => value is T,
+): T[] {
   if (typeof window === "undefined") return [];
 
   try {
     const value = window.localStorage.getItem(key);
     if (!value) return [];
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isValidItem);
+  } catch (error) {
+    console.warn(`Unable to read storefront data from localStorage (${key}).`, error);
     return [];
+  }
+}
+
+function writeStoredItems<T>(key: string, items: T[]) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(items));
+  } catch (error) {
+    console.error(`Unable to save storefront data to localStorage (${key}).`, error);
   }
 }
 
@@ -81,24 +161,51 @@ export function StorefrontStateProvider({
 }) {
   const [cartItems, setCartItems] = useState<StoreCartItem[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<StoreFavoriteItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCartItems(readStoredItems<StoreCartItem>(CART_STORAGE_KEY));
-    setFavoriteItems(readStoredItems<StoreFavoriteItem>(FAVORITES_STORAGE_KEY));
-    setHydrated(true);
+    setCartItems(readStoredItems(CART_STORAGE_KEY, isStoreCartItem));
+    setFavoriteItems(readStoredItems(FAVORITES_STORAGE_KEY, isStoreFavoriteItem));
+    setIsHydrated(true);
+
+    function handleStorage(event: StorageEvent) {
+      try {
+        if (event.storageArea !== window.localStorage) return;
+      } catch (error) {
+        console.warn("Unable to access localStorage while syncing storefront state.", error);
+        return;
+      }
+
+      if (event.key === null || event.key === CART_STORAGE_KEY) {
+        setCartItems(
+          event.key === null
+            ? []
+            : readStoredItems(CART_STORAGE_KEY, isStoreCartItem),
+        );
+      }
+      if (event.key === null || event.key === FAVORITES_STORAGE_KEY) {
+        setFavoriteItems(
+          event.key === null
+            ? []
+            : readStoredItems(FAVORITES_STORAGE_KEY, isStoreFavoriteItem),
+        );
+      }
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
-  }, [cartItems, hydrated]);
+    if (!isHydrated) return;
+    writeStoredItems(CART_STORAGE_KEY, cartItems);
+  }, [cartItems, isHydrated]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favoriteItems));
-  }, [favoriteItems, hydrated]);
+    if (!isHydrated) return;
+    writeStoredItems(FAVORITES_STORAGE_KEY, favoriteItems);
+  }, [favoriteItems, isHydrated]);
 
   const addToCart = useCallback(
     (item: Omit<StoreCartItem, "id" | "quantity">, quantity = 1) => {
@@ -186,6 +293,7 @@ export function StorefrontStateProvider({
     () => ({
       cartItems,
       favoriteItems,
+      isHydrated,
       activePromotions,
       cartCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
       favoritesCount: favoriteItems.length,
@@ -202,6 +310,7 @@ export function StorefrontStateProvider({
       cartItems,
       clearCart,
       favoriteItems,
+      isHydrated,
       activePromotions,
       isFavorite,
       removeFavorite,
