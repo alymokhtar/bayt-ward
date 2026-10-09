@@ -18,7 +18,10 @@ import {
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { formatCurrency } from "@/lib/utils";
-import { appendProductQueryParams } from "@/lib/store/whatsapp";
+import {
+  appendProductQueryParams,
+  buildStoreCartOrderMessage,
+} from "@/lib/store/whatsapp";
 import { calculateCartDiscounts } from "@/lib/promotions";
 import { getStoreOnlyPromotionNotices } from "@/lib/promotion-format";
 
@@ -121,45 +124,34 @@ export default function StoreHeaderControls({
         ? window.location.origin
         : process.env.NEXT_PUBLIC_SITE_URL || "";
 
-    const productLines = cartItems.map((item) => {
+    const orderItems = cartItems.map((item) => {
       const baseProductUrl = item.productId
         ? `${origin}/store/product/${item.productId}`.replace(/([^:]\/)\/+/g, "$1")
         : item.href;
       
       const productUrl = appendProductQueryParams(baseProductUrl, item.color, item.size);
 
-      const itemTotal = item.unitPrice * item.quantity;
-
-      const productDetails = [
-        `المنتج: ${item.name}`,
-        ...(item.color ? [`اللون: ${item.color}`] : []),
-        ...(item.size ? [`المقاس: ${item.size}`] : []),
-        `الكمية: ${item.quantity}`,
-        `السعر: ${formatCurrency(itemTotal, item.currencySymbol)}`,
-        ...getStoreOnlyPromotionNotices(item, activePromotions),
-        `الرابط: ${productUrl}`,
-      ];
-
-      return productDetails.join("\n");
+      return {
+        productName: item.name,
+        productUrl,
+        color: item.color,
+        size: item.size,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        currencySymbol: item.currencySymbol,
+        promotionNotices: getStoreOnlyPromotionNotices(item, activePromotions),
+      };
     });
 
     const currencySymbolForTotal = cartItems.length > 0 ? cartItems[0]!.currencySymbol : currencySymbol;
 
-    const message = [
-      "مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذه المنتجات:",
-      "",
-      ...productLines,
-      "",
-      `المجموع الفرعي: ${formatCurrency(cartSubtotal, currencySymbolForTotal)}`,
-      ...promotionResult.appliedPromotions.flatMap((promotion) => [
-        `العرض: ${promotion.title}`,
-        `الخصم: - ${formatCurrency(promotion.discountValue, currencySymbolForTotal)}`,
-      ]),
-      ...(promotionResult.discountAmount > 0
-        ? [`إجمالي الخصم: - ${formatCurrency(promotionResult.discountAmount, currencySymbolForTotal)}`]
-        : []),
-      `الإجمالي بعد الخصم: ${formatCurrency(promotionResult.finalTotal, currencySymbolForTotal)}`,
-    ].join("\n");
+    const message = buildStoreCartOrderMessage(orderItems, {
+      subtotal: cartSubtotal,
+      discountAmount: promotionResult.discountAmount,
+      finalTotal: promotionResult.finalTotal,
+      appliedPromotions: promotionResult.appliedPromotions,
+      currencySymbol: currencySymbolForTotal,
+    });
 
     const whatsappUrl = getWhatsAppUrl(whatsappNumber, message);
 

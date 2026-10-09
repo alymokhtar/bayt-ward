@@ -5,6 +5,9 @@ export type StoreOrderMessageParams = {
   color?: string;
   size?: string;
   price?: number;
+  discountAmount?: number;
+  savingsPercent?: number;
+  finalTotal?: number;
   currencySymbol?: string;
   productUrl?: string;
   productId?: string;
@@ -64,6 +67,9 @@ export function buildStoreOrderMessage({
   productUrl,
   productId,
   quantity,
+  discountAmount,
+  savingsPercent,
+  finalTotal,
 }: Omit<StoreOrderMessageParams, "whatsappNumber">): string {
   const lines = [
     "مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذا المنتج:",
@@ -76,20 +82,18 @@ export function buildStoreOrderMessage({
   if (quantity !== undefined) lines.push(`الكمية: ${quantity}`);
   
   if (price !== undefined && currencySymbol) {
-    const formattedPrice = price.toLocaleString("en-US", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    });
-    if (quantity !== undefined && quantity > 1) {
-      const formattedTotal = (price * quantity).toLocaleString("en-US", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      });
-      lines.push(`سعر الوحدة: ${formattedPrice} ${currencySymbol}`);
-      lines.push(`الإجمالي: ${formattedTotal} ${currencySymbol}`);
-    } else {
-      lines.push(`السعر: ${formattedPrice} ${currencySymbol}`);
+    const originalTotal = price * (quantity ?? 1);
+    lines.push(`سعر الوحدة قبل الخصم: ${formatAmount(price)} ${currencySymbol}`);
+    lines.push(`المجموع قبل الخصم: ${formatAmount(originalTotal)} ${currencySymbol}`);
+    if (discountAmount !== undefined && discountAmount > 0) {
+      lines.push(`الخصم المطبق: - ${formatAmount(discountAmount)} ${currencySymbol}`);
     }
+    if (savingsPercent !== undefined && savingsPercent > 0) {
+      lines.push(`نسبة التوفير: ${formatAmount(savingsPercent)}%`);
+    }
+    lines.push(
+      `الإجمالي بعد الخصم: ${formatAmount(finalTotal ?? originalTotal - (discountAmount ?? 0))} ${currencySymbol}`,
+    );
   }
 
   const productLink = getStoreProductLink(productUrl, productId);
@@ -103,4 +107,66 @@ export function buildStoreOrderMessage({
 export function getStoreOrderWhatsAppUrl(params: StoreOrderMessageParams): string {
   const message = buildStoreOrderMessage(params);
   return getWhatsAppUrl(params.whatsappNumber, message);
+}
+
+export type StoreCartOrderItem = {
+  productName: string;
+  productUrl: string;
+  color?: string;
+  size?: string;
+  quantity: number;
+  unitPrice: number;
+  currencySymbol: string;
+  promotionNotices?: string[];
+};
+
+export type StoreCartOrderSummary = {
+  subtotal: number;
+  discountAmount: number;
+  finalTotal: number;
+  appliedPromotions: { title: string; discountValue: number }[];
+  currencySymbol: string;
+};
+
+export function buildStoreCartOrderMessage(
+  items: StoreCartOrderItem[],
+  summary: StoreCartOrderSummary,
+): string {
+  const lines = [
+    "مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذه المنتجات:",
+    "",
+    ...items.flatMap((item) => [
+      `المنتج: ${item.productName}`,
+      ...(item.color ? [`اللون: ${item.color}`] : []),
+      ...(item.size ? [`المقاس: ${item.size}`] : []),
+      `الكمية: ${item.quantity}`,
+      `السعر: ${formatAmount(item.unitPrice * item.quantity)} ${item.currencySymbol}`,
+      ...(item.promotionNotices ?? []),
+      `الرابط: ${item.productUrl}`,
+      "",
+    ]),
+    `المجموع الفرعي: ${formatAmount(summary.subtotal)} ${summary.currencySymbol}`,
+    ...summary.appliedPromotions.flatMap((promotion) => [
+      `العرض: ${promotion.title}`,
+      `الخصم: - ${formatAmount(promotion.discountValue)} ${summary.currencySymbol}`,
+    ]),
+    ...(summary.discountAmount > 0
+      ? [
+          `إجمالي الخصم: - ${formatAmount(summary.discountAmount)} ${summary.currencySymbol}`,
+          ...(summary.subtotal > 0
+            ? [`نسبة التوفير: ${formatAmount(summary.discountAmount / summary.subtotal * 100)}%`]
+            : []),
+        ]
+      : []),
+    `الإجمالي بعد الخصم: ${formatAmount(summary.finalTotal)} ${summary.currencySymbol}`,
+  ];
+
+  return lines.join("\n");
+}
+
+function formatAmount(amount: number): string {
+  return amount.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
 }

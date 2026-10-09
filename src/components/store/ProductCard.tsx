@@ -16,7 +16,11 @@ import {
   isProductInStock,
 } from "@/lib/store/product-utils";
 import type { StoreProductListItem } from "@/lib/store/types";
-import { isPromotionDateRangeActive, type Promotion } from "@/lib/promotions";
+import {
+  calculateCartDiscounts,
+  isPromotionDateRangeActive,
+  type Promotion,
+} from "@/lib/promotions";
 import { formatPromotionOfferText } from "@/lib/promotion-format";
 import { formatCurrency } from "@/lib/utils";
 
@@ -54,7 +58,7 @@ export default function ProductCard({
     promotionAppliesToProduct(promotion, product),
   );
   const discountedPrices = getDiscountedPriceRange(
-    product.variants.map((variant) => variant.sellingPrice),
+    product,
     productPromotions,
   );
   const hasPriceDiscount = discountedPrices !== null;
@@ -176,39 +180,34 @@ function promotionAppliesToProduct(
 }
 
 function getDiscountedPriceRange(
-  prices: number[],
+  product: StoreProductListItem,
   promotions: Promotion[],
 ): { min: number; max: number } | null {
-  const validPrices = prices.filter((price) => Number.isFinite(price) && price >= 0);
-  if (validPrices.length === 0) return null;
-
-  const directPromotions = promotions.filter(
-    (promotion) =>
-      !promotion.isStoreOnly &&
-      (promotion.type === "PERCENTAGE" &&
-        Number.isFinite(promotion.discountPercent) &&
-        (promotion.discountPercent ?? 0) > 0) ||
-      (promotion.type === "FIXED_AMOUNT" &&
-        Number.isFinite(promotion.discountAmount) &&
-        (promotion.discountAmount ?? 0) > 0),
+  const validVariants = product.variants.filter(
+    (variant) =>
+      Number.isFinite(variant.sellingPrice) && variant.sellingPrice >= 0,
   );
-  if (directPromotions.length === 0) return null;
+  if (validVariants.length === 0) return null;
 
-  const discounted = validPrices.map((price) => {
-    let nextPrice = price;
-    for (const promotion of directPromotions) {
-      if (promotion.type === "PERCENTAGE") {
-        nextPrice *= 1 - Math.min(100, promotion.discountPercent ?? 0) / 100;
-      } else {
-        nextPrice -= promotion.discountAmount ?? 0;
-      }
-    }
-    return Math.max(0, Math.round((nextPrice + Number.EPSILON) * 100) / 100);
-  });
+  const discounted = validVariants.map((variant) =>
+    calculateCartDiscounts(
+      [{
+        productId: product.id,
+        variantId: variant.id,
+        categoryId: product.category.id,
+        unitPrice: variant.sellingPrice,
+        quantity: 1,
+        name: getProductDisplayName(product),
+      }],
+      promotions,
+      { channel: "ONLINE" },
+    ),
+  );
+  if (!discounted.some((result) => result.discountAmount > 0)) return null;
 
   return {
-    min: Math.min(...discounted),
-    max: Math.max(...discounted),
+    min: Math.min(...discounted.map((result) => result.finalTotal)),
+    max: Math.max(...discounted.map((result) => result.finalTotal)),
   };
 }
 

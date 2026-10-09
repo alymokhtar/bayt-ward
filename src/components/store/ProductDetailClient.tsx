@@ -136,6 +136,18 @@ export default function ProductDetailClient({
     productPromotions,
     { channel: "ONLINE" },
   );
+  const orderDiscountResult = calculateCartDiscounts(
+    [{
+      productId: product.id,
+      variantId: selectedVariant?.variantId,
+      categoryId: product.categoryId,
+      unitPrice: price,
+      quantity,
+      name: displayName,
+    }],
+    productPromotions,
+    { channel: "ONLINE" },
+  );
   const hasDirectDiscount = discountResult.discountAmount > 0;
   const appliedDirectPromotions = productPromotions.filter(
     (promotion) =>
@@ -628,6 +640,13 @@ export default function ProductDetailClient({
               color={activeColor || undefined}
               size={selectedSizeValue || selectedVariant?.size}
               price={price}
+              discountAmount={orderDiscountResult.discountAmount}
+              savingsPercent={
+                orderDiscountResult.originalTotal > 0
+                  ? orderDiscountResult.discountAmount / orderDiscountResult.originalTotal * 100
+                  : 0
+              }
+              finalTotal={orderDiscountResult.finalTotal}
               currencySymbol={currencySymbol}
               disabled={!inStock || !selectedVariant}
               className="flex-[2] min-w-0 whitespace-nowrap rounded-full px-3 py-3 text-sm md:px-6 md:py-3.5"
