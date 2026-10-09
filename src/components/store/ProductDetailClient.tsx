@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ShoppingBag, Share2 } from "lucide-react";
+import { Check, Minus, Plus, ShoppingBag, Share2 } from "lucide-react";
 import ProductGallery from "@/components/store/ProductGallery";
 import { useStorefrontState } from "@/components/store/StorefrontStateProvider";
 import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
@@ -42,9 +42,18 @@ export default function ProductDetailClient({
   const normalizedRequestedColor = requestedColor
     ? availableColors.find((color) => color.name === requestedColor)?.name ?? null
     : null;
+  const requestedColorSizes = getAvailableSizesForColor(
+    product,
+    normalizedRequestedColor ?? initialSelectedColor,
+  );
+  const initialSelectedSize =
+    requestedColorSizes.find((size) => size.size === requestedSize && size.inStock)?.size ??
+    requestedColorSizes.find((size) => size.inStock)?.size ??
+    null;
 
   const [selectedColor, setSelectedColor] = useState<string>(() => normalizedRequestedColor ?? initialSelectedColor);
-  const [selectedSize, setSelectedSize] = useState<string | null>(() => requestedSize ?? null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(() => initialSelectedSize);
+  const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [zoomOpen, setZoomOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -65,9 +74,10 @@ export default function ProductDetailClient({
   }, [zoomOpen]);
 
   const displayName = getProductDisplayName(product);
-  const activeColor = normalizedRequestedColor ??
-    (availableColors.some((color) => color.name === selectedColor) ? selectedColor : initialSelectedColor);
-  const selectedSizeValue = requestedSize ?? selectedSize;
+  const activeColor = availableColors.some((color) => color.name === selectedColor)
+    ? selectedColor
+    : initialSelectedColor;
+  const selectedSizeValue = selectedSize;
 
   const galleryVariants = useMemo(
     () =>
@@ -91,6 +101,7 @@ export default function ProductDetailClient({
   );
 
   const selectedVariant = sizes.find((item) => item.size === selectedSizeValue) ?? sizes[0];
+  const stockQuantity = selectedVariant?.stockQuantity ?? 0;
   const images = useMemo(() => {
     if (selectedVariant?.images.length) {
       return selectedVariant.images;
@@ -108,7 +119,8 @@ export default function ProductDetailClient({
     return productImages.length > 0 ? productImages : [];
   }, [activeColor, availableColors, product, selectedVariant]);
   const price = selectedVariant?.price ?? product.variants[0]?.sellingPrice ?? 0;
-  const inStock = selectedVariant ? selectedVariant.inStock : product.variants.some((v) => v.stockQuantity > 0);
+  const inStock = selectedVariant?.inStock ?? false;
+
   const productPromotions = activePromotions.filter((promotion) =>
     promotionMatchesProduct(promotion, product.id, product.categoryId),
   );
@@ -155,7 +167,9 @@ export default function ProductDetailClient({
 
   function handleColorChange(color: string) {
     setSelectedColor(color);
-    setSelectedSize(null);
+    const colorSizes = getAvailableSizesForColor(product, color);
+    setSelectedSize(colorSizes.find((size) => size.inStock)?.size ?? null);
+    setQuantity(1);
     setActiveImageIndex(0);
   }
 
@@ -441,7 +455,7 @@ export default function ProductDetailClient({
       : null;
 
   function handleAddToCart() {
-    if (!selectedVariant || !inStock) return;
+    if (!selectedVariant || !inStock || quantity > stockQuantity) return;
 
     addToCart({
       productId: product.id,
@@ -454,7 +468,8 @@ export default function ProductDetailClient({
       size: selectedSize || selectedVariant.size,
       unitPrice: price,
       currencySymbol,
-    });
+      stockQuantity,
+    }, quantity);
     setAddedToCart(true);
     window.setTimeout(() => setAddedToCart(false), 1600);
   }
@@ -515,6 +530,7 @@ export default function ProductDetailClient({
                       disabled={!item.inStock}
                       onClick={() => {
                         setSelectedSize(item.size);
+                        setQuantity(1);
                         setActiveImageIndex(0);
                       }}
                       className={cn(
@@ -531,6 +547,34 @@ export default function ProductDetailClient({
                 </div>
               </div>
             )}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-[var(--store-muted)] md:text-sm">الكمية</span>
+              <div className="inline-flex items-center rounded-full border border-[var(--store-border)] bg-[var(--store-surface)]">
+                <button
+                  type="button"
+                  disabled={!inStock || quantity <= 1}
+                  onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+                  aria-label="تقليل الكمية"
+                  className="inline-flex h-9 w-9 items-center justify-center text-[var(--store-text)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <span className="min-w-9 text-center text-sm font-semibold" aria-live="polite">
+                  {quantity}
+                </span>
+                <button
+                  type="button"
+                  disabled={!inStock || quantity >= stockQuantity}
+                  onClick={() =>
+                    setQuantity((current) => Math.min(stockQuantity, current + 1))
+                  }
+                  aria-label="زيادة الكمية"
+                  className="inline-flex h-9 w-9 items-center justify-center text-[var(--store-text)] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -580,11 +624,12 @@ export default function ProductDetailClient({
               productUrl={productUrl}
               productId={product.id}
               whatsappNumber={whatsappNumber}
+              quantity={quantity}
               color={activeColor || undefined}
               size={selectedSizeValue || selectedVariant?.size}
               price={price}
               currencySymbol={currencySymbol}
-              disabled={!inStock}
+              disabled={!inStock || !selectedVariant}
               className="flex-[2] min-w-0 whitespace-nowrap rounded-full px-3 py-3 text-sm md:px-6 md:py-3.5"
             />
 
@@ -622,4 +667,3 @@ function promotionMatchesProduct(
     (promotion.categories?.length ?? 0) === 0
   ) || matchesProduct || matchesCategory;
 }
-

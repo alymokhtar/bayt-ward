@@ -7,6 +7,7 @@ type WhatsAppOrderButtonProps = {
   productUrl: string;
   productId?: string;
   whatsappNumber: string;
+  quantity?: number;
   color?: string;
   size?: string;
   price?: number;
@@ -20,6 +21,7 @@ export default function WhatsAppOrderButton({
   productUrl,
   productId,
   whatsappNumber,
+  quantity,
   color,
   size,
   price,
@@ -27,6 +29,19 @@ export default function WhatsAppOrderButton({
   disabled = false,
   className = "",
 }: WhatsAppOrderButtonProps) {
+  if (disabled) {
+    return (
+      <button
+        type="button"
+        disabled
+        aria-disabled="true"
+        className={`inline-flex w-full cursor-not-allowed items-center justify-center rounded-full bg-[var(--store-text)] px-6 py-3.5 text-sm font-medium text-white opacity-50 ${className}`}
+      >
+        غير متوفر حالياً
+      </button>
+    );
+  }
+
   if (!whatsappNumber) {
     return (
       <a
@@ -43,6 +58,7 @@ export default function WhatsAppOrderButton({
     productUrl,
     productId,
     whatsappNumber,
+    quantity,
     color,
     size,
     price,

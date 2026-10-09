@@ -326,7 +326,7 @@ export default function StoreHeaderControls({
                               <Minus className="h-3.5 w-3.5" />
                             </button>
                             <span className="min-w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                            <button type="button" className="inline-flex h-8 w-8 items-center justify-center text-[var(--store-text)]" onClick={() => updateCartQuantity(item.id, item.quantity + 1)} aria-label="زيادة الكمية">
+                            <button type="button" disabled={item.stockQuantity === undefined || item.quantity >= item.stockQuantity} className="inline-flex h-8 w-8 items-center justify-center text-[var(--store-text)] disabled:cursor-not-allowed disabled:opacity-40" onClick={() => updateCartQuantity(item.id, item.quantity + 1)} aria-label="زيادة الكمية">
                               <Plus className="h-3.5 w-3.5" />
                             </button>
                           </div>

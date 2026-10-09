@@ -9,6 +9,7 @@ export type StoreOrderMessageParams = {
   productUrl?: string;
   productId?: string;
   whatsappNumber: string;
+  quantity?: number;
 };
 
 function getStoreProductLink(productUrl?: string, productId?: string): string {
@@ -62,6 +63,7 @@ export function buildStoreOrderMessage({
   currencySymbol,
   productUrl,
   productId,
+  quantity,
 }: Omit<StoreOrderMessageParams, "whatsappNumber">): string {
   const lines = [
     "مرحباً متجر Bayt Ward، أرغب في إتمام طلب هذا المنتج:",
@@ -71,13 +73,23 @@ export function buildStoreOrderMessage({
 
   if (color) lines.push(`اللون: ${color}`);
   if (size) lines.push(`المقاس: ${size}`);
+  if (quantity !== undefined) lines.push(`الكمية: ${quantity}`);
   
   if (price !== undefined && currencySymbol) {
     const formattedPrice = price.toLocaleString("en-US", {
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     });
-    lines.push(`السعر: ${formattedPrice} ${currencySymbol}`);
+    if (quantity !== undefined && quantity > 1) {
+      const formattedTotal = (price * quantity).toLocaleString("en-US", {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      });
+      lines.push(`سعر الوحدة: ${formattedPrice} ${currencySymbol}`);
+      lines.push(`الإجمالي: ${formattedTotal} ${currencySymbol}`);
+    } else {
+      lines.push(`السعر: ${formattedPrice} ${currencySymbol}`);
+    }
   }
 
   const productLink = getStoreProductLink(productUrl, productId);

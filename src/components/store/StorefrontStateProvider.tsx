@@ -32,6 +32,7 @@ export type StoreCartItem = {
   unitPrice: number;
   currencySymbol: string;
   quantity: number;
+  stockQuantity?: number;
 };
 
 type StorefrontState = {
@@ -101,8 +102,13 @@ export function StorefrontStateProvider({
 
   const addToCart = useCallback(
     (item: Omit<StoreCartItem, "id" | "quantity">, quantity = 1) => {
-      const nextQuantity = Math.max(1, quantity);
+      const nextQuantity = Math.max(1, Math.floor(quantity));
       const id = getCartItemId(item.productId, item.variantId);
+      const stockLimit = Number.isSafeInteger(item.stockQuantity)
+        ? Math.max(0, item.stockQuantity ?? 0)
+        : Number.POSITIVE_INFINITY;
+
+      if (stockLimit === 0) return;
 
       setCartItems((current) => {
         const existing = current.find((cartItem) => cartItem.id === id);
@@ -110,27 +116,45 @@ export function StorefrontStateProvider({
         if (existing) {
           return current.map((cartItem) =>
             cartItem.id === id
-              ? { ...cartItem, quantity: cartItem.quantity + nextQuantity }
+              ? {
+                  ...cartItem,
+                  ...item,
+                  quantity: Math.min(cartItem.quantity + nextQuantity, stockLimit),
+                }
               : cartItem
           );
         }
 
-        return [...current, { ...item, id, quantity: nextQuantity }];
+        return [
+          ...current,
+          { ...item, id, quantity: Math.min(nextQuantity, stockLimit) },
+        ];
       });
     },
     []
   );
 
   const updateCartQuantity = useCallback((id: string, quantity: number) => {
-    const nextQuantity = Math.max(0, quantity);
+    setCartItems((current) => {
+      const item = current.find((cartItem) => cartItem.id === id);
+      if (!item) return current;
 
-    setCartItems((current) =>
-      nextQuantity === 0
-        ? current.filter((item) => item.id !== id)
-        : current.map((item) =>
-            item.id === id ? { ...item, quantity: nextQuantity } : item
-          )
-    );
+      const stockLimit = Number.isSafeInteger(item.stockQuantity)
+        ? Math.max(0, item.stockQuantity ?? 0)
+        : item.quantity;
+      const nextQuantity = Math.min(
+        Math.max(0, Math.floor(quantity)),
+        stockLimit,
+      );
+
+      return nextQuantity === 0
+        ? current.filter((cartItem) => cartItem.id !== id)
+        : current.map((cartItem) =>
+            cartItem.id === id
+              ? { ...cartItem, quantity: nextQuantity }
+              : cartItem
+          );
+    });
   }, []);
 
   const removeFromCart = useCallback((id: string) => {
