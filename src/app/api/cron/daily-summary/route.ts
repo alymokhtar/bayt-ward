@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization") || "";
   const cronSecret = process.env.CRON_SECRET?.trim();
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return new Response(JSON.stringify({ success: false, error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },

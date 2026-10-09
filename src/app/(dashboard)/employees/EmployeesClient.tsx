@@ -47,11 +47,13 @@ type Employee = {
 interface EmployeesClientProps {
   employees: Employee[];
   canManage?: boolean;
+  canAssignAdmin?: boolean;
 }
 
 export default function EmployeesClient({
   employees: initial,
   canManage = false,
+  canAssignAdmin = false,
 }: EmployeesClientProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
@@ -334,7 +336,9 @@ export default function EmployeesClient({
           />
           <Select
             label="الدور"
-            options={USER_ROLES}
+            options={USER_ROLES.filter(
+              (option) => option.value !== "ADMIN" || canAssignAdmin || role === "ADMIN"
+            )}
             value={role}
             onChange={(e) => setRole(e.target.value)}
           />

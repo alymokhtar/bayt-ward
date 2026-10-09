@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { getJwtSecret } from "@/lib/env";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "bayt-ward-secret-key-2024"
-);
+const JWT_SECRET = new TextEncoder().encode(getJwtSecret());
 
 const PROTECTED_ROUTES = [
   "/dashboard",

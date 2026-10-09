@@ -20,7 +20,19 @@ export function getDatabaseUrl(): string | undefined {
 }
 
 export function getJwtSecret(): string {
-  return process.env.JWT_SECRET ?? "bayt-ward-secret-key-2024";
+  const defaultSecret = "bayt-ward-secret-key-2024";
+  const configuredSecret = process.env.JWT_SECRET?.trim();
+
+  if (
+    process.env.NODE_ENV === "production" &&
+    (!configuredSecret || configuredSecret === defaultSecret)
+  ) {
+    throw new Error(
+      "JWT_SECRET must be explicitly configured with a non-default value in production"
+    );
+  }
+
+  return configuredSecret || defaultSecret;
 }
 
 export function isDatabaseConfigured(): boolean {

@@ -64,17 +64,24 @@ export async function getEmployees() {
 }
 
 export async function getPayrollEmployees() {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
 
   return prisma.user.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...(session.role === "CASHIER" ? { id: session.id } : {}),
+    },
     orderBy: { name: "asc" },
     select: { id: true, name: true, salary: true, role: true },
   });
 }
 
 export async function getEmployeePayrollSummary(employeeId: string) {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+
+  if (session.role === "CASHIER" && employeeId !== session.id) {
+    throw new Error("FORBIDDEN");
+  }
 
   const employee = await prisma.user.findUnique({
     where: { id: employeeId },
@@ -201,7 +208,11 @@ export async function createEmployee(data: {
   startDate?: Date;
 }) {
   try {
-    await requireRole(["ADMIN", "MANAGER"]);
+    const session = await requireRole(["ADMIN", "MANAGER"]);
+
+    if (data.role === "ADMIN" && session.role !== "ADMIN") {
+      return { success: false, error: "إنشاء حساب مدير النظام متاح للمدير فقط" };
+    }
 
     if (!data.name?.trim()) {
       return { success: false, error: "اسم الموظف مطلوب" };
@@ -262,6 +273,18 @@ export async function updateEmployee(
       return { success: false, error: "لا يمكن تعطيل حسابك الحالي" };
     }
 
+    if (session.id === id && data.role !== undefined && data.role !== existing.role) {
+      return { success: false, error: "لا يمكنك تغيير دور حسابك بنفسك" };
+    }
+
+    if (
+      data.role === "ADMIN" &&
+      existing.role !== "ADMIN" &&
+      session.role !== "ADMIN"
+    ) {
+      return { success: false, error: "ترقية الموظفين إلى مدير النظام متاحة للمدير فقط" };
+    }
+
     const updateData: Record<string, unknown> = {
       name: data.name?.trim(),
       email: data.email?.trim().toLowerCase(),
@@ -269,7 +292,6 @@ export async function updateEmployee(
       role: data.role,
       isActive: data.isActive,
     };
-
     if (data.salary !== undefined) {
       updateData.salary = Math.max(0, data.salary);
     }
@@ -285,11 +307,35 @@ export async function updateEmployee(
       updateData.password = await hashPassword(data.password);
     }
 
-    const employee = await prisma.user.update({
-      where: { id },
-      data: updateData,
-      select: userSelect,
-    });
+    const removesActiveAdmin =
+      existing.role === "ADMIN" &&
+      existing.isActive &&
+      (data.isActive === false || (data.role !== undefined && data.role !== "ADMIN"));
+
+    const employee = await prisma.$transaction(
+      async (tx) => {
+        if (removesActiveAdmin) {
+          const otherActiveAdmins = await tx.user.count({
+            where: {
+              role: "ADMIN",
+              isActive: true,
+              id: { not: id },
+            },
+          });
+
+          if (otherActiveAdmins === 0) {
+            throw new Error("لا يمكن تعطيل أو تخفيض دور آخر مدير نشط في النظام");
+          }
+        }
+
+        return tx.user.update({
+          where: { id },
+          data: updateData,
+          select: userSelect,
+        });
+      },
+      { isolationLevel: "Serializable" }
+    );
 
     revalidateEmployeePaths();
     return { success: true, data: employee };
@@ -378,38 +424,57 @@ export async function deleteEmployee(id: string) {
       return { success: false, error: "لا يمكن حذف حسابك الحالي" };
     }
 
-    const existing = await prisma.user.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: {
-            sales: true,
-            purchases: true,
-            returns: true,
-            expenses: true,
+    await prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.user.findUnique({
+          where: { id },
+          include: {
+            _count: {
+              select: {
+                sales: true,
+                purchases: true,
+                returns: true,
+                expenses: true,
+              },
+            },
           },
-        },
+        });
+
+        if (!existing) {
+          throw new Error("الموظف غير موجود");
+        }
+
+        if (existing.role === "ADMIN" && existing.isActive) {
+          const otherActiveAdmins = await tx.user.count({
+            where: {
+              role: "ADMIN",
+              isActive: true,
+              id: { not: id },
+            },
+          });
+
+          if (otherActiveAdmins === 0) {
+            throw new Error("لا يمكن حذف آخر مدير نشط في النظام");
+          }
+        }
+
+        const hasActivity =
+          existing._count.sales > 0 ||
+          existing._count.purchases > 0 ||
+          existing._count.returns > 0 ||
+          existing._count.expenses > 0;
+
+        if (hasActivity) {
+          await tx.user.update({
+            where: { id },
+            data: { isActive: false },
+          });
+        } else {
+          await tx.user.delete({ where: { id } });
+        }
       },
-    });
-
-    if (!existing) {
-      return { success: false, error: "الموظف غير موجود" };
-    }
-
-    const hasActivity =
-      existing._count.sales > 0 ||
-      existing._count.purchases > 0 ||
-      existing._count.returns > 0 ||
-      existing._count.expenses > 0;
-
-    if (hasActivity) {
-      await prisma.user.update({
-        where: { id },
-        data: { isActive: false },
-      });
-    } else {
-      await prisma.user.delete({ where: { id } });
-    }
+      { isolationLevel: "Serializable" }
+    );
 
     revalidateEmployeePaths();
     return { success: true, data: undefined };

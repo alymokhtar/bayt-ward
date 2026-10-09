@@ -116,7 +116,21 @@ export async function createBackupSnapshot(): Promise<BackupPayload> {
     employeeAdjustments,
   ] = await Promise.all([
     prisma.setting.findMany({ orderBy: { key: "asc" } }),
-    prisma.user.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.user.findMany({
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        salary: true,
+        startDate: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    }),
     prisma.category.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.globalColor.findMany({ orderBy: { createdAt: "asc" } }),
     prisma.product.findMany({ orderBy: { createdAt: "asc" } }),
@@ -218,18 +232,47 @@ export async function restoreBackupSnapshot(
     value: String(row.value),
   }));
 
-  const users = data.users.map((row) => ({
-    id: String(row.id),
-    name: String(row.name),
-    email: String(row.email),
-    password: String(row.password),
-    phone: toNullableString(row.phone),
-    role: row.role as "ADMIN" | "MANAGER" | "CASHIER",
-    salary: Number(row.salary ?? 0),
-    startDate: toNullableDate(row.startDate),
-    isActive: Boolean(row.isActive),
-    createdAt: toDate(row.createdAt),
-  }));
+  const existingUsers = await prisma.user.findMany({
+    select: { id: true, email: true, password: true },
+  });
+  const existingUsersById = new Map(existingUsers.map((user) => [user.id, user]));
+  const existingUsersByEmail = new Map(
+    existingUsers.map((user) => [user.email.toLowerCase(), user])
+  );
+
+  const users = data.users.map((row) => {
+    const id = String(row.id);
+    const email = String(row.email);
+    const existingUser =
+      existingUsersById.get(id) ?? existingUsersByEmail.get(email.toLowerCase());
+    const password =
+      typeof row.password === "string" && row.password
+        ? row.password
+        : existingUser?.password;
+
+    if (!password) {
+      throw new Error(
+        `لا يحتوي ملف النسخة الاحتياطية على بيانات اعتماد الموظف ${email}. أوقفنا الاستعادة لحماية الحسابات.`
+      );
+    }
+
+    return {
+      id,
+      name: String(row.name),
+      email,
+      password,
+      phone: toNullableString(row.phone),
+      role: row.role as "ADMIN" | "MANAGER" | "CASHIER",
+      salary: Number(row.salary ?? 0),
+      startDate: toNullableDate(row.startDate),
+      isActive: Boolean(row.isActive),
+      createdAt: toDate(row.createdAt),
+    };
+  });
+
+  if (!users.some((user) => user.role === "ADMIN" && user.isActive)) {
+    throw new Error("يجب أن تحتوي النسخة الاحتياطية على مدير نشط واحد على الأقل");
+  }
 
   const categories = data.categories.map((row) => ({
     id: String(row.id),

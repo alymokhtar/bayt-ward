@@ -20,7 +20,11 @@ export default async function EmployeesPage() {
       </div>
       <Card>
         <CardContent className="pt-6">
-          <EmployeesClient employees={employees} canManage />
+          <EmployeesClient
+            employees={employees}
+            canManage
+            canAssignAdmin={session.role === "ADMIN"}
+          />
         </CardContent>
       </Card>
     </div>
