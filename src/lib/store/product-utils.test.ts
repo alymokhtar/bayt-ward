@@ -49,6 +49,7 @@ function createVariant(
 ): StoreProduct["variants"][number] {
   return {
     id,
+    sku: `SKU-${id}`,
     size,
     color,
     colorHex,

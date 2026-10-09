@@ -22,7 +22,18 @@ export function formatPhoneForWhatsApp(phone: string): string {
   const trimmedPhone = phone?.trim() || "";
   if (!trimmedPhone) return "";
 
-  let cleaned = trimmedPhone.replace(/\D/g, "");
+  let cleaned = Array.from(trimmedPhone, (character) => {
+    const codePoint = character.codePointAt(0)!;
+    if (codePoint >= 0x0660 && codePoint <= 0x0669) {
+      return String(codePoint - 0x0660);
+    }
+    if (codePoint >= 0x06f0 && codePoint <= 0x06f9) {
+      return String(codePoint - 0x06f0);
+    }
+    return character;
+  })
+    .join("")
+    .replace(/\D/g, "");
   if (!cleaned) return "";
 
   if (cleaned.startsWith("00")) {
@@ -35,7 +46,7 @@ export function formatPhoneForWhatsApp(phone: string): string {
     cleaned = `20${cleaned}`;
   }
 
-  return `+${cleaned}`;
+  return cleaned;
 }
 
 export function buildWhatsAppMessage(

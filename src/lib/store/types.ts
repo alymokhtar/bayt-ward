@@ -29,6 +29,7 @@ export const storeProductListSelect = {
     orderBy: [{ size: "asc" as const }, { color: "asc" as const }],
     select: {
       id: true,
+      sku: true,
       size: true,
       color: true,
       colorHex: true,
@@ -80,6 +81,7 @@ export const storeProductInclude = {
     orderBy: [{ size: "asc" as const }, { color: "asc" as const }],
     select: {
       id: true,
+      sku: true,
       size: true,
       color: true,
       colorHex: true,

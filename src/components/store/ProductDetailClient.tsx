@@ -473,6 +473,7 @@ export default function ProductDetailClient({
       productId: product.id,
       categoryId: product.categoryId,
       variantId: selectedVariant.variantId,
+      sku: selectedVariant.sku,
       name: displayName,
       href: productUrl,
       imageUrl: cartImageUrl ?? null,
@@ -639,6 +640,8 @@ export default function ProductDetailClient({
               quantity={quantity}
               color={activeColor || undefined}
               size={selectedSizeValue || selectedVariant?.size}
+              sku={selectedVariant?.sku}
+              variantId={selectedVariant?.variantId}
               price={price}
               discountAmount={orderDiscountResult.discountAmount}
               savingsPercent={

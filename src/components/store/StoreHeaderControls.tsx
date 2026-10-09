@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
+import React, { useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -38,6 +38,34 @@ const subscribeToNothing = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 
+function allocateDiscountByItem(
+  items: Array<{ unitPrice: number; quantity: number }>,
+  discountAmount: number,
+): number[] {
+  const lineTotals = items.map((item) => item.unitPrice * item.quantity);
+  const totalCents = Math.round(lineTotals.reduce((sum, total) => sum + total, 0) * 100);
+  const discountCents = Math.min(
+    totalCents,
+    Math.max(0, Math.round(discountAmount * 100)),
+  );
+  if (totalCents <= 0 || discountCents <= 0) return items.map(() => 0);
+
+  const shares = lineTotals.map((lineTotal, index) => {
+    const exactCents = (discountCents * lineTotal * 100) / totalCents;
+    const cents = Math.floor(exactCents);
+    return { index, cents, remainder: exactCents - cents };
+  });
+  let remainingCents = discountCents - shares.reduce((sum, share) => sum + share.cents, 0);
+
+  for (const share of [...shares].sort((left, right) => right.remainder - left.remainder)) {
+    if (remainingCents <= 0) break;
+    shares[share.index]!.cents += 1;
+    remainingCents -= 1;
+  }
+
+  return shares.map((share) => share.cents / 100);
+}
+
 export default function StoreHeaderControls({
   settings,
   navLinks,
@@ -63,6 +91,8 @@ export default function StoreHeaderControls({
   const [cartOpen, setCartOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [whatsappOpenError, setWhatsappOpenError] = useState("");
+  const [isOpeningWhatsApp, setIsOpeningWhatsApp] = useState(false);
+  const openingWhatsAppRef = useRef(false);
   const mounted = useSyncExternalStore(
     subscribeToNothing,
     getClientSnapshot,
@@ -117,15 +147,19 @@ export default function StoreHeaderControls({
   }
 
   function handleWhatsAppOrder() {
+    if (openingWhatsAppRef.current) return;
     const whatsappNumber = settings.store_whatsapp || settings.store_phone || "";
     if (!whatsappNumber || cartItems.length === 0) return;
 
+    openingWhatsAppRef.current = true;
+    setIsOpeningWhatsApp(true);
     const origin =
       typeof window !== "undefined" && window.location?.origin
         ? window.location.origin
         : process.env.NEXT_PUBLIC_SITE_URL || "";
 
-    const orderItems = cartItems.map((item) => {
+    const allocatedDiscounts = allocateDiscountByItem(cartItems, promotionResult.discountAmount);
+    const orderItems = cartItems.map((item, index) => {
       const baseProductUrl = item.productId
         ? `${origin}/store/product/${item.productId}`.replace(/([^:]\/)\/+/g, "$1")
         : item.href;
@@ -137,9 +171,13 @@ export default function StoreHeaderControls({
         productUrl,
         color: item.color,
         size: item.size,
+        sku: item.sku,
+        variantId: item.variantId,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         currencySymbol: item.currencySymbol,
+        allocatedDiscount: allocatedDiscounts[index],
+        finalTotal: item.unitPrice * item.quantity - allocatedDiscounts[index]!,
         promotionNotices: getStoreOnlyPromotionNotices(item, activePromotions),
       };
     });
@@ -162,6 +200,8 @@ export default function StoreHeaderControls({
       whatsappWindow = window.open("about:blank", "_blank");
       if (!whatsappWindow) {
         setWhatsappOpenError("تعذر فتح واتساب. اسمحي بالنوافذ المنبثقة ثم حاولي مرة أخرى.");
+        openingWhatsAppRef.current = false;
+        setIsOpeningWhatsApp(false);
         return;
       }
 
@@ -171,11 +211,17 @@ export default function StoreHeaderControls({
       console.error("Unable to open the WhatsApp order link.", error);
       whatsappWindow?.close();
       setWhatsappOpenError("تعذر فتح رابط واتساب. لم يتم تفريغ السلة؛ حاولي مرة أخرى.");
+      openingWhatsAppRef.current = false;
+      setIsOpeningWhatsApp(false);
       return;
     }
 
     clearCart();
     setCartOpen(false);
+    window.setTimeout(() => {
+      openingWhatsAppRef.current = false;
+      setIsOpeningWhatsApp(false);
+    }, 1500);
   }
 
   const actions = (
@@ -374,9 +420,9 @@ export default function StoreHeaderControls({
                   <span>الإجمالي بعد الخصم</span>
                   <span className="text-lg" dir="ltr">{formatCurrency(promotionResult.finalTotal, cartItems[0]?.currencySymbol || currencySymbol)}</span>
                 </div>
-                <button type="button" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50" onClick={handleWhatsAppOrder} disabled={cartItems.length === 0 || (!settings.store_whatsapp && !settings.store_phone)}>
+                <button type="button" className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50" onClick={handleWhatsAppOrder} disabled={isOpeningWhatsApp || cartItems.length === 0 || (!settings.store_whatsapp && !settings.store_phone)}>
                   <MessageCircle className="h-4 w-4" />
-                  اطلبي عبر واتساب
+                  {isOpeningWhatsApp ? "جارٍ فتح واتساب..." : "اطلبي عبر واتساب"}
                 </button>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <button type="button" className="rounded-full border border-[var(--store-border)] bg-[#FDFBF7] px-4 py-3 text-sm font-semibold text-[var(--store-text)] transition hover:border-[var(--store-gold)] disabled:cursor-not-allowed disabled:opacity-50" onClick={clearCart} disabled={cartItems.length === 0}>

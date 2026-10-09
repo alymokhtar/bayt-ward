@@ -24,6 +24,7 @@ export type StoreCartItem = {
   productId: string;
   categoryId: string;
   variantId: string;
+  sku?: string;
   name: string;
   href: string;
   imageUrl: string | null;
@@ -71,6 +72,7 @@ function isStoreCartItem(value: unknown): value is StoreCartItem {
     productId,
     categoryId,
     variantId,
+    sku,
     name,
     href,
     imageUrl,
@@ -87,6 +89,7 @@ function isStoreCartItem(value: unknown): value is StoreCartItem {
     productId.length > 0 &&
     typeof variantId === "string" &&
     variantId.length > 0 &&
+    (sku === undefined || typeof sku === "string") &&
     id === getCartItemId(productId, variantId) &&
     typeof categoryId === "string" &&
     typeof name === "string" &&

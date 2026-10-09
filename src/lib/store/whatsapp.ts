@@ -4,6 +4,8 @@ export type StoreOrderMessageParams = {
   productName: string;
   color?: string;
   size?: string;
+  sku?: string;
+  variantId?: string;
   price?: number;
   discountAmount?: number;
   savingsPercent?: number;
@@ -62,6 +64,8 @@ export function buildStoreOrderMessage({
   productName,
   color,
   size,
+  sku,
+  variantId,
   price,
   currencySymbol,
   productUrl,
@@ -79,6 +83,7 @@ export function buildStoreOrderMessage({
 
   if (color) lines.push(`اللون: ${color}`);
   if (size) lines.push(`المقاس: ${size}`);
+  if (sku || variantId) lines.push(`رمز المتغير: ${sku || variantId}`);
   if (quantity !== undefined) lines.push(`الكمية: ${quantity}`);
   
   if (price !== undefined && currencySymbol) {
@@ -114,10 +119,14 @@ export type StoreCartOrderItem = {
   productUrl: string;
   color?: string;
   size?: string;
+  sku?: string;
+  variantId?: string;
   quantity: number;
   unitPrice: number;
   currencySymbol: string;
   promotionNotices?: string[];
+  allocatedDiscount?: number;
+  finalTotal?: number;
 };
 
 export type StoreCartOrderSummary = {
@@ -139,8 +148,17 @@ export function buildStoreCartOrderMessage(
       `المنتج: ${item.productName}`,
       ...(item.color ? [`اللون: ${item.color}`] : []),
       ...(item.size ? [`المقاس: ${item.size}`] : []),
+      ...((item.sku || item.variantId)
+        ? [`رمز المتغير: ${item.sku || item.variantId}`]
+        : []),
       `الكمية: ${item.quantity}`,
       `السعر: ${formatAmount(item.unitPrice * item.quantity)} ${item.currencySymbol}`,
+      ...(item.allocatedDiscount !== undefined
+        ? [
+            `الخصم الموزع على هذا المنتج: - ${formatAmount(item.allocatedDiscount)} ${item.currencySymbol}`,
+            `إجمالي المنتج بعد الخصم الموزع: ${formatAmount(item.finalTotal ?? item.unitPrice * item.quantity - item.allocatedDiscount)} ${item.currencySymbol}`,
+          ]
+        : []),
       ...(item.promotionNotices ?? []),
       `الرابط: ${item.productUrl}`,
       "",

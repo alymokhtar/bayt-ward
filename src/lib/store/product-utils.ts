@@ -71,6 +71,7 @@ export function getAvailableSizesForColor(
   inStock: boolean;
   stockQuantity: number;
   variantId: string;
+  sku: string;
   price: number;
   images: { id: string; url: string; altText: string | null }[];
 }[] {
@@ -81,6 +82,7 @@ export function getAvailableSizesForColor(
       inStock: boolean;
       stockQuantity: number;
       variantId: string;
+      sku: string;
       price: number;
       images: { id: string; url: string; altText: string | null }[];
     }
@@ -95,6 +97,7 @@ export function getAvailableSizesForColor(
       stockQuantity: variant.stockQuantity,
       inStock: variant.stockQuantity > 0,
       variantId: variant.id,
+      sku: variant.sku,
       price: variant.sellingPrice,
       images: (variant.images ?? [])
         .filter((item) => item.isActive)

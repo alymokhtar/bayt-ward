@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import { getStoreOrderWhatsAppUrl } from "@/lib/store/whatsapp";
 
 type WhatsAppOrderButtonProps = {
@@ -10,6 +11,8 @@ type WhatsAppOrderButtonProps = {
   quantity?: number;
   color?: string;
   size?: string;
+  sku?: string;
+  variantId?: string;
   price?: number;
   discountAmount?: number;
   savingsPercent?: number;
@@ -27,6 +30,8 @@ export default function WhatsAppOrderButton({
   quantity,
   color,
   size,
+  sku,
+  variantId,
   price,
   discountAmount,
   savingsPercent,
@@ -35,6 +40,10 @@ export default function WhatsAppOrderButton({
   disabled = false,
   className = "",
 }: WhatsAppOrderButtonProps) {
+  const openingRef = useRef(false);
+  const [isOpening, setIsOpening] = useState(false);
+  const [openError, setOpenError] = useState("");
+
   if (disabled) {
     return (
       <button
@@ -67,6 +76,8 @@ export default function WhatsAppOrderButton({
     quantity,
     color,
     size,
+    sku,
+    variantId,
     price,
     discountAmount,
     savingsPercent,
@@ -74,17 +85,54 @@ export default function WhatsAppOrderButton({
     currencySymbol,
   });
 
+  function handleOrderClick() {
+    if (openingRef.current || disabled) return;
+    openingRef.current = true;
+    setIsOpening(true);
+    setOpenError("");
+
+    let orderWindow: Window | null = null;
+    try {
+      orderWindow = window.open("about:blank", "_blank");
+      if (!orderWindow) {
+        setOpenError("تعذر فتح واتساب. اسمحي بالنوافذ المنبثقة ثم حاولي مرة أخرى.");
+        openingRef.current = false;
+        setIsOpening(false);
+        return;
+      }
+      orderWindow.opener = null;
+      orderWindow.location.href = href;
+    } catch (error) {
+      console.error("Unable to open the WhatsApp product order link.", error);
+      orderWindow?.close();
+      setOpenError("تعذر فتح رابط واتساب. حاولي مرة أخرى.");
+      openingRef.current = false;
+      setIsOpening(false);
+      return;
+    }
+
+    window.setTimeout(() => {
+      openingRef.current = false;
+      setIsOpening(false);
+    }, 1500);
+  }
+
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-disabled={disabled}
+    <button
+      type="button"
+      onClick={handleOrderClick}
+      disabled={disabled || isOpening}
+      aria-disabled={disabled || isOpening}
       dir="rtl"
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3.5 text-sm font-medium text-white transition hover:bg-[#1da851] disabled:opacity-50 ${className}`}
+      className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3.5 text-sm font-medium text-white transition hover:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
     >
       <span aria-hidden="true" className="shrink-0">💬</span>
-      <span className="whitespace-nowrap text-center">اطلبي عبر واتساب</span>
-    </a>
+      <span className="whitespace-nowrap text-center">
+        {isOpening
+          ? "جارٍ فتح واتساب..."
+          : openError || "اطلبي عبر واتساب"}
+      </span>
+      {openError && <span className="sr-only" role="alert">{openError}</span>}
+    </button>
   );
 }
