@@ -34,16 +34,12 @@ export default function CustomerDetailsModal({
 }: CustomerDetailsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<CustomerDetails | null>(null);
+  const [loadedData, setLoadedData] = useState<CustomerDetails | null>(null);
+  const data = loadedData?.id === customerId ? loadedData : null;
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!customerId) {
-      setData(null);
-      setError("");
-      setExpandedSaleId(null);
-      return;
-    }
+    if (!customerId) return;
 
     let cancelled = false;
 
@@ -53,7 +49,7 @@ export default function CustomerDetailsModal({
       setExpandedSaleId(null);
       try {
         const result = await getCustomer(customerId!);
-        if (!cancelled) setData(result);
+        if (!cancelled) setLoadedData(result);
       } catch {
         if (!cancelled) setError("تعذر تحميل تفاصيل العميل");
       } finally {

@@ -35,14 +35,11 @@ export default function ReturnDetailsModal({
 }: ReturnDetailsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<ReturnDetails | null>(null);
+  const [loadedData, setLoadedData] = useState<ReturnDetails | null>(null);
+  const data = loadedData?.id === returnId ? loadedData : null;
 
   useEffect(() => {
-    if (!returnId) {
-      setData(null);
-      setError("");
-      return;
-    }
+    if (!returnId) return;
 
     let cancelled = false;
 
@@ -51,7 +48,7 @@ export default function ReturnDetailsModal({
       setError("");
       try {
         const result = await getReturn(returnId!);
-        if (!cancelled) setData(result);
+        if (!cancelled) setLoadedData(result);
       } catch {
         if (!cancelled) setError("تعذر تحميل تفاصيل المرتجع");
       } finally {

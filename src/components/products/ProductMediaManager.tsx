@@ -6,7 +6,7 @@ import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-consta
 import type { ProductColorWithMedia, ProductMediaItem } from "@/lib/types/product-media";
 import { Check, Eye, EyeOff, ImagePlus, Trash2, X } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { isValidImageUrl } from "@/lib/utils";
 
 type ProductMediaManagerProps = {
@@ -27,7 +27,7 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [activePreview, setActivePreview] = useState<ProductMediaItem | null>(null);
 
-  async function refreshColors() {
+  const refreshColors = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getProductColorsWithMedia(productId);
@@ -40,7 +40,7 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
     } finally {
       setLoading(false);
     }
-  }
+  }, [productId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +57,7 @@ export default function ProductMediaManager({ productId, productColorId }: Produ
     return () => {
       cancelled = true;
     };
-  }, [productId]);
+  }, [productId, refreshColors]);
 
   const selectedColor = useMemo(() => {
     if (!productColorId) {

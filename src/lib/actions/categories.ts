@@ -4,7 +4,7 @@ import { updateTag } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { invalidateCategoriesData } from "@/lib/revalidate-tags";
-import { deleteImageByPublicId, isCloudinaryConfigured, uploadImageBuffer } from "@/lib/cloudinary";
+import { isCloudinaryConfigured, uploadImageBuffer } from "@/lib/cloudinary";
 import { ALLOWED_MIME_TYPES, MAX_UPLOAD_BYTES } from "@/lib/product-media-constants";
 
 type ActionResult<T = void> =
@@ -107,7 +107,7 @@ export async function uploadCategoryImage(formData: FormData): Promise<ActionRes
     try {
       const arrayBuffer = await file.arrayBuffer();
       buffer = Buffer.from(arrayBuffer);
-    } catch (error) {
+    } catch {
       return { success: false, error: "خطأ في معالجة الملف" };
     }
 

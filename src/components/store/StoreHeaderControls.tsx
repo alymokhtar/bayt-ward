@@ -38,34 +38,6 @@ const subscribeToNothing = () => () => {};
 const getClientSnapshot = () => true;
 const getServerSnapshot = () => false;
 
-function allocateDiscountByItem(
-  items: Array<{ unitPrice: number; quantity: number }>,
-  discountAmount: number,
-): number[] {
-  const lineTotals = items.map((item) => item.unitPrice * item.quantity);
-  const totalCents = Math.round(lineTotals.reduce((sum, total) => sum + total, 0) * 100);
-  const discountCents = Math.min(
-    totalCents,
-    Math.max(0, Math.round(discountAmount * 100)),
-  );
-  if (totalCents <= 0 || discountCents <= 0) return items.map(() => 0);
-
-  const shares = lineTotals.map((lineTotal, index) => {
-    const exactCents = (discountCents * lineTotal * 100) / totalCents;
-    const cents = Math.floor(exactCents);
-    return { index, cents, remainder: exactCents - cents };
-  });
-  let remainingCents = discountCents - shares.reduce((sum, share) => sum + share.cents, 0);
-
-  for (const share of [...shares].sort((left, right) => right.remainder - left.remainder)) {
-    if (remainingCents <= 0) break;
-    shares[share.index]!.cents += 1;
-    remainingCents -= 1;
-  }
-
-  return shares.map((share) => share.cents / 100);
-}
-
 export default function StoreHeaderControls({
   settings,
   navLinks,
@@ -158,8 +130,7 @@ export default function StoreHeaderControls({
         ? window.location.origin
         : process.env.NEXT_PUBLIC_SITE_URL || "";
 
-    const allocatedDiscounts = allocateDiscountByItem(cartItems, promotionResult.discountAmount);
-    const orderItems = cartItems.map((item, index) => {
+    const orderItems = cartItems.map((item) => {
       const baseProductUrl = item.productId
         ? `${origin}/store/product/${item.productId}`.replace(/([^:]\/)\/+/g, "$1")
         : item.href;
@@ -176,8 +147,6 @@ export default function StoreHeaderControls({
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         currencySymbol: item.currencySymbol,
-        allocatedDiscount: allocatedDiscounts[index],
-        finalTotal: item.unitPrice * item.quantity - allocatedDiscounts[index]!,
         promotionNotices: getStoreOnlyPromotionNotices(item, activePromotions),
       };
     });
@@ -193,6 +162,12 @@ export default function StoreHeaderControls({
     });
 
     const whatsappUrl = getWhatsAppUrl(whatsappNumber, message);
+    if (!whatsappUrl) {
+      setWhatsappOpenError("رقم واتساب المتجر غير صالح. راجعي إعدادات التواصل قبل إرسال الطلب.");
+      openingWhatsAppRef.current = false;
+      setIsOpeningWhatsApp(false);
+      return;
+    }
     setWhatsappOpenError("");
 
     let whatsappWindow: Window | null = null;
@@ -321,9 +296,15 @@ export default function StoreHeaderControls({
               );
             })}
             <li>
-              <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="mt-2 block rounded-lg bg-[var(--store-gold)] px-3 py-2.5 text-sm font-bold text-white">
-                تواصل عبر واتساب
-              </a>
+              {whatsappHref ? (
+                <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="mt-2 block rounded-lg bg-[var(--store-gold)] px-3 py-2.5 text-sm font-bold text-white">
+                  تواصل عبر واتساب
+                </a>
+              ) : (
+                <span className="mt-2 block text-sm text-red-700" role="alert">
+                  رقم واتساب المتجر غير صالح.
+                </span>
+              )}
             </li>
           </ul>
         </nav>

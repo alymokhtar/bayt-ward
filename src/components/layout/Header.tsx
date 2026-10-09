@@ -44,9 +44,11 @@ export default function Header({ user }: HeaderProps) {
       <div className="flex flex-row items-center justify-between w-full px-4 py-2">
         <div className="flex items-center gap-2">
           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-gold/20">
-            <img
+            <Image
               src="/images/logo-light.png"
               alt="Bayt Ward Logo"
+              width={48}
+              height={48}
               className="h-full w-full object-contain"
             />
           </div>

@@ -125,8 +125,6 @@ export type StoreCartOrderItem = {
   unitPrice: number;
   currencySymbol: string;
   promotionNotices?: string[];
-  allocatedDiscount?: number;
-  finalTotal?: number;
 };
 
 export type StoreCartOrderSummary = {
@@ -152,13 +150,7 @@ export function buildStoreCartOrderMessage(
         ? [`رمز المتغير: ${item.sku || item.variantId}`]
         : []),
       `الكمية: ${item.quantity}`,
-      `السعر: ${formatAmount(item.unitPrice * item.quantity)} ${item.currencySymbol}`,
-      ...(item.allocatedDiscount !== undefined
-        ? [
-            `الخصم الموزع على هذا المنتج: - ${formatAmount(item.allocatedDiscount)} ${item.currencySymbol}`,
-            `إجمالي المنتج بعد الخصم الموزع: ${formatAmount(item.finalTotal ?? item.unitPrice * item.quantity - item.allocatedDiscount)} ${item.currencySymbol}`,
-          ]
-        : []),
+      `السعر قبل خصومات الطلب: ${formatAmount(item.unitPrice * item.quantity)} ${item.currencySymbol}`,
       ...(item.promotionNotices ?? []),
       `الرابط: ${item.productUrl}`,
       "",

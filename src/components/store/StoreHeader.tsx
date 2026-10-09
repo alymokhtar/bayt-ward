@@ -1,12 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  Heart,
-} from "lucide-react";
 import { useMemo } from "react";
 import { STORE_NAME_AR } from "@/lib/constants";
-import { cn, formatCurrency } from "@/lib/utils";
-import { formatPhoneForWhatsApp, getWhatsAppUrl } from "@/lib/whatsapp";
+import { cn } from "@/lib/utils";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 import StoreHeaderControls from "@/components/store/StoreHeaderControls";
 
 type StoreHeaderProps = {

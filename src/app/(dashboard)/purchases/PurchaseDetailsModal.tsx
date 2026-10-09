@@ -34,14 +34,11 @@ export default function PurchaseDetailsModal({
 }: PurchaseDetailsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<PurchaseDetails | null>(null);
+  const [loadedData, setLoadedData] = useState<PurchaseDetails | null>(null);
+  const data = loadedData?.id === purchaseId ? loadedData : null;
 
   useEffect(() => {
-    if (!purchaseId) {
-      setData(null);
-      setError("");
-      return;
-    }
+    if (!purchaseId) return;
 
     let cancelled = false;
 
@@ -50,7 +47,7 @@ export default function PurchaseDetailsModal({
       setError("");
       try {
         const result = await getPurchase(purchaseId!);
-        if (!cancelled) setData(result);
+        if (!cancelled) setLoadedData(result);
       } catch {
         if (!cancelled) setError("تعذر تحميل تفاصيل أمر الشراء");
       } finally {

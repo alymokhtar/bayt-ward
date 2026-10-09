@@ -5,7 +5,6 @@ import { CACHE_TAG } from "@/lib/server-cache";
 import {
   PUBLISHED_PRODUCT_WHERE,
   STORE_PAGE_SIZE,
-  STORE_REVALIDATE_SECONDS,
 } from "@/lib/store/constants";
 import { storeProductInclude, storeProductListSelect } from "@/lib/store/types";
 import { resolvePagination, toPaginatedResult } from "@/lib/utils";

@@ -44,9 +44,11 @@ export default function AppearanceSettingsPanel({
     if (!canSaveGlobally) {
       const storedAccent = readStoredThemeAccent(userId);
       if (storedAccent) {
-        setAccent(storedAccent);
+        const frame = window.requestAnimationFrame(() => setAccent(storedAccent));
+        return () => window.cancelAnimationFrame(frame);
       }
     }
+    return undefined;
   }, [canSaveGlobally, userId]);
 
   useEffect(() => {

@@ -16,6 +16,7 @@ import {
   getCachedStoreCategoryCovers,
   getCachedStoreSettingsPublic,
 } from "@/lib/store/cached-queries";
+import type { StoreProductListItem } from "@/lib/store/types";
 
 export const revalidate = 60;
 
@@ -48,10 +49,10 @@ export async function generateMetadata(): Promise<Metadata> {
 function SectionSkeleton({ className = "h-40" }: { className?: string }) {
   return (
     <div className="store-container store-section">
-      <div className="animate-pulse rounded-2xl border border-[var(--store-border)] bg-[var(--store-surface)] p-6">
+      <div className={`animate-pulse rounded-2xl border border-[var(--store-border)] bg-[var(--store-surface)] p-6 ${className}`}>
         <div className="h-5 w-40 rounded bg-[var(--store-gold-soft)]" />
         <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, index) => (
+          {Array.from({ length: 6 }, (_, index) => (
             <div key={index} className="h-48 rounded-xl bg-[var(--store-cream)]" />
           ))}
         </div>
@@ -91,7 +92,7 @@ async function StoreProductsSection({
   showNewBadge = false,
 }: {
   title: string;
-  products: any[];
+  products: StoreProductListItem[];
   currencySymbol: string;
   showNewBadge?: boolean;
 }) {
@@ -131,7 +132,7 @@ async function StoreArrivalSection({
   arrivals,
   currencySymbol,
 }: {
-  arrivals: any[];
+  arrivals: StoreProductListItem[];
   currencySymbol: string;
 }) {
   if (arrivals.length === 0) {
@@ -143,7 +144,7 @@ async function StoreArrivalSection({
       <SectionHeading title="وصل حديثاً" />
       <div className="relative">
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {arrivals.map((product, index) => (
+          {arrivals.map((product) => (
             <ProductCard
               key={product.id}
               product={product}

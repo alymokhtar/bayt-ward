@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/Table";
 import { getExpense } from "@/lib/actions/expenses";
-import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES, PAYMENT_METHODS } from "@/lib/constants";
+import { ADJUSTMENT_TYPE_LABELS, EXPENSE_CATEGORIES } from "@/lib/constants";
 import { formatCurrency, formatDate, formatDateTime, getPaymentMethodLabel } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
@@ -33,14 +33,11 @@ export default function ExpenseDetailsModal({
 }: ExpenseDetailsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<ExpenseDetails | null>(null);
+  const [loadedData, setLoadedData] = useState<ExpenseDetails | null>(null);
+  const data = loadedData?.id === expenseId ? loadedData : null;
 
   useEffect(() => {
-    if (!expenseId) {
-      setData(null);
-      setError("");
-      return;
-    }
+    if (!expenseId) return;
 
     let cancelled = false;
 
@@ -49,7 +46,7 @@ export default function ExpenseDetailsModal({
       setError("");
       try {
         const result = await getExpense(expenseId!);
-        if (!cancelled) setData(result);
+        if (!cancelled) setLoadedData(result);
       } catch {
         if (!cancelled) setError("تعذر تحميل تفاصيل المصروف");
       } finally {

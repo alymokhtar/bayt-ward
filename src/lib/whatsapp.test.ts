@@ -15,6 +15,17 @@ test("formats local Egyptian phone numbers to international WhatsApp format", ()
   assert.equal(formatPhoneForWhatsApp("۰۱۰۱۲۳۴۵۶۷۸"), "201012345678");
 });
 
+test("rejects incomplete or malformed phone numbers and accepts valid international numbers", () => {
+  assert.equal(formatPhoneForWhatsApp("0101234567"), "");
+  assert.equal(formatPhoneForWhatsApp("+20101234567"), "");
+  assert.equal(formatPhoneForWhatsApp("01012345678 abc"), "");
+  assert.equal(formatPhoneForWhatsApp("1234567890123456"), "");
+  assert.equal(formatPhoneForWhatsApp("01112345678"), "201112345678");
+  assert.equal(formatPhoneForWhatsApp("+447911123456"), "447911123456");
+  assert.equal(formatPhoneForWhatsApp("00447911123456"), "447911123456");
+  assert.equal(getWhatsAppUrl("0101234567", "مرحبا"), "");
+});
+
 test("builds WhatsApp URLs with the normalized phone number", () => {
   assert.equal(
     getWhatsAppUrl("01012345678", "مرحبا"),
@@ -85,8 +96,6 @@ test("formats cart order lines and totals consistently with the provided discoun
         unitPrice: 100,
         currencySymbol: "MRU",
         sku: "SKU-RED-M",
-        allocatedDiscount: 20,
-        finalTotal: 180,
       },
     ],
     {
@@ -100,9 +109,8 @@ test("formats cart order lines and totals consistently with the provided discoun
 
   assert.match(message, /الكمية: 2/);
   assert.match(message, /رمز المتغير: SKU-RED-M/);
-  assert.match(message, /السعر: 200 MRU/);
-  assert.match(message, /الخصم الموزع على هذا المنتج: - 20 MRU/);
-  assert.match(message, /إجمالي المنتج بعد الخصم الموزع: 180 MRU/);
+  assert.match(message, /السعر قبل خصومات الطلب: 200 MRU/);
+  assert.doesNotMatch(message, /الخصم الموزع على هذا المنتج/);
   assert.match(message, /المجموع الفرعي: 200 MRU/);
   assert.match(message, /الخصم: - 20 MRU/);
   assert.match(message, /إجمالي الخصم: - 20 MRU/);

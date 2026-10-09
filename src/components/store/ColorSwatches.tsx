@@ -26,7 +26,7 @@ export default function ColorSwatches({
   const swatchSize = size === "sm" ? "h-4 w-4" : "h-6 w-6";
 
   return (
-    <div className="flex flex-wrap gap-2" role="list" aria-label="الألوان المتاحة">
+    <div className="flex flex-wrap gap-2" role="group" aria-label="الألوان المتاحة">
       {unique.map((color) => {
         const unavailable = unavailableColors.includes(color.name);
         const isActive = activeColor === color.name;
@@ -37,7 +37,6 @@ export default function ColorSwatches({
             <button
               key={color.name}
               type="button"
-              role="listitem"
               aria-label={`${color.name}${unavailable ? " — غير متوفر" : ""}`}
               aria-pressed={isActive}
               disabled={unavailable}

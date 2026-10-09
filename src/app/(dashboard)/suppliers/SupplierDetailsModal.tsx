@@ -34,18 +34,14 @@ export default function SupplierDetailsModal({
 }: SupplierDetailsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<SupplierDetails | null>(null);
+  const [loadedData, setLoadedData] = useState<SupplierDetails | null>(null);
+  const data = loadedData?.id === supplierId ? loadedData : null;
   const [expandedPurchaseId, setExpandedPurchaseId] = useState<string | null>(
     null
   );
 
   useEffect(() => {
-    if (!supplierId) {
-      setData(null);
-      setError("");
-      setExpandedPurchaseId(null);
-      return;
-    }
+    if (!supplierId) return;
 
     let cancelled = false;
 
@@ -54,7 +50,7 @@ export default function SupplierDetailsModal({
       setError("");
       try {
         const result = await getSupplierDetails(supplierId!);
-        if (!cancelled) setData(result);
+        if (!cancelled) setLoadedData(result);
       } catch {
         if (!cancelled) setError("تعذر تحميل تفاصيل المورد");
       } finally {

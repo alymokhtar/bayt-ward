@@ -9,7 +9,9 @@ import {
   isValidElement,
   useEffect,
   type ReactNode,
+  type ReactElement,
 } from "react";
+import type { ButtonProps } from "@/components/ui/Button";
 
 export interface ModalProps {
   isOpen: boolean;
@@ -36,15 +38,11 @@ function normalizeFooterNode(node: ReactNode): ReactNode {
     }
 
     if (child.type === Button) {
-      const childProps = child.props as {
-        variant?: string;
-        className?: string;
-        size?: string;
-      };
+      const childProps = child.props as ButtonProps;
 
       const currentClassName = childProps.className;
 
-      return cloneElement(child as React.ReactElement<any>, {
+      return cloneElement(child as ReactElement<ButtonProps>, {
         variant: "primary",
         size: childProps.size ?? "md",
         className: cn(
@@ -57,7 +55,7 @@ function normalizeFooterNode(node: ReactNode): ReactNode {
 
     const childChildren = (child.props as { children?: ReactNode })?.children;
     if (childChildren) {
-      return cloneElement(child as any, {
+      return cloneElement(child as ReactElement<{ children?: ReactNode }>, {
         children: normalizeFooterNode(childChildren),
       });
     }

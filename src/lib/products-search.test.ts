@@ -12,6 +12,7 @@ test("keeps all variants for a matched product when the name matches", () => {
       id: "prod-1",
       name: "T-Shirt",
       nameAr: "تي شيرت",
+      categoryId: "category-1",
       variants: [
         {
           id: "v1",
@@ -35,7 +36,7 @@ test("keeps all variants for a matched product when the name matches", () => {
         },
       ],
     },
-  ] as any;
+  ];
 
   const results = flattenProductSearchResults(products);
 

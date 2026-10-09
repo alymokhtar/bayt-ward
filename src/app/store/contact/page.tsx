@@ -6,6 +6,7 @@ import { getShareUrl, processGoogleMapsUrl } from "@/lib/maps-utils";
 import { STORE_NAME_AR } from "@/lib/constants";
 import { MessageCircle, Phone, Mail, MapPin, ExternalLink } from "lucide-react";
 import { SiFacebook, SiInstagram, SiTiktok, SiYoutube, SiSnapchat, SiX } from "react-icons/si";
+import StoreSocialLink from "@/components/store/StoreSocialLink";
 
 export const revalidate = 60;
 
@@ -70,61 +71,47 @@ export default async function ContactPage() {
               </a>
             </div>
           )}
+          {whatsappNumber && !whatsappHref && (
+            <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700" role="alert">
+              رقم واتساب المتجر غير صالح حالياً. يرجى التواصل عبر الهاتف.
+            </p>
+          )}
           {(settings.social_facebook_url || settings.social_instagram_url || settings.social_tiktok_url || settings.social_youtube_url || settings.social_snapchat_url || settings.social_x_url) && (
             <div className="rounded-[1.25rem] border border-[var(--store-border)] bg-white/70 p-4">
               <p className="text-[11px] text-[var(--store-gold)]" dir="rtl">
                 حساباتنا على مواقع التواصل الاجتماعي
               </p>
               <div className="mt-2 flex items-center gap-4">
-                {(() => {
-                  const IconWrap = ({ href, label, title, children, hoverClasses = "" }: any) => (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={label}
-                      title={title}
-                      className={`inline-flex items-center justify-center h-9 w-9 rounded-full bg-[#f7efe6] text-[var(--store-text)] transition-transform duration-200 transform hover:scale-110 ${hoverClasses}`}
-                    >
-                      {children}
-                    </a>
-                  );
-
-                  return (
-                    <>
                       {settings.social_facebook_url && (
-                        <IconWrap href={settings.social_facebook_url} label="Facebook" title="فيسبوك" hoverClasses="hover:bg-[#1877F2] hover:text-white">
+                        <StoreSocialLink href={settings.social_facebook_url} label="Facebook" title="فيسبوك" hoverClasses="hover:bg-[#1877F2] hover:text-white">
                           <SiFacebook className="h-5 w-5" />
-                        </IconWrap>
+                        </StoreSocialLink>
                       )}
                       {settings.social_instagram_url && (
-                        <IconWrap href={settings.social_instagram_url} label="Instagram" title="انستغرام" hoverClasses="hover:bg-gradient-to-r hover:from-[#E4405F] hover:to-[#833AB4] hover:text-white">
+                        <StoreSocialLink href={settings.social_instagram_url} label="Instagram" title="انستغرام" hoverClasses="hover:bg-gradient-to-r hover:from-[#E4405F] hover:to-[#833AB4] hover:text-white">
                           <SiInstagram className="h-5 w-5" />
-                        </IconWrap>
+                        </StoreSocialLink>
                       )}
                       {settings.social_tiktok_url && (
-                        <IconWrap href={settings.social_tiktok_url} label="TikTok" title="تيك توك" hoverClasses="hover:bg-[#000000] hover:text-white">
+                        <StoreSocialLink href={settings.social_tiktok_url} label="TikTok" title="تيك توك" hoverClasses="hover:bg-[#000000] hover:text-white">
                           <SiTiktok className="h-5 w-5" />
-                        </IconWrap>
+                        </StoreSocialLink>
                       )}
                       {settings.social_youtube_url && (
-                        <IconWrap href={settings.social_youtube_url} label="YouTube" title="يوتيوب" hoverClasses="hover:bg-[#FF0000] hover:text-white">
+                        <StoreSocialLink href={settings.social_youtube_url} label="YouTube" title="يوتيوب" hoverClasses="hover:bg-[#FF0000] hover:text-white">
                           <SiYoutube className="h-5 w-5" />
-                        </IconWrap>
+                        </StoreSocialLink>
                       )}
                       {settings.social_snapchat_url && (
-                        <IconWrap href={settings.social_snapchat_url} label="Snapchat" title="سناب شات" hoverClasses="hover:bg-[#FFFC00] hover:text-black">
+                        <StoreSocialLink href={settings.social_snapchat_url} label="Snapchat" title="سناب شات" hoverClasses="hover:bg-[#FFFC00] hover:text-black">
                           <SiSnapchat className="h-5 w-5" />
-                        </IconWrap>
+                        </StoreSocialLink>
                       )}
                       {settings.social_x_url && (
-                        <IconWrap href={settings.social_x_url} label="X" title="إكس" hoverClasses="hover:bg-[#000000] hover:text-white">
+                        <StoreSocialLink href={settings.social_x_url} label="X" title="إكس" hoverClasses="hover:bg-[#000000] hover:text-white">
                           <SiX className="h-5 w-5" />
-                        </IconWrap>
+                        </StoreSocialLink>
                       )}
-                    </>
-                  );
-                })()}
               </div>
             </div>
           )}

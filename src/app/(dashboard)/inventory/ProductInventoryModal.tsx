@@ -30,14 +30,11 @@ export default function ProductInventoryModal({
 }: ProductInventoryModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<ProductInventory | null>(null);
+  const [loadedData, setLoadedData] = useState<ProductInventory | null>(null);
+  const data = loadedData?.id === productId ? loadedData : null;
 
   useEffect(() => {
-    if (!productId) {
-      setData(null);
-      setError("");
-      return;
-    }
+    if (!productId) return;
 
     let cancelled = false;
 
@@ -46,7 +43,7 @@ export default function ProductInventoryModal({
       setError("");
       try {
         const result = await getProductInventory(productId!);
-        if (!cancelled) setData(result);
+        if (!cancelled) setLoadedData(result);
       } catch {
         if (!cancelled) setError("تعذر تحميل تفاصيل المخزون");
       } finally {

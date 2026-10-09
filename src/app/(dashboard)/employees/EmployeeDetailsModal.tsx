@@ -29,14 +29,11 @@ export default function EmployeeDetailsModal({
 }: EmployeeDetailsModalProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [data, setData] = useState<EmployeeDetails | null>(null);
+  const [loadedData, setLoadedData] = useState<EmployeeDetails | null>(null);
+  const data = loadedData?.id === employeeId ? loadedData : null;
 
   useEffect(() => {
-    if (!employeeId) {
-      setData(null);
-      setError("");
-      return;
-    }
+    if (!employeeId) return;
 
     let cancelled = false;
 
@@ -45,7 +42,7 @@ export default function EmployeeDetailsModal({
       setError("");
       try {
         const result = await getEmployeeDetails(employeeId!);
-        if (!cancelled) setData(result);
+        if (!cancelled) setLoadedData(result);
       } catch {
         if (!cancelled) setError("تعذر تحميل تفاصيل الموظف");
       } finally {

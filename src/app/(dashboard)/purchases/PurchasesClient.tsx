@@ -131,27 +131,6 @@ export default function PurchasesClient({
     return () => clearTimeout(t);
   }, [query, doSearch]);
 
-  const { handleKeyDown: handleBarcodeKeyDown, focusInput: focusBarcodeInput } =
-    useBarcodeScanner(async (value) => {
-      setError("");
-      await resolveAndAdd(value);
-    }, searchRef);
-
-  useEffect(() => {
-    if (modalOpen) {
-      // Use RAF to focus the barcode input when the modal is opened
-      // This avoids arbitrary timeouts and waits for the browser to paint the modal
-      requestAnimationFrame(() => focusBarcodeInput());
-    }
-  }, [modalOpen, focusBarcodeInput]);
-
-  function focusAddProduct() {
-    setQuery("");
-    setResults([]);
-    setError("");
-    focusBarcodeInput();
-  }
-
   function addItem(variant: VariantResult) {
     setItems((prev) => {
       const existing = prev.find((i) => i.variant.id === variant.id);
@@ -173,26 +152,6 @@ export default function PurchasesClient({
     // Request focusing the quantity input for this variant after items update
     setFocusVariantId(variant.id);
   }
-
-  // When items change and a focus target is set, focus the corresponding quantity input
-  useEffect(() => {
-    if (!focusVariantId) return;
-    const el = quantityRefs.current[focusVariantId];
-    if (el) {
-      try {
-        el.focus();
-        el.select();
-      } catch {}
-      el.scrollIntoView({ block: "center", behavior: "smooth" });
-      // optional visual flash to indicate existing row got focus
-      setFlashVariantId(focusVariantId);
-      setTimeout(() => setFlashVariantId(null), 700);
-    } else {
-      // fallback: focus barcode input if quantity input not available
-      requestAnimationFrame(() => focusBarcodeInput());
-    }
-    setFocusVariantId(null);
-  }, [items, focusVariantId, focusBarcodeInput]);
 
   async function resolveAndAdd(queryText: string) {
     let result: Awaited<ReturnType<typeof scanVariantCode>>;
@@ -225,6 +184,44 @@ export default function PurchasesClient({
       setResults([]);
     }
   }
+
+  const { handleKeyDown: handleBarcodeKeyDown, focusInput: focusBarcodeInput } =
+    useBarcodeScanner(async (value) => {
+      setError("");
+      await resolveAndAdd(value);
+    }, searchRef);
+
+  useEffect(() => {
+    if (modalOpen) {
+      requestAnimationFrame(() => focusBarcodeInput());
+    }
+  }, [modalOpen, focusBarcodeInput]);
+
+  function focusAddProduct() {
+    setQuery("");
+    setResults([]);
+    setError("");
+    focusBarcodeInput();
+  }
+
+  useEffect(() => {
+    if (!focusVariantId) return;
+    const el = quantityRefs.current[focusVariantId];
+    if (el) {
+      try {
+        el.focus();
+        el.select();
+      } catch {}
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      setFlashVariantId(focusVariantId);
+      setTimeout(() => setFlashVariantId(null), 700);
+    } else {
+      requestAnimationFrame(() => focusBarcodeInput());
+    }
+    requestAnimationFrame(() => {
+      setFocusVariantId((current) => current === focusVariantId ? null : current);
+    });
+  }, [items, focusVariantId, focusBarcodeInput]);
 
   async function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     await handleBarcodeKeyDown(e);

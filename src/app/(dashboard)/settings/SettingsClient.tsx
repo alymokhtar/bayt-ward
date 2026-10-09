@@ -202,7 +202,7 @@ export default function SettingsClient({ settings }: SettingsClientProps) {
             placeholder="https://maps.app.goo.gl/... أو كود Embed من جوجل ماب"
           />
           <p className="text-xs text-muted">
-            يمكنك الحصول على رابط المشاركة من جوجل ماب بالضغط على "المشاركة" أو نسخ كود الـ Embed.
+            يمكنك الحصول على رابط المشاركة من جوجل ماب بالضغط على &quot;المشاركة&quot; أو نسخ كود الـ Embed.
           </p>
         </div>
       </div>

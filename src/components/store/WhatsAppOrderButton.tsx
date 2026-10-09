@@ -118,21 +118,28 @@ export default function WhatsAppOrderButton({
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleOrderClick}
-      disabled={disabled || isOpening}
-      aria-disabled={disabled || isOpening}
-      dir="rtl"
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3.5 text-sm font-medium text-white transition hover:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
-    >
-      <span aria-hidden="true" className="shrink-0">💬</span>
-      <span className="whitespace-nowrap text-center">
-        {isOpening
-          ? "جارٍ فتح واتساب..."
-          : openError || "اطلبي عبر واتساب"}
-      </span>
-      {openError && <span className="sr-only" role="alert">{openError}</span>}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={handleOrderClick}
+        disabled={disabled || isOpening || !href}
+        aria-disabled={disabled || isOpening || !href}
+        dir="rtl"
+        className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-4 py-3.5 text-sm font-medium text-white transition hover:bg-[#1da851] disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      >
+        <span aria-hidden="true" className="shrink-0">💬</span>
+        <span className="whitespace-nowrap text-center">
+          {isOpening
+            ? "جارٍ فتح واتساب..."
+            : openError || "اطلبي عبر واتساب"}
+        </span>
+        {openError && <span className="sr-only" role="alert">{openError}</span>}
+      </button>
+      {!href && (
+        <p className="mt-2 text-sm text-red-700" role="alert">
+          رقم واتساب المتجر غير صالح. يرجى استخدام صفحة التواصل.
+        </p>
+      )}
+    </>
   );
 }

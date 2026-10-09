@@ -21,6 +21,13 @@ export interface WhatsAppMessageParams {
 export function formatPhoneForWhatsApp(phone: string): string {
   const trimmedPhone = phone?.trim() || "";
   if (!trimmedPhone) return "";
+  if (
+    /[^0-9٠-٩۰-۹+().,\s/-]/.test(trimmedPhone) ||
+    (trimmedPhone.match(/\+/g)?.length ?? 0) > 1 ||
+    (trimmedPhone.includes("+") && !trimmedPhone.startsWith("+"))
+  ) {
+    return "";
+  }
 
   let cleaned = Array.from(trimmedPhone, (character) => {
     const codePoint = character.codePointAt(0)!;
@@ -40,10 +47,15 @@ export function formatPhoneForWhatsApp(phone: string): string {
     cleaned = cleaned.slice(2);
   }
 
-  if (cleaned.startsWith("0")) {
+  const egyptianMobile = /^(?:10|11|12|15)\d{8}$/;
+  if (/^0(?:10|11|12|15)\d{8}$/.test(cleaned)) {
     cleaned = `20${cleaned.slice(1)}`;
-  } else if (!cleaned.startsWith("20") && cleaned.length <= 11) {
+  } else if (egyptianMobile.test(cleaned)) {
     cleaned = `20${cleaned}`;
+  } else if (cleaned.startsWith("20")) {
+    if (!/^20(?:10|11|12|15)\d{8}$/.test(cleaned)) return "";
+  } else if (cleaned.length < 8 || cleaned.length > 15 || cleaned.startsWith("0")) {
+    return "";
   }
 
   return cleaned;
@@ -99,11 +111,13 @@ export function buildWhatsAppMessage(
 
 export function getWhatsAppUrl(phone: string, message: string): string {
   const formattedPhone = formatPhoneForWhatsApp(phone);
+  if (!formattedPhone) return "";
   const encodedMessage = encodeURIComponent(message);
   return `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
 }
 
 export function openWhatsApp(phone: string, message: string): void {
   if (typeof window === "undefined") return;
-  window.open(getWhatsAppUrl(phone, message), "_blank", "noopener,noreferrer");
+  const url = getWhatsAppUrl(phone, message);
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
 }
