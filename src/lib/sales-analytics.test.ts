@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildSalesChannelAnalytics,
+  buildNetSalesChannelTrend,
   buildSalesChannelTrend,
   getSalesChannelWhere,
   subtractChannelReturns,
@@ -74,6 +75,22 @@ test("subtracts approved returns from channel revenue without changing order cou
   ]);
 });
 
+test("subtracts returns from channels with no sales in the selected period", () => {
+  assert.deepEqual(
+    subtractChannelReturns(
+      [{ channel: "POS", revenue: 500, orders: 4 }],
+      [
+        { channel: "POS", refundAmount: 75 },
+        { channel: "ONLINE", refundAmount: 50 },
+      ],
+    ),
+    [
+      { channel: "POS", revenue: 425, orders: 4 },
+      { channel: "ONLINE", revenue: -50, orders: 0 },
+    ],
+  );
+});
+
 test("aggregates daily revenue per channel using Cairo business dates", () => {
   const sales = [
     { channel: "POS" as const, totalAmount: 100, createdAt: new Date("2026-10-03T23:30:00.000Z") },
@@ -89,4 +106,24 @@ test("aggregates daily revenue per channel using Cairo business dates", () => {
     { date: "2026-10-03", POS: 0, ONLINE: 50 },
     { date: "2026-10-04", POS: 0, ONLINE: 80 },
   ]);
+});
+
+test("builds daily net channel revenue including return-only and empty days", () => {
+  assert.deepEqual(
+    buildNetSalesChannelTrend(
+      [
+        { date: "2026-10-03", channel: "POS", revenue: 100 },
+        { date: "2026-10-03", channel: "POS", revenue: -25 },
+        { date: "2026-10-04", channel: "ONLINE", revenue: -40 },
+      ],
+      "ALL",
+      "2026-10-03",
+      "2026-10-05",
+    ),
+    [
+      { date: "2026-10-03", POS: 75, ONLINE: 0 },
+      { date: "2026-10-04", POS: 0, ONLINE: -40 },
+      { date: "2026-10-05", POS: 0, ONLINE: 0 },
+    ],
+  );
 });

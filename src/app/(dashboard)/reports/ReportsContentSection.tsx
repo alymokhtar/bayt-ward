@@ -81,6 +81,9 @@ export default async function ReportsContentSection({
             value={formatCurrency(salesReport.totalExpenses)}
           />
         </div>
+        <p className="text-xs text-muted">
+          تُخصم المرتجعات في تاريخ إرجاعها الفعلي، وقد تخص فاتورة مبيعات من فترة سابقة.
+        </p>
         <div className="grid gap-4 lg:grid-cols-2">
           <SalesChannelChart data={revenueMix} />
           <SalesChannelTrendChart data={trend} channel={channel} />
@@ -91,6 +94,11 @@ export default async function ReportsContentSection({
             <ReportsSalesExportButton from={from} to={to} channel={channel} />
           </CardHeader>
           <CardContent>
+            {salesReport.salesListTruncated && (
+              <p className="mb-3 text-sm text-muted">
+                تعرض القائمة أول 1000 فاتورة فقط؛ المؤشرات أعلاه محسوبة على كامل الفترة.
+              </p>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -216,7 +224,7 @@ export default async function ReportsContentSection({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>أفضل المنتجات مبيعًا</CardTitle>
+          <CardTitle>الأعلى إيرادًا صافيًا</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>

@@ -29,12 +29,14 @@ export default function SalesChannelTrendChart({
 }) {
   const channels = channel === "ALL" ? ["POS", "ONLINE"] as const : [channel];
   const hasData = data.some((point) =>
-    channels.some((key) => Number.isFinite(point[key]) && point[key] > 0),
+    channels.some((key) => Number.isFinite(point[key]) && point[key] !== 0),
   );
 
   return (
     <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
-      <h2 className="text-sm font-semibold text-brown">اتجاه الإيرادات اليومي</h2>
+      <h2 className="text-sm font-semibold text-brown">
+        صافي الإيرادات اليومي بعد المرتجعات
+      </h2>
       <div className="mt-2 h-64">
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">

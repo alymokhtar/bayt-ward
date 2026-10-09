@@ -24,13 +24,36 @@ export function subtractChannelReturns(
   sales: Array<{ channel: SalesChannelKey; revenue: number | null; orders: number }>,
   returns: Array<{ channel: SalesChannelKey; refundAmount: number }>,
 ) {
-  const returnsByChannel = new Map(
-    returns.map((item) => [item.channel, item.refundAmount]),
-  );
+  const totals = new Map<
+    SalesChannelKey,
+    { revenue: number; orders: number; refundAmount: number }
+  >();
 
-  return sales.map((item) => ({
-    ...item,
-    revenue: (item.revenue ?? 0) - (returnsByChannel.get(item.channel) ?? 0),
+  for (const sale of sales) {
+    const total = totals.get(sale.channel) ?? {
+      revenue: 0,
+      orders: 0,
+      refundAmount: 0,
+    };
+    total.revenue += sale.revenue ?? 0;
+    total.orders += sale.orders;
+    totals.set(sale.channel, total);
+  }
+
+  for (const item of returns) {
+    const total = totals.get(item.channel) ?? {
+      revenue: 0,
+      orders: 0,
+      refundAmount: 0,
+    };
+    total.refundAmount += item.refundAmount;
+    totals.set(item.channel, total);
+  }
+
+  return [...totals].map(([channel, total]) => ({
+    channel,
+    revenue: total.revenue - total.refundAmount,
+    orders: total.orders,
   }));
 }
 
@@ -73,6 +96,38 @@ export interface SalesChannelTrendPoint {
   date: string;
   POS: number;
   ONLINE: number;
+}
+
+export function buildNetSalesChannelTrend(
+  dailyTotals: Array<{
+    date: string;
+    channel: SalesChannelKey;
+    revenue: number;
+  }>,
+  channel: SalesChannelFilter,
+  from: string,
+  to: string,
+): SalesChannelTrendPoint[] {
+  const byDate = new Map<string, SalesChannelTrendPoint>();
+  const start = new Date(`${from}T00:00:00.000Z`);
+  const end = new Date(`${to}T00:00:00.000Z`);
+
+  for (
+    const date = new Date(start);
+    date <= end;
+    date.setUTCDate(date.getUTCDate() + 1)
+  ) {
+    const dateKey = date.toISOString().slice(0, 10);
+    byDate.set(dateKey, { date: dateKey, POS: 0, ONLINE: 0 });
+  }
+
+  for (const total of dailyTotals) {
+    if (channel !== "ALL" && total.channel !== channel) continue;
+    const point = byDate.get(total.date);
+    if (point) point[total.channel] += total.revenue;
+  }
+
+  return [...byDate.values()];
 }
 
 export function buildSalesChannelTrend(

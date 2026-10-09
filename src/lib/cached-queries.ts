@@ -928,6 +928,7 @@ export const getCachedSalesReport = unstable_cache(
       }),
       prisma.sale.findMany({
         where: completedSalesWhere,
+        take: 1000,
         select: {
           id: true,
           invoiceNumber: true,
@@ -968,6 +969,7 @@ export const getCachedSalesReport = unstable_cache(
       returnsCount: returns._count,
       totalReturns,
       totalExpenses,
+      salesListTruncated: sales._count > salesList.length,
       salesList: salesList.map((sale) => ({
         id: sale.id,
         invoiceNumber: sale.invoiceNumber,
