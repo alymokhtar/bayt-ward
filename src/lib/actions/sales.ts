@@ -1090,13 +1090,11 @@ export async function createSale(data: {
     }
 
     void checkLowStockAndNotify(data.items.map((item) => item.variantId));
-    try {
-      await sendTelegramMessage(formatSaleTelegramMessage(sale), {
-        parseMode: "HTML",
-      });
-    } catch (error) {
+    void sendTelegramMessage(formatSaleTelegramMessage(sale), {
+      parseMode: "HTML",
+    }).catch((error) => {
       console.error("Failed to send sale Telegram notification:", error);
-    }
+    });
     return { success: true, data: sale };
   } catch (error) {
     if (
