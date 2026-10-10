@@ -31,6 +31,15 @@ enum SaleStatus {
   PARTIALLY_REFUNDED
 }
 
+enum LoyaltyTransactionType {
+  EARN
+  REDEEM
+  EARN_REVERSAL
+  REDEEM_REVERSAL
+  EXPIRE
+  ADJUSTMENT
+}
+
 enum SalesChannel {
   POS
   ONLINE
@@ -298,19 +307,21 @@ model Image {
 }
 
 model Customer {
-  id         String   @id @default(cuid())
-  name       String
-  phone      String   @unique
-  email      String?
-  address    String?
-  notes      String?
-  totalSpent Float    @default(0)
-  visitCount Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  phone         String   @unique
+  email         String?
+  address       String?
+  notes         String?
+  totalSpent    Float    @default(0)
+  visitCount    Int      @default(0)
+  loyaltyPoints Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  sales   Sale[]
-  returns Return[]
+  sales               Sale[]
+  returns             Return[]
+  loyaltyTransactions LoyaltyTransaction[]
 }
 
 model Supplier {
@@ -328,38 +339,42 @@ model Supplier {
 }
 
 model Sale {
-  id                String         @id @default(cuid())
-  invoiceNumber     String         @unique
-  idempotencyKey    String?        @unique
-  channel           SalesChannel   @default(POS)
-  customerId        String?
-  userId            String
-  subtotal          Float
-  discountAmount    Float          @default(0)
-  discountPercent   Float          @default(0)
-  discountReason    String?
-  appliedPromotions Json           @default("[]")
-  couponId          String?
-  couponCode        String?
-  taxAmount         Float          @default(0)
-  totalAmount       Float
-  tenderedAmount    Float          @default(0)
-  paidAmount        Float
-  changeAmount      Float          @default(0)
-  paymentMethod     PaymentMethod? @default(CASH)
-  status            SaleStatus     @default(COMPLETED)
-  notes             String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id                    String         @id @default(cuid())
+  invoiceNumber         String         @unique
+  idempotencyKey        String?        @unique
+  channel               SalesChannel   @default(POS)
+  customerId            String?
+  userId                String
+  subtotal              Float
+  discountAmount        Float          @default(0)
+  discountPercent       Float          @default(0)
+  discountReason        String?
+  appliedPromotions     Json           @default("[]")
+  couponId              String?
+  couponCode            String?
+  loyaltyPointsEarned   Int            @default(0)
+  loyaltyPointsRedeemed Int            @default(0)
+  loyaltyDiscountAmount Float          @default(0)
+  taxAmount             Float          @default(0)
+  totalAmount           Float
+  tenderedAmount        Float          @default(0)
+  paidAmount            Float
+  changeAmount          Float          @default(0)
+  paymentMethod         PaymentMethod? @default(CASH)
+  status                SaleStatus     @default(COMPLETED)
+  notes                 String?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
-  customer              Customer?  @relation(fields: [customerId], references: [id])
-  coupon                Coupon?    @relation(fields: [couponId], references: [id], onDelete: SetNull)
-  user                  User       @relation(fields: [userId], references: [id])
+  customer              Customer?            @relation(fields: [customerId], references: [id])
+  coupon                Coupon?              @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  user                  User                 @relation(fields: [userId], references: [id])
   items                 SaleItem[]
   returns               Return[]
   payments              Payment[]
-  exchangesAsOriginal   Exchange[] @relation("ExchangeOriginalSale")
-  exchangeAsReplacement Exchange?  @relation("ExchangeReplacementSale")
+  exchangesAsOriginal   Exchange[]           @relation("ExchangeOriginalSale")
+  exchangeAsReplacement Exchange?            @relation("ExchangeReplacementSale")
+  loyaltyTransactions   LoyaltyTransaction[]
 
   @@index([customerId])
   @@index([couponId])
@@ -367,6 +382,24 @@ model Sale {
   @@index([status])
   @@index([createdAt])
   @@index([status, createdAt])
+}
+
+model LoyaltyTransaction {
+  id             String                 @id @default(cuid())
+  customerId     String
+  saleId         String?
+  type           LoyaltyTransactionType
+  points         Int
+  balanceAfter   Int
+  idempotencyKey String                 @unique
+  reason         String?
+  createdAt      DateTime               @default(now())
+
+  customer Customer @relation(fields: [customerId], references: [id])
+  sale     Sale?    @relation(fields: [saleId], references: [id], onDelete: SetNull)
+
+  @@index([customerId, createdAt])
+  @@index([saleId])
 }
 
 model Payment {
