@@ -30,12 +30,12 @@ export function buildLoyaltyPointsWhatsAppMessage({
   pointsBalance,
 }: LoyaltyPointsWhatsAppMessageParams): string {
   return (
-    `🌸 *بيت ورد*\n` +
+    `\u{1F338} *بيت ورد*\n` +
     `أهلاً ${customerName}، شكراً لزيارتك!\n` +
     `اكتسبتِ من مشترياتك اليوم *${pointsEarned} نقطة بيت ورد*.\n` +
     `رصيدك المتاح الآن *${pointsBalance} نقطة*.\n` +
-    `📌 *تنويه:* يمكنك استبدال النقاط بخصم مباشر عند وصول رصيدك إلى 50 نقطة فأكثر.\n` +
-    `سعداء بخدمتك دائماً 💕 — بيت ورد`
+    `\u{1F4CC} *تنويه:* يمكنك استبدال النقاط بخصم مباشر عند وصول رصيدك إلى 50 نقطة فأكثر.\n` +
+    `سعداء بخدمتك دائماً \u{1F495} — بيت ورد`
   );
 }
 
