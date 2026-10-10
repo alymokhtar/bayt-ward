@@ -104,28 +104,28 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
         <>
           <DashedLine />
           <div className="space-y-0.5">
-            <p className="font-bold">نقاط الولاء</p>
+            <p className="font-bold">نقاط بيت ورد</p>
             {(data.loyaltyPointsEarned ?? 0) > 0 && (
               <div className="flex justify-between gap-2">
-                <span>النقاط المكتسبة:</span>
+                <span>نقاط بيت ورد المكتسبة:</span>
                 <span dir="ltr">{data.loyaltyPointsEarned}</span>
               </div>
             )}
             {(data.loyaltyPointsRedeemed ?? 0) > 0 && (
               <div className="flex justify-between gap-2">
-                <span>النقاط المستبدلة:</span>
+                <span>نقاط بيت ورد المستبدلة:</span>
                 <span dir="ltr">{data.loyaltyPointsRedeemed}</span>
               </div>
             )}
             {(data.loyaltyDiscountAmount ?? 0) > 0 && (
               <div className="flex justify-between gap-2">
-                <span>خصم الولاء:</span>
+                <span>خصم نقاط بيت ورد:</span>
                 <span dir="ltr">- {fmt(data.loyaltyDiscountAmount ?? 0)}</span>
               </div>
             )}
             {data.loyaltyPointsBalanceAfter !== undefined && (
               <div className="flex justify-between gap-2">
-                <span>الرصيد بعد العملية:</span>
+                <span>رصيد نقاط بيت ورد:</span>
                 <span dir="ltr">{data.loyaltyPointsBalanceAfter}</span>
               </div>
             )}

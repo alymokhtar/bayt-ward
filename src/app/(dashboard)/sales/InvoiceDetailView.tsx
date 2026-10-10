@@ -310,22 +310,22 @@ export default function InvoiceDetailView({
               sale.loyaltyPointsRedeemed > 0 ||
               sale.loyaltyDiscountAmount > 0) && (
               <div className="space-y-1 rounded-lg border border-gold/20 bg-gold/5 p-3 print:border-0 print:bg-transparent print:p-0">
-                <p className="font-semibold text-brown">نقاط الولاء</p>
+                <p className="font-semibold text-brown">نقاط بيت ورد</p>
                 {sale.loyaltyPointsEarned > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted">النقاط المكتسبة</span>
+                    <span className="text-muted">نقاط بيت ورد المكتسبة</span>
                     <span dir="ltr">{sale.loyaltyPointsEarned}</span>
                   </div>
                 )}
                 {sale.loyaltyPointsRedeemed > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted">النقاط المستبدلة</span>
+                    <span className="text-muted">نقاط بيت ورد المستبدلة</span>
                     <span dir="ltr">{sale.loyaltyPointsRedeemed}</span>
                   </div>
                 )}
                 {sale.loyaltyDiscountAmount > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted">خصم الولاء</span>
+                    <span className="text-muted">خصم نقاط بيت ورد</span>
                     <span>- {formatCurrency(sale.loyaltyDiscountAmount)}</span>
                   </div>
                 )}

@@ -115,7 +115,7 @@ test("prints loyalty points earned, redeemed, and remaining balance", () => {
 
   const html = buildReceiptPrintHtml(receipt);
 
-  assert.match(html, /النقاط المكتسبة:<\/span><span>10<\/span>/);
-  assert.match(html, /النقاط المستبدلة:<\/span><span>50<\/span>/);
-  assert.match(html, /الرصيد بعد العملية:<\/span><span>75<\/span>/);
+  assert.match(html, /نقاط بيت ورد المكتسبة:<\/span><span>10<\/span>/);
+  assert.match(html, /نقاط بيت ورد المستبدلة:<\/span><span>50<\/span>/);
+  assert.match(html, /رصيد نقاط بيت ورد:<\/span><span>75<\/span>/);
 });

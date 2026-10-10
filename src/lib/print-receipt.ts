@@ -192,7 +192,7 @@ export function buildReceiptPrintHtml(
     (data.loyaltyPointsRedeemed ?? 0) > 0 ||
     (data.loyaltyDiscountAmount ?? 0) > 0 ||
     data.loyaltyPointsBalanceAfter !== undefined
-      ? `${dashedLine()}<div><strong>نقاط الولاء</strong>${(data.loyaltyPointsEarned ?? 0) > 0 ? row("النقاط المكتسبة:", String(data.loyaltyPointsEarned)) : ""}${(data.loyaltyPointsRedeemed ?? 0) > 0 ? row("النقاط المستبدلة:", String(data.loyaltyPointsRedeemed)) : ""}${(data.loyaltyDiscountAmount ?? 0) > 0 ? row("خصم الولاء:", `- ${fmt(data.loyaltyDiscountAmount ?? 0)}`) : ""}${data.loyaltyPointsBalanceAfter !== undefined ? row("الرصيد بعد العملية:", String(data.loyaltyPointsBalanceAfter)) : ""}</div>`
+      ? `${dashedLine()}<div><strong>نقاط بيت ورد</strong>${(data.loyaltyPointsEarned ?? 0) > 0 ? row("نقاط بيت ورد المكتسبة:", String(data.loyaltyPointsEarned)) : ""}${(data.loyaltyPointsRedeemed ?? 0) > 0 ? row("نقاط بيت ورد المستبدلة:", String(data.loyaltyPointsRedeemed)) : ""}${(data.loyaltyDiscountAmount ?? 0) > 0 ? row("خصم نقاط بيت ورد:", `- ${fmt(data.loyaltyDiscountAmount ?? 0)}`) : ""}${data.loyaltyPointsBalanceAfter !== undefined ? row("رصيد نقاط بيت ورد:", String(data.loyaltyPointsBalanceAfter)) : ""}</div>`
       : ""
   }
 
