@@ -660,6 +660,9 @@ export async function createSale(data: {
       if (!coupon || !coupon.isActive) {
         return { success: false, error: "الكوبون غير صالح أو غير مفعل" };
       }
+      if (coupon.customerId && coupon.customerId !== data.customerId) {
+        return { success: false, error: "هذا الكوبون مخصص لعميل آخر" };
+      }
       if (coupon.expiresAt && coupon.expiresAt < new Date()) {
         return { success: false, error: "انتهت صلاحية الكوبون" };
       }
@@ -869,6 +872,9 @@ export async function createSale(data: {
         if (
           !currentCoupon ||
           !currentCoupon.isActive ||
+          currentCoupon.customerId !== coupon.customerId ||
+          (currentCoupon.customerId !== null &&
+            currentCoupon.customerId !== data.customerId) ||
           currentCoupon.code !== coupon.code ||
           currentCoupon.type !== coupon.type ||
           currentCoupon.discountPercent !== coupon.discountPercent ||
