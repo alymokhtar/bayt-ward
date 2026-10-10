@@ -17,6 +17,13 @@ export default function Sidebar({ role }: SidebarProps) {
   const filteredItems = NAV_ITEMS.filter((item) =>
     item.roles.includes(role)
   );
+  const activeItem = filteredItems
+    .filter(
+      (item) =>
+        pathname === item.href ||
+        (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`)),
+    )
+    .sort((left, right) => right.href.length - left.href.length)[0];
 
   return (
     <aside
@@ -49,10 +56,7 @@ export default function Sidebar({ role }: SidebarProps) {
         <ul className="space-y-1">
           {filteredItems.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" &&
-                pathname.startsWith(item.href));
+            const isActive = activeItem?.href === item.href;
 
             return (
               <li key={item.href}>
