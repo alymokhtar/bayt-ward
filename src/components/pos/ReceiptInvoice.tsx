@@ -32,6 +32,7 @@ export type ReceiptData = {
   items: ReceiptItem[];
   subtotal: number;
   discountAmount: number;
+  loyaltyDiscountAmount?: number;
   appliedPromotions?: { id: string; title: string; discountValue: number }[];
   loyaltyPointsEarned?: number;
   loyaltyPointsRedeemed?: number;
@@ -96,25 +97,38 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
         )}
       </div>
 
-      {(data.customerName ||
-        (data.loyaltyPointsEarned ?? 0) > 0 ||
-        (data.loyaltyPointsRedeemed ?? 0) > 0) && (
+      {((data.loyaltyPointsEarned ?? 0) > 0 ||
+        (data.loyaltyPointsRedeemed ?? 0) > 0 ||
+        (data.loyaltyDiscountAmount ?? 0) > 0 ||
+        data.loyaltyPointsBalanceAfter !== undefined) && (
         <>
           <DashedLine />
           <div className="space-y-0.5">
             <p className="font-bold">نقاط الولاء</p>
-            <div className="flex justify-between gap-2">
-              <span>النقاط المكتسبة:</span>
-              <span dir="ltr">{data.loyaltyPointsEarned ?? 0}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span>النقاط المستبدلة:</span>
-              <span dir="ltr">{data.loyaltyPointsRedeemed ?? 0}</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              <span>الرصيد بعد العملية:</span>
-              <span dir="ltr">{data.loyaltyPointsBalanceAfter ?? 0}</span>
-            </div>
+            {(data.loyaltyPointsEarned ?? 0) > 0 && (
+              <div className="flex justify-between gap-2">
+                <span>النقاط المكتسبة:</span>
+                <span dir="ltr">{data.loyaltyPointsEarned}</span>
+              </div>
+            )}
+            {(data.loyaltyPointsRedeemed ?? 0) > 0 && (
+              <div className="flex justify-between gap-2">
+                <span>النقاط المستبدلة:</span>
+                <span dir="ltr">{data.loyaltyPointsRedeemed}</span>
+              </div>
+            )}
+            {(data.loyaltyDiscountAmount ?? 0) > 0 && (
+              <div className="flex justify-between gap-2">
+                <span>خصم الولاء:</span>
+                <span dir="ltr">- {fmt(data.loyaltyDiscountAmount ?? 0)}</span>
+              </div>
+            )}
+            {data.loyaltyPointsBalanceAfter !== undefined && (
+              <div className="flex justify-between gap-2">
+                <span>الرصيد بعد العملية:</span>
+                <span dir="ltr">{data.loyaltyPointsBalanceAfter}</span>
+              </div>
+            )}
           </div>
         </>
       )}

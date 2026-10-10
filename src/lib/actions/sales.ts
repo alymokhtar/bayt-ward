@@ -325,7 +325,33 @@ export async function getSale(id: string) {
 
   const sale = await prisma.sale.findUnique({
     where: { id },
-    include: {
+    select: {
+      id: true,
+      invoiceNumber: true,
+      idempotencyKey: true,
+      channel: true,
+      customerId: true,
+      userId: true,
+      subtotal: true,
+      discountAmount: true,
+      discountPercent: true,
+      discountReason: true,
+      appliedPromotions: true,
+      couponId: true,
+      couponCode: true,
+      loyaltyPointsEarned: true,
+      loyaltyPointsRedeemed: true,
+      loyaltyDiscountAmount: true,
+      taxAmount: true,
+      totalAmount: true,
+      tenderedAmount: true,
+      paidAmount: true,
+      changeAmount: true,
+      paymentMethod: true,
+      status: true,
+      notes: true,
+      createdAt: true,
+      updatedAt: true,
       payments: {
         select: {
           method: true,

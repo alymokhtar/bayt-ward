@@ -154,6 +154,9 @@ export default function InvoiceDetailView({
         })),
         subtotal: sale.subtotal,
         discountAmount: sale.discountAmount,
+        loyaltyPointsEarned: sale.loyaltyPointsEarned,
+        loyaltyPointsRedeemed: sale.loyaltyPointsRedeemed,
+        loyaltyDiscountAmount: sale.loyaltyDiscountAmount,
         totalAmount: sale.totalAmount,
         paidAmount: historicalPaidAmount,
         changeAmount: historicalRemaining,
@@ -301,6 +304,31 @@ export default function InvoiceDetailView({
               <div className="flex justify-between gap-3">
                 <span className="text-muted">سبب الخصم</span>
                 <span className="text-end">{sale.discountReason}</span>
+              </div>
+            )}
+            {(sale.loyaltyPointsEarned > 0 ||
+              sale.loyaltyPointsRedeemed > 0 ||
+              sale.loyaltyDiscountAmount > 0) && (
+              <div className="space-y-1 rounded-lg border border-gold/20 bg-gold/5 p-3 print:border-0 print:bg-transparent print:p-0">
+                <p className="font-semibold text-brown">نقاط الولاء</p>
+                {sale.loyaltyPointsEarned > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted">النقاط المكتسبة</span>
+                    <span dir="ltr">{sale.loyaltyPointsEarned}</span>
+                  </div>
+                )}
+                {sale.loyaltyPointsRedeemed > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted">النقاط المستبدلة</span>
+                    <span dir="ltr">{sale.loyaltyPointsRedeemed}</span>
+                  </div>
+                )}
+                {sale.loyaltyDiscountAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted">خصم الولاء</span>
+                    <span>- {formatCurrency(sale.loyaltyDiscountAmount)}</span>
+                  </div>
+                )}
               </div>
             )}
             {sale.taxAmount > 0 && (
