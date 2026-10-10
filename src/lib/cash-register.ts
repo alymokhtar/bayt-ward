@@ -18,42 +18,16 @@ export async function getCashRegisterReview(from?: string, to?: string) {
     createdAt: { gte: start, lt: end },
   };
 
-  const returnWhere = {
-    status: "APPROVED" as const,
-    createdAt: { gte: start, lt: end },
-    exchange: null,
-  };
-
-  const expensesWhere = {
-    expenseDate: { gte: start, lt: end },
-  };
-
-  const [salesAgg, returnsAgg, expensesAgg, paymentAgg, salesByMethod, returnsByMethod, expensesByMethod, exchangeSettlements, exchangeCount] = await Promise.all([
+  const [
+    salesAgg,
+    salesByMethod,
+    returnsByMethod,
+    expensesByMethod,
+    exchangeSettlements,
+    exchangeCount,
+  ] = await Promise.all([
     prisma.sale.aggregate({
       where: saleWhere,
-      _sum: { totalAmount: true },
-      _count: true,
-    }),
-    prisma.return.aggregate({
-      where: returnWhere,
-      _sum: { refundAmount: true },
-      _count: true,
-    }),
-    prisma.expense.aggregate({
-      where: expensesWhere,
-      _sum: { amount: true },
-      _count: true,
-    }),
-    prisma.payment.aggregate({
-      where: {
-        createdAt: { gte: start, lt: end },
-        sale: {
-          status: { in: ["COMPLETED", "PARTIALLY_REFUNDED", "REFUNDED"] },
-          createdAt: { gte: start, lt: end },
-          exchangeAsReplacement: null,
-        },
-      },
-      _sum: { amount: true },
       _count: true,
     }),
     prisma.payment.groupBy({
@@ -98,6 +72,27 @@ export async function getCashRegisterReview(from?: string, to?: string) {
     }),
   ]);
 
+  const totalPaymentRevenue = salesByMethod.reduce(
+    (sum, group) => sum + (group._sum.amount ?? 0),
+    0,
+  );
+  const totalReturnsAmount = returnsByMethod.reduce(
+    (sum, group) => sum + (group._sum.refundAmount ?? 0),
+    0,
+  );
+  const returnsCount = returnsByMethod.reduce(
+    (sum, group) => sum + group._count,
+    0,
+  );
+  const totalExpensesAmount = expensesByMethod.reduce(
+    (sum, group) => sum + (group._sum.amount ?? 0),
+    0,
+  );
+  const expensesCount = expensesByMethod.reduce(
+    (sum, group) => sum + group._count,
+    0,
+  );
+
   const collections = exchangeSettlements.filter((row) => row.direction === "COLLECTION");
   const exchangeRefunds = exchangeSettlements.filter((row) => row.direction === "REFUND");
   const exchangeCollectionsTotal = collections.reduce(
@@ -108,9 +103,9 @@ export async function getCashRegisterReview(from?: string, to?: string) {
     (sum, row) => sum + (row._sum.amount ?? 0),
     0,
   );
-  const totalRevenue = (paymentAgg._sum.amount ?? 0) + exchangeCollectionsTotal;
-  const totalReturns = (returnsAgg._sum.refundAmount ?? 0) + exchangeRefundsTotal;
-  const totalExpenses = expensesAgg._sum.amount ?? 0;
+  const totalRevenue = totalPaymentRevenue + exchangeCollectionsTotal;
+  const totalReturns = totalReturnsAmount + exchangeRefundsTotal;
+  const totalExpenses = totalExpensesAmount;
 
   const netRevenue = totalRevenue - totalReturns - totalExpenses;
 
@@ -207,8 +202,8 @@ export async function getCashRegisterReview(from?: string, to?: string) {
     totalReturns,
     netRevenue,
     salesCount: salesAgg._count,
-    returnsCount: returnsAgg._count + exchangeCount,
-    expensesCount: expensesAgg._count,
+    returnsCount: returnsCount + exchangeCount,
+    expensesCount,
     paymentBreakdown,
     refundBreakdown,
   };
