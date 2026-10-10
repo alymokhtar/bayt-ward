@@ -14,6 +14,11 @@ import { normalizeSalePayments } from "@/lib/sales-payment-utils";
 import { calculateCartDiscounts, calculateCouponDiscount } from "@/lib/promotions";
 import { getActivePromotionsData } from "@/lib/promotions-data";
 import { allocateInvoiceDiscount } from "@/lib/sale-pricing";
+import {
+  calculateLoyaltyPointsEarned,
+  LOYALTY_MIN_REDEMPTION_POINTS,
+  LOYALTY_POINT_VALUE,
+} from "@/lib/loyalty-utils";
 import { PaymentMethod, Prisma, SaleStatus, SalesChannel } from "@prisma/client";
 import { getBusinessDayBoundsFromDateKeys } from "@/lib/business-day";
 import {
@@ -51,6 +56,9 @@ const saleResponseSelect = {
   paymentMethod: true,
   notes: true,
   appliedPromotions: true,
+  loyaltyPointsEarned: true,
+  loyaltyPointsRedeemed: true,
+  loyaltyDiscountAmount: true,
   createdAt: true,
   payments: { select: { method: true, amount: true } },
   items: {
@@ -513,6 +521,7 @@ export async function createSale(data: {
   paymentMethod?: PaymentMethod;
   payments?: SalePaymentInput[];
   notes?: string;
+  loyaltyPointsToRedeem?: number;
 }) {
   let userId: string | undefined;
   let idempotencyKey: string | undefined;
@@ -678,10 +687,36 @@ export async function createSale(data: {
         error: `إجمالي الخصم اليدوي لا يمكن أن يتجاوز ${maximumDiscountPercent}% من قيمة الأصناف`,
       };
     }
+    const loyaltyPointsToRedeem = data.loyaltyPointsToRedeem ?? 0;
+    if (
+      !Number.isInteger(loyaltyPointsToRedeem) ||
+      loyaltyPointsToRedeem < 0 ||
+      (loyaltyPointsToRedeem > 0 &&
+        loyaltyPointsToRedeem < LOYALTY_MIN_REDEMPTION_POINTS)
+    ) {
+      return {
+        success: false,
+        error: `يجب أن يكون عدد نقاط الاستبدال صفراً أو ${LOYALTY_MIN_REDEMPTION_POINTS} نقطة على الأقل`,
+      };
+    }
+    if (loyaltyPointsToRedeem > 0 && !data.customerId) {
+      return { success: false, error: "اختر عميلاً لاستبدال نقاط الولاء" };
+    }
+
+    const loyaltyDiscountAmount = loyaltyPointsToRedeem * LOYALTY_POINT_VALUE;
+    const discountBeforeLoyalty =
+      promotionResult.discountAmount + couponDiscountAmount + manualDiscount;
+    if (loyaltyDiscountAmount > grossSubtotal - Math.min(grossSubtotal, discountBeforeLoyalty)) {
+      return { success: false, error: "قيمة النقاط المستبدلة تتجاوز المبلغ المتبقي من الفاتورة" };
+    }
     const requestedDiscount = Math.min(
       grossSubtotal,
-      promotionResult.discountAmount + couponDiscountAmount + manualDiscount,
+      discountBeforeLoyalty + loyaltyDiscountAmount,
     );
+    const totalAmountBeforePayment = Math.max(0, grossSubtotal - requestedDiscount);
+    const loyaltyPointsEarned = data.customerId
+      ? calculateLoyaltyPointsEarned(totalAmountBeforePayment)
+      : 0;
     const salePricing = allocateInvoiceDiscount(
       trustedItems.map((item) => ({
         key: item.variantId,
@@ -872,9 +907,16 @@ export async function createSale(data: {
             id: `COUPON:${coupon.id}`,
             title: `كوبون ${coupon.code}`,
             discountValue: couponDiscountAmount,
+          }] : []).concat(loyaltyPointsToRedeem > 0 ? [{
+            id: `LOYALTY:${data.customerId}`,
+            title: `استبدال ${loyaltyPointsToRedeem} نقطة ولاء`,
+            discountValue: loyaltyDiscountAmount,
           }] : []),
           couponId: coupon?.id,
           couponCode: coupon?.code,
+          loyaltyPointsEarned,
+          loyaltyPointsRedeemed: loyaltyPointsToRedeem,
+          loyaltyDiscountAmount,
           discountReason: discountReason || null,
           // POS currently has no configured VAT calculation; sales are saved with zero tax.
           taxAmount: 0,
@@ -904,6 +946,55 @@ export async function createSale(data: {
         },
         select: saleResponseSelect,
       });
+
+      if (data.customerId && loyaltyPointsToRedeem > 0) {
+        const redeemedCustomer = await tx.customer.updateManyAndReturn({
+          where: {
+            id: data.customerId,
+            loyaltyPoints: { gte: loyaltyPointsToRedeem },
+          },
+          data: { loyaltyPoints: { decrement: loyaltyPointsToRedeem } },
+          select: { loyaltyPoints: true },
+        });
+        if (redeemedCustomer.length !== 1) {
+          throw new Error("رصيد نقاط العميل غير كافٍ. حدّث الرصيد وحاول مرة أخرى");
+        }
+
+        await tx.loyaltyTransaction.create({
+          data: {
+            customerId: data.customerId,
+            saleId: createdSale.id,
+            type: "REDEEM",
+            points: -loyaltyPointsToRedeem,
+            balanceAfter: redeemedCustomer[0].loyaltyPoints,
+            idempotencyKey: `sale:${createdSale.id}:redeem`,
+            reason: `استبدال نقاط في الفاتورة ${invoiceNumber}`,
+          },
+        });
+      }
+
+      if (data.customerId && loyaltyPointsEarned > 0) {
+        const earnedCustomer = await tx.customer.updateManyAndReturn({
+          where: { id: data.customerId },
+          data: { loyaltyPoints: { increment: loyaltyPointsEarned } },
+          select: { loyaltyPoints: true },
+        });
+        if (earnedCustomer.length !== 1) {
+          throw new Error("تعذر تحديث رصيد نقاط العميل");
+        }
+
+        await tx.loyaltyTransaction.create({
+          data: {
+            customerId: data.customerId,
+            saleId: createdSale.id,
+            type: "EARN",
+            points: loyaltyPointsEarned,
+            balanceAfter: earnedCustomer[0].loyaltyPoints,
+            idempotencyKey: `sale:${createdSale.id}:earn`,
+            reason: `نقاط مكتسبة من الفاتورة ${invoiceNumber}`,
+          },
+        });
+      }
 
       for (const item of data.items) {
         const variant = latestVariantMap.get(item.variantId);
@@ -1003,6 +1094,8 @@ export async function cancelSale(id: string, reason?: string) {
         totalAmount: true,
         customerId: true,
         couponId: true,
+        loyaltyPointsEarned: true,
+        loyaltyPointsRedeemed: true,
         notes: true,
         returns: {
           where: { status: "APPROVED" },
@@ -1053,6 +1146,50 @@ export async function cancelSale(id: string, reason?: string) {
         await tx.coupon.updateMany({
           where: { id: sale.couponId, usageCount: { gt: 0 } },
           data: { usageCount: { decrement: 1 } },
+        });
+      }
+
+      if (sale.customerId && sale.loyaltyPointsEarned > 0) {
+        const reversedCustomer = await tx.customer.updateManyAndReturn({
+          where: { id: sale.customerId },
+          data: { loyaltyPoints: { decrement: sale.loyaltyPointsEarned } },
+          select: { loyaltyPoints: true },
+        });
+        if (reversedCustomer.length !== 1) {
+          throw new Error("تعذر عكس النقاط المكتسبة من الفاتورة");
+        }
+        await tx.loyaltyTransaction.create({
+          data: {
+            customerId: sale.customerId,
+            saleId: sale.id,
+            type: "EARN_REVERSAL",
+            points: -sale.loyaltyPointsEarned,
+            balanceAfter: reversedCustomer[0].loyaltyPoints,
+            idempotencyKey: `sale:${sale.id}:cancel:earn-reversal`,
+            reason: `عكس النقاط المكتسبة بسبب إلغاء الفاتورة ${sale.invoiceNumber}`,
+          },
+        });
+      }
+
+      if (sale.customerId && sale.loyaltyPointsRedeemed > 0) {
+        const restoredCustomer = await tx.customer.updateManyAndReturn({
+          where: { id: sale.customerId },
+          data: { loyaltyPoints: { increment: sale.loyaltyPointsRedeemed } },
+          select: { loyaltyPoints: true },
+        });
+        if (restoredCustomer.length !== 1) {
+          throw new Error("تعذر إعادة النقاط المستبدلة إلى العميل");
+        }
+        await tx.loyaltyTransaction.create({
+          data: {
+            customerId: sale.customerId,
+            saleId: sale.id,
+            type: "REDEEM_REVERSAL",
+            points: sale.loyaltyPointsRedeemed,
+            balanceAfter: restoredCustomer[0].loyaltyPoints,
+            idempotencyKey: `sale:${sale.id}:cancel:redeem-reversal`,
+            reason: `إعادة النقاط المستبدلة بسبب إلغاء الفاتورة ${sale.invoiceNumber}`,
+          },
         });
       }
 

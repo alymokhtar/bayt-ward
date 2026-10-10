@@ -299,6 +299,57 @@ export async function createReturn(data: {
         });
       }
 
+      if (sale.customerId && sale.loyaltyPointsEarned > 0 && sale.totalAmount > 0) {
+        const [approvedRefunds, priorReversals] = await Promise.all([
+          tx.return.aggregate({
+            where: { saleId: sale.id, status: "APPROVED" },
+            _sum: { refundAmount: true },
+          }),
+          tx.loyaltyTransaction.aggregate({
+            where: { saleId: sale.id, type: "EARN_REVERSAL" },
+            _sum: { points: true },
+          }),
+        ]);
+        const cumulativeRefund = Math.min(
+          sale.totalAmount,
+          approvedRefunds._sum.refundAmount ?? 0,
+        );
+        const targetReversedPoints =
+          cumulativeRefund >= sale.totalAmount
+            ? sale.loyaltyPointsEarned
+            : Math.floor(
+                sale.loyaltyPointsEarned * cumulativeRefund / sale.totalAmount,
+              );
+        const alreadyReversedPoints = Math.abs(priorReversals._sum.points ?? 0);
+        const pointsToReverse = Math.max(
+          0,
+          targetReversedPoints - alreadyReversedPoints,
+        );
+
+        if (pointsToReverse > 0) {
+          const updatedCustomer = await tx.customer.updateManyAndReturn({
+            where: { id: sale.customerId },
+            data: { loyaltyPoints: { decrement: pointsToReverse } },
+            select: { loyaltyPoints: true },
+          });
+          if (updatedCustomer.length !== 1) {
+            throw new Error("تعذر عكس نقاط الولاء الخاصة بالمرتجع");
+          }
+
+          await tx.loyaltyTransaction.create({
+            data: {
+              customerId: sale.customerId,
+              saleId: sale.id,
+              type: "EARN_REVERSAL",
+              points: -pointsToReverse,
+              balanceAfter: updatedCustomer[0].loyaltyPoints,
+              idempotencyKey: `return:${created.id}:earn-reversal`,
+              reason: `عكس نقاط مكتسبة بسبب المرتجع ${returnNumber}`,
+            },
+          });
+        }
+      }
+
       if (sale.customerId) {
         await tx.customer.update({
           where: { id: sale.customerId },
