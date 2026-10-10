@@ -353,6 +353,7 @@ export const getCachedCustomersPage = unstable_cache(
           notes: true,
           totalSpent: true,
           visitCount: true,
+          loyaltyPoints: true,
           _count: {
             select: {
               sales: { where: { status: { not: "CANCELLED" } } },

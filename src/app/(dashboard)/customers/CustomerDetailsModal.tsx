@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/Table";
 import CustomerWhatsAppButton from "@/components/whatsapp/CustomerWhatsAppButton";
 import { getCustomer } from "@/lib/actions/customers";
+import { getCustomerLoyaltySummary } from "@/lib/actions/loyalty";
+import type { LoyaltyTransactionType } from "@prisma/client";
 import {
   formatCurrency,
   formatDateTime,
@@ -22,6 +24,18 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type CustomerDetails = Awaited<ReturnType<typeof getCustomer>>;
+type CustomerLoyaltySummary = Awaited<
+  ReturnType<typeof getCustomerLoyaltySummary>
+>;
+
+const loyaltyTransactionLabels: Record<LoyaltyTransactionType, string> = {
+  EARN: "اكتساب",
+  REDEEM: "استبدال",
+  EARN_REVERSAL: "عكس نقاط مكتسبة",
+  REDEEM_REVERSAL: "إرجاع نقاط مستبدلة",
+  EXPIRE: "انتهاء صلاحية",
+  ADJUSTMENT: "تسوية يدوية",
+};
 
 interface CustomerDetailsModalProps {
   customerId: string | null;
@@ -36,25 +50,44 @@ export default function CustomerDetailsModal({
   const [error, setError] = useState("");
   const [loadedData, setLoadedData] = useState<CustomerDetails | null>(null);
   const data = loadedData?.id === customerId ? loadedData : null;
+  const [loyaltySummary, setLoyaltySummary] =
+    useState<CustomerLoyaltySummary | null>(null);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [loyaltyError, setLoyaltyError] = useState("");
   const [expandedSaleId, setExpandedSaleId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!customerId) return;
+    const selectedCustomerId = customerId;
 
     let cancelled = false;
 
     async function load() {
       setLoading(true);
       setError("");
+      setLoyaltyLoading(true);
+      setLoyaltyError("");
+      setLoyaltySummary(null);
       setExpandedSaleId(null);
-      try {
-        const result = await getCustomer(customerId!);
-        if (!cancelled) setLoadedData(result);
-      } catch {
-        if (!cancelled) setError("تعذر تحميل تفاصيل العميل");
-      } finally {
-        if (!cancelled) setLoading(false);
+      const [customerResult, loyaltyResult] = await Promise.allSettled([
+        getCustomer(selectedCustomerId),
+        getCustomerLoyaltySummary(selectedCustomerId),
+      ]);
+      if (cancelled) return;
+
+      if (customerResult.status === "fulfilled") {
+        setLoadedData(customerResult.value);
+      } else {
+        setError("تعذر تحميل تفاصيل العميل");
       }
+
+      if (loyaltyResult.status === "fulfilled") {
+        setLoyaltySummary(loyaltyResult.value);
+      } else {
+        setLoyaltyError("تعذر تحميل رصيد وسجل نقاط الولاء");
+      }
+      setLoading(false);
+      setLoyaltyLoading(false);
     }
 
     load();
@@ -124,6 +157,82 @@ export default function CustomerDetailsModal({
               </p>
             </div>
           </div>
+
+          <section className="rounded-xl border border-gold/20 bg-gold/5 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-semibold text-brown">نقاط الولاء</h3>
+              {loyaltySummary && (
+                <p className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-gold">
+                  الرصيد الحالي: {loyaltySummary.loyaltyPoints} نقطة
+                </p>
+              )}
+            </div>
+
+            {loyaltyLoading && (
+              <p className="text-sm text-muted">جارٍ تحميل سجل الحركات...</p>
+            )}
+            {loyaltyError && (
+              <p role="alert" className="text-sm text-danger">{loyaltyError}</p>
+            )}
+            {loyaltySummary && !loyaltyLoading && (
+              loyaltySummary.loyaltyTransactions.length === 0 ? (
+                <p className="py-4 text-center text-sm text-muted">
+                  لا توجد حركات نقاط لهذا العميل بعد
+                </p>
+              ) : (
+                <div className="max-h-64 overflow-auto rounded-lg border border-border bg-white">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>التاريخ</TableHead>
+                        <TableHead>نوع الحركة</TableHead>
+                        <TableHead>النقاط</TableHead>
+                        <TableHead>الرصيد بعدها</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loyaltySummary.loyaltyTransactions.map((transaction) => (
+                        <TableRow key={transaction.id}>
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {formatDateTime(transaction.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p>{loyaltyTransactionLabels[transaction.type]}</p>
+                              {transaction.sale?.invoiceNumber && (
+                                <p className="text-xs text-muted" dir="ltr">
+                                  {transaction.sale.invoiceNumber}
+                                </p>
+                              )}
+                              {transaction.reason && (
+                                <p className="max-w-48 truncate text-xs text-muted">
+                                  {transaction.reason}
+                                </p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell
+                            dir="ltr"
+                            className={
+                              transaction.points > 0
+                                ? "font-semibold text-green-700"
+                                : transaction.points < 0
+                                  ? "font-semibold text-danger"
+                                  : undefined
+                            }
+                          >
+                            {transaction.points > 0 ? "+" : ""}
+                            {transaction.points}
+                          </TableCell>
+                          <TableCell dir="ltr">{transaction.balanceAfter}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )
+            )}
+          </section>
 
           <div className="rounded-xl border border-border p-4 space-y-3 text-sm">
             <p className="font-medium text-brown">معلومات الاتصال</p>

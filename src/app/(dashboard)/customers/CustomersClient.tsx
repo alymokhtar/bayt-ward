@@ -28,7 +28,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-type Customer = {
+type CustomerItem = {
   id: string;
   name: string;
   phone: string;
@@ -37,11 +37,12 @@ type Customer = {
   notes: string | null;
   totalSpent: number;
   visitCount: number;
+  loyaltyPoints: number;
   _count: { sales: number; returns: number };
 };
 
 interface CustomersClientProps {
-  customers: Customer[];
+  customers: CustomerItem[];
   total: number;
   page: number;
   totalPages: number;
@@ -59,7 +60,7 @@ export default function CustomersClient({
 }: CustomersClientProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Customer | null>(null);
+  const [editing, setEditing] = useState<CustomerItem | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -68,7 +69,7 @@ export default function CustomersClient({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CustomerItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
@@ -85,7 +86,7 @@ export default function CustomersClient({
     setModalOpen(true);
   }
 
-  function openEdit(c: Customer) {
+  function openEdit(c: CustomerItem) {
     setEditing(c);
     setName(c.name);
     setPhone(c.phone);
@@ -203,6 +204,7 @@ export default function CustomersClient({
                   <TableHead>المبيعات</TableHead>
                   <TableHead>إجمالي الإنفاق</TableHead>
                   <TableHead>الزيارات</TableHead>
+                  <TableHead>نقاط الولاء</TableHead>
                   <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
@@ -230,6 +232,11 @@ export default function CustomersClient({
                       {formatCurrency(c.totalSpent)}
                     </TableCell>
                     <TableCell>{c.visitCount}</TableCell>
+                    <TableCell>
+                      <span className="inline-flex min-w-20 items-center justify-center rounded-full bg-gold/10 px-2.5 py-1 text-sm font-semibold text-gold">
+                        {c.loyaltyPoints} نقطة
+                      </span>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <CustomerWhatsAppButton
