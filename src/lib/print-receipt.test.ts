@@ -92,3 +92,30 @@ test("prints promotion detail as informational text without deducting it twice",
   assert.match(html, /ضمن الخصم الإجمالي: خصم العرض/);
   assert.match(html, /<span>الإجمالي<\/span><span>180 ج\.م<\/span>/);
 });
+
+test("prints loyalty points earned, redeemed, and remaining balance", () => {
+  const receipt: ReceiptData = {
+    invoiceNumber: "INV-LOYALTY-001",
+    createdAt: new Date("2026-10-04T10:00:00.000Z"),
+    storeNameAr: "بيت ورد",
+    currencySymbol: "ج.م",
+    cashierName: "الكاشير",
+    customerName: "عميل",
+    paymentMethod: "CASH",
+    items: [],
+    subtotal: 200,
+    discountAmount: 50,
+    loyaltyPointsEarned: 10,
+    loyaltyPointsRedeemed: 50,
+    loyaltyPointsBalanceAfter: 75,
+    totalAmount: 150,
+    paidAmount: 150,
+    changeAmount: 0,
+  };
+
+  const html = buildReceiptPrintHtml(receipt);
+
+  assert.match(html, /النقاط المكتسبة:<\/span><span>10<\/span>/);
+  assert.match(html, /النقاط المستبدلة:<\/span><span>50<\/span>/);
+  assert.match(html, /الرصيد بعد العملية:<\/span><span>75<\/span>/);
+});

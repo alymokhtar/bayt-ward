@@ -33,6 +33,9 @@ export type ReceiptData = {
   subtotal: number;
   discountAmount: number;
   appliedPromotions?: { id: string; title: string; discountValue: number }[];
+  loyaltyPointsEarned?: number;
+  loyaltyPointsRedeemed?: number;
+  loyaltyPointsBalanceAfter?: number;
   totalAmount: number;
   paidAmount: number;
   changeAmount: number;
@@ -92,6 +95,29 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
           </div>
         )}
       </div>
+
+      {(data.customerName ||
+        (data.loyaltyPointsEarned ?? 0) > 0 ||
+        (data.loyaltyPointsRedeemed ?? 0) > 0) && (
+        <>
+          <DashedLine />
+          <div className="space-y-0.5">
+            <p className="font-bold">نقاط الولاء</p>
+            <div className="flex justify-between gap-2">
+              <span>النقاط المكتسبة:</span>
+              <span dir="ltr">{data.loyaltyPointsEarned ?? 0}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span>النقاط المستبدلة:</span>
+              <span dir="ltr">{data.loyaltyPointsRedeemed ?? 0}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span>الرصيد بعد العملية:</span>
+              <span dir="ltr">{data.loyaltyPointsBalanceAfter ?? 0}</span>
+            </div>
+          </div>
+        </>
+      )}
 
       <DashedLine />
 

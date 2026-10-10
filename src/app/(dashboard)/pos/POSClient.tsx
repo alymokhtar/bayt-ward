@@ -6,11 +6,13 @@ import ReceiptModal from "@/components/pos/ReceiptModal";
 import type { ReceiptData } from "@/components/pos/ReceiptInvoice";
 import { createSale } from "@/lib/actions/sales";
 import { createCustomer, searchCustomers } from "@/lib/actions/customers";
+import { getCustomerLoyaltySummary } from "@/lib/actions/loyalty";
 import { searchVariants } from "@/lib/actions/products";
 import { getCouponQuote } from "@/app/(dashboard)/dashboard/promotions/actions";
 import { scanVariantCode } from "@/lib/variant-scan-client";
 import { formatCurrency } from "@/lib/utils";
 import { calculateCartDiscounts, type Promotion } from "@/lib/promotions";
+import { LOYALTY_MIN_REDEMPTION_POINTS, LOYALTY_POINT_VALUE } from "@/lib/loyalty-utils";
 import type { PaymentMethod, SalesChannel } from "@prisma/client";
 import {
   Banknote,
@@ -82,6 +84,7 @@ export default function POSClient({
   const searchRef = useRef<HTMLInputElement>(null);
   const productSearchRequestRef = useRef(0);
   const customerSearchRequestRef = useRef(0);
+  const loyaltyRequestRef = useRef(0);
   const saleSubmissionRef = useRef<{
     idempotencyKey: string;
     payload: Omit<Parameters<typeof createSale>[0], "idempotencyKey">;
@@ -114,6 +117,10 @@ export default function POSClient({
   const [customerQuery, setCustomerQuery] = useState("");
   const [customerResults, setCustomerResults] = useState<CustomerResult[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerResult | null>(null);
+  const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState<number | null>(null);
+  const [loyaltyLoading, setLoyaltyLoading] = useState(false);
+  const [loyaltyError, setLoyaltyError] = useState("");
+  const [loyaltyPointsInput, setLoyaltyPointsInput] = useState("");
   const [showNewCustomer, setShowNewCustomer] = useState(false);
   const [newCustomerName, setNewCustomerName] = useState("");
   const [newCustomerPhone, setNewCustomerPhone] = useState("");
@@ -148,7 +155,28 @@ export default function POSClient({
   const promotionDiscount = promotionResult.discountAmount;
   const couponDiscount =
     appliedCoupon?.subtotal === subtotal ? appliedCoupon.discountAmount : 0;
-  const totalDiscount = Math.min(subtotal, manualDiscount + promotionDiscount + couponDiscount);
+  const discountBeforeLoyalty = Math.min(
+    subtotal,
+    manualDiscount + promotionDiscount + couponDiscount,
+  );
+  const loyaltyPointsToRedeem =
+    /^\d+$/.test(loyaltyPointsInput) ? Number(loyaltyPointsInput) : 0;
+  const loyaltyPointsInputIsNumeric = /^\d+$/.test(loyaltyPointsInput);
+  const loyaltyDiscount =
+    loyaltyPointsToRedeem * LOYALTY_POINT_VALUE;
+  const loyaltyPointsValid =
+    loyaltyPointsInput === "" ||
+    (loyaltyPointsInputIsNumeric && loyaltyPointsToRedeem === 0) ||
+    (loyaltyPointsInputIsNumeric &&
+      Number.isSafeInteger(loyaltyPointsToRedeem) &&
+      loyaltyPointsToRedeem >= LOYALTY_MIN_REDEMPTION_POINTS &&
+      customerLoyaltyPoints !== null &&
+      loyaltyPointsToRedeem <= customerLoyaltyPoints &&
+      loyaltyDiscount <= subtotal - discountBeforeLoyalty);
+  const totalDiscount = Math.min(
+    subtotal,
+    discountBeforeLoyalty + (loyaltyPointsValid ? loyaltyDiscount : 0),
+  );
   const totalAmount = Math.max(0, subtotal - totalDiscount);
   const couponConflictsWithPromotion =
     !!appliedCoupon && promotionDiscount > 0 && !appliedCoupon.stackable;
@@ -169,6 +197,39 @@ export default function POSClient({
     Math.abs(splitPaymentTotal - totalAmount) < 0.01;
   const isSinglePaymentValid = !!paymentMethod && paid >= totalAmount && totalAmount > 0;
   const isPaymentReady = splitPaymentEnabled ? isSplitPaymentValid : isSinglePaymentValid;
+
+  async function selectCustomer(customer: CustomerResult) {
+    const requestId = ++loyaltyRequestRef.current;
+    setSelectedCustomer(customer);
+    setCustomerLoyaltyPoints(null);
+    setLoyaltyPointsInput("");
+    setLoyaltyError("");
+    setLoyaltyLoading(true);
+    try {
+      const summary = await getCustomerLoyaltySummary(customer.id);
+      if (requestId === loyaltyRequestRef.current) {
+        setCustomerLoyaltyPoints(summary.loyaltyPoints);
+      }
+    } catch (summaryError) {
+      console.error("POS customer loyalty lookup failed", summaryError);
+      if (requestId === loyaltyRequestRef.current) {
+        setLoyaltyError("تعذر تحميل رصيد نقاط العميل. أعد اختياره للمحاولة مجدداً.");
+      }
+    } finally {
+      if (requestId === loyaltyRequestRef.current) {
+        setLoyaltyLoading(false);
+      }
+    }
+  }
+
+  function clearSelectedCustomer() {
+    loyaltyRequestRef.current += 1;
+    setSelectedCustomer(null);
+    setCustomerLoyaltyPoints(null);
+    setLoyaltyPointsInput("");
+    setLoyaltyError("");
+    setLoyaltyLoading(false);
+  }
 
   async function handleApplyCoupon() {
     setCouponLoading(true);
@@ -380,7 +441,7 @@ export default function POSClient({
       phone: newCustomerPhone,
     });
     if (result.success && result.data) {
-      setSelectedCustomer(result.data);
+      await selectCustomer(result.data);
       setShowNewCustomer(false);
       setNewCustomerName("");
       setNewCustomerPhone("");
@@ -457,6 +518,7 @@ export default function POSClient({
         payload: {
           channel: orderChannel,
           customerId: selectedCustomer?.id,
+          loyaltyPointsToRedeem,
           items: cart.map((item) => ({
             variantId: item.variant.id,
             quantity: item.quantity,
@@ -531,6 +593,9 @@ export default function POSClient({
         cashierName: result.data.user.name,
         customerName: result.data.customer?.name ?? undefined,
         customerPhone: result.data.customer?.phone ?? undefined,
+        loyaltyPointsEarned: result.data.loyaltyPointsEarned,
+        loyaltyPointsRedeemed: result.data.loyaltyPointsRedeemed,
+        loyaltyPointsBalanceAfter: result.data.customer?.loyaltyPoints ?? 0,
         paymentMethod: result.data.paymentMethod ?? "CASH",
         payments: result.data.payments.map((payment) => ({
           method: payment.method,
@@ -567,6 +632,10 @@ export default function POSClient({
       setPaidAmount("");
       setNotes("");
       setSelectedCustomer(null);
+      setCustomerLoyaltyPoints(null);
+      setLoyaltyPointsInput("");
+      setLoyaltyError("");
+      setLoyaltyLoading(false);
       setPaymentMethod("");
       setSplitPaymentEnabled(false);
       setSplitPaymentAmounts(DEFAULT_SPLIT_PAYMENT_VALUES);
@@ -763,15 +832,25 @@ export default function POSClient({
               <span className="text-sm font-medium text-brown">العميل</span>
             </div>
             {selectedCustomer ? (
-              <div className="flex items-center justify-between rounded-lg bg-cream-dark/50 px-3 py-2">
-                <span className="text-sm">{selectedCustomer.name}</span>
-                <button
-                  type="button"
-                  onClick={() => setSelectedCustomer(null)}
-                  className="text-xs text-danger"
-                >
-                  إزالة
-                </button>
+              <div className="space-y-2 rounded-lg bg-cream-dark/50 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm">{selectedCustomer.name}</span>
+                  <button
+                    type="button"
+                    onClick={clearSelectedCustomer}
+                    className="text-xs text-danger"
+                  >
+                    إزالة
+                  </button>
+                </div>
+                <p className="text-xs text-muted">
+                  {loyaltyLoading
+                    ? "جاري تحميل رصيد نقاط الولاء..."
+                    : customerLoyaltyPoints !== null
+                      ? `رصيد نقاط الولاء: ${customerLoyaltyPoints}`
+                      : "رصيد نقاط الولاء غير متاح"}
+                </p>
+                {loyaltyError && <p className="text-xs text-danger" role="alert">{loyaltyError}</p>}
               </div>
             ) : showNewCustomer ? (
               <div className="space-y-2">
@@ -820,7 +899,7 @@ export default function POSClient({
                         <button
                           type="button"
                           onClick={() => {
-                            setSelectedCustomer(c);
+                            void selectCustomer(c);
                             setCustomerQuery("");
                             setCustomerResults([]);
                             focusBarcodeInput();
@@ -844,6 +923,39 @@ export default function POSClient({
               </div>
             )}
           </div>
+
+          {selectedCustomer && (
+            <div className="space-y-2 rounded-lg border border-gold/20 bg-gold/5 p-3">
+              <Input
+                label={`نقاط الولاء للاستبدال (الحد الأدنى ${LOYALTY_MIN_REDEMPTION_POINTS})`}
+                type="number"
+                min={LOYALTY_MIN_REDEMPTION_POINTS}
+                max={Math.max(
+                  0,
+                  Math.min(
+                    customerLoyaltyPoints ?? 0,
+                    Math.floor((subtotal - discountBeforeLoyalty) / LOYALTY_POINT_VALUE),
+                  ),
+                )}
+                step={1}
+                value={loyaltyPointsInput}
+                disabled={loyaltyLoading || customerLoyaltyPoints === null}
+                onChange={(event) => setLoyaltyPointsInput(event.target.value)}
+                dir="ltr"
+              />
+              {loyaltyPointsInput && loyaltyPointsToRedeem > 0 && (
+                loyaltyPointsValid ? (
+                  <p className="text-sm text-green-800">
+                    خصم نقاط الولاء: - {formatCurrency(loyaltyDiscount)}
+                  </p>
+                ) : (
+                  <p className="text-xs text-danger" role="alert">
+                    أدخل 50 نقطة على الأقل، ضمن رصيد العميل والمبلغ المتبقي من الفاتورة.
+                  </p>
+                )
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <Input
@@ -1021,6 +1133,12 @@ export default function POSClient({
               <span>- {formatCurrency(couponDiscount)}</span>
             </div>
           )}
+          {loyaltyDiscount > 0 && loyaltyPointsValid && (
+            <div className="flex justify-between text-green-800">
+              <span>استبدال {loyaltyPointsToRedeem} نقطة ولاء</span>
+              <span>- {formatCurrency(loyaltyDiscount)}</span>
+            </div>
+          )}
 
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
@@ -1078,7 +1196,14 @@ export default function POSClient({
             className="w-full"
             size="lg"
             loading={loading}
-            disabled={pendingRetry || cart.length === 0 || !isPaymentReady}
+            disabled={
+              pendingRetry ||
+              cart.length === 0 ||
+              !isPaymentReady ||
+              !loyaltyPointsValid ||
+              loyaltyLoading ||
+              (!!loyaltyPointsInput && customerLoyaltyPoints === null)
+            }
             onClick={handleCompleteSale}
           >
             إتمام البيع

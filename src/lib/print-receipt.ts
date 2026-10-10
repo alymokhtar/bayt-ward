@@ -187,6 +187,13 @@ export function buildReceiptPrintHtml(
         )
       : row("طريقة الدفع", escapeHtml(getPaymentMethodLabel(data.payments?.[0]?.method ?? data.paymentMethod)))
   }
+  ${
+    data.customerName ||
+    (data.loyaltyPointsEarned ?? 0) > 0 ||
+    (data.loyaltyPointsRedeemed ?? 0) > 0
+      ? `${dashedLine()}<div><strong>نقاط الولاء</strong>${row("النقاط المكتسبة:", String(data.loyaltyPointsEarned ?? 0))}${row("النقاط المستبدلة:", String(data.loyaltyPointsRedeemed ?? 0))}${row("الرصيد بعد العملية:", String(data.loyaltyPointsBalanceAfter ?? 0))}</div>`
+      : ""
+  }
 
   ${
     data.notes

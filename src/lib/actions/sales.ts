@@ -78,7 +78,7 @@ const saleResponseSelect = {
       },
     },
   },
-  customer: { select: { id: true, name: true, phone: true } },
+  customer: { select: { id: true, name: true, phone: true, loyaltyPoints: true } },
   user: { select: { id: true, name: true } },
 } satisfies Prisma.SaleSelect;
 
@@ -1037,6 +1037,13 @@ export async function createSale(data: {
             totalSpent: { increment: totalAmount },
             visitCount: { increment: 1 },
           },
+        });
+      }
+
+      if (data.customerId) {
+        return tx.sale.findUniqueOrThrow({
+          where: { id: createdSale.id },
+          select: saleResponseSelect,
         });
       }
 
