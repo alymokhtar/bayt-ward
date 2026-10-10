@@ -18,6 +18,26 @@ export interface WhatsAppMessageParams {
   customMessage?: string;
 }
 
+export interface LoyaltyPointsWhatsAppMessageParams {
+  customerName: string;
+  pointsEarned: number;
+  pointsBalance: number;
+}
+
+export function buildLoyaltyPointsWhatsAppMessage({
+  customerName,
+  pointsEarned,
+  pointsBalance,
+}: LoyaltyPointsWhatsAppMessageParams): string {
+  return (
+    `🌸 *بيت ورد*\n` +
+    `أهلاً ${customerName}، شكراً لزيارتك!\n` +
+    `اكتسبتِ من مشترياتك اليوم *${pointsEarned} نقطة بيت ورد*.\n` +
+    `رصيدك المتاح الآن *${pointsBalance} نقطة*.\n` +
+    `سعداء بخدمتك دائماً 💕 — بيت ورد`
+  );
+}
+
 export function formatPhoneForWhatsApp(phone: string): string {
   const trimmedPhone = phone?.trim() || "";
   if (!trimmedPhone) return "";

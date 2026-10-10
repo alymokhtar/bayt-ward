@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { formatPhoneForWhatsApp, getWhatsAppUrl } from "./whatsapp";
+import {
+  buildLoyaltyPointsWhatsAppMessage,
+  formatPhoneForWhatsApp,
+  getWhatsAppUrl,
+} from "./whatsapp";
 import {
   buildStoreCartOrderMessage,
   buildStoreOrderMessage,
@@ -31,6 +35,20 @@ test("builds WhatsApp URLs with the normalized phone number", () => {
     getWhatsAppUrl("01012345678", "مرحبا"),
     "https://wa.me/201012345678?text=%D9%85%D8%B1%D8%AD%D8%A8%D8%A7"
   );
+});
+
+test("builds a loyalty points message without invoice details", () => {
+  const message = buildLoyaltyPointsWhatsAppMessage({
+    customerName: "سارة",
+    pointsEarned: 15,
+    pointsBalance: 65,
+  });
+
+  assert.equal(
+    message,
+    "🌸 *بيت ورد*\nأهلاً سارة، شكراً لزيارتك!\nاكتسبتِ من مشترياتك اليوم *15 نقطة بيت ورد*.\nرصيدك المتاح الآن *65 نقطة*.\nسعداء بخدمتك دائماً 💕 — بيت ورد",
+  );
+  assert.doesNotMatch(message, /فاتورة|الإجمالي|المنتج/);
 });
 
 test("encodes line breaks, symbols, and emoji in WhatsApp messages", () => {

@@ -3,7 +3,12 @@
 import Button from "@/components/ui/Button";
 import ReceiptInvoice, { type ReceiptData } from "@/components/pos/ReceiptInvoice";
 import { printReceipt } from "@/lib/print-receipt";
-import { Printer, X } from "lucide-react";
+import {
+  buildLoyaltyPointsWhatsAppMessage,
+  formatPhoneForWhatsApp,
+  openWhatsApp,
+} from "@/lib/whatsapp";
+import { MessageCircle, Printer, X } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 
 interface ReceiptModalProps {
@@ -13,11 +18,34 @@ interface ReceiptModalProps {
 
 export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
   const hasAutoPrinted = useRef(false);
+  const hasValidCustomerPhone = Boolean(
+    receipt?.customerPhone && formatPhoneForWhatsApp(receipt.customerPhone),
+  );
+  const hasLoyaltyPointsToShare = Boolean(
+    receipt &&
+      receipt.customerName &&
+      hasValidCustomerPhone &&
+      ((receipt.loyaltyPointsEarned ?? 0) > 0 ||
+        (receipt.loyaltyPointsBalanceAfter ?? 0) > 0),
+  );
 
   const handlePrint = useCallback(() => {
     if (!receipt) return;
     printReceipt(receipt);
   }, [receipt]);
+
+  function handleShareLoyaltyPoints() {
+    if (!receipt?.customerPhone || !receipt.customerName) return;
+
+    openWhatsApp(
+      receipt.customerPhone,
+      buildLoyaltyPointsWhatsAppMessage({
+        customerName: receipt.customerName,
+        pointsEarned: receipt.loyaltyPointsEarned ?? 0,
+        pointsBalance: receipt.loyaltyPointsBalanceAfter ?? 0,
+      }),
+    );
+  }
 
   useEffect(() => {
     if (!receipt) {
@@ -77,6 +105,15 @@ export default function ReceiptModal({ receipt, onClose }: ReceiptModalProps) {
             <Printer className="h-4 w-4" />
             طباعة
           </Button>
+          {hasLoyaltyPointsToShare && (
+            <Button
+              className="flex-1 bg-[#25D366] text-white hover:bg-[#1da851]"
+              onClick={handleShareLoyaltyPoints}
+            >
+              <MessageCircle className="h-4 w-4" />
+              إرسال النقاط عبر واتساب
+            </Button>
+          )}
           <Button className="flex-1" variant="secondary" onClick={onClose}>
             فاتورة جديدة
           </Button>
