@@ -63,11 +63,16 @@ test("builds a loyalty coupon message with customer, spend, code, discount, and 
     expiresAt: "25‏/10‏/2026",
   });
 
-  assert.match(message, /سارة/);
+  assert.match(message, /متجر بيت ورد/);
+  assert.match(message, /أهلاً بكِ يا \*سارة\*/);
+  assert.ok(message.includes("\n\nأهلاً بكِ يا *سارة*"));
+  assert.match(message, /يسعدنا جداً احتفالاً بولائك المستمر/);
   assert.ok(message.includes(formatCurrency(10_250)));
+  assert.match(message, /كوبون مكافأة الولاء الحصري/);
   assert.match(message, /BW-ABC123/);
   assert.ok(message.includes(formatCurrency(100)));
-  assert.match(message, /25/);
+  assert.match(message, /صالح حتى تاريخ: \*25‏\/10‏\/2026\*/);
+  assert.match(message, /ننتظر زيارتك القادمة/);
   assert.doesNotMatch(message, /فاتورة|الأصناف/);
 });
 

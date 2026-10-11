@@ -40,12 +40,16 @@ export function buildLoyaltyCouponWhatsAppMessage({
   expiresAt,
 }: LoyaltyCouponWhatsAppMessageParams): string {
   return (
-    `\u{1F338} *بيت ورد*\n` +
-    `أهلاً ${customerName}، وصل إجمالي مشترياتك إلى *${formatCurrency(totalSpent)}*.\n` +
-    `كوبونك الحصري: *${couponCode}*\n` +
-    `قيمة الخصم: *${formatCurrency(discountAmount)}*\n` +
-    `صالح حتى: *${expiresAt}*.\n` +
-    `شكراً لثقتك ببيت ورد \u{1F495}`
+    `\u{1F338} *متجر بيت ورد* \u{1F338}\n\n` +
+    `أهلاً بكِ يا *${customerName}* \u{2728}\n\n` +
+    `يسعدنا جداً احتفالاً بولائك المستمر أن نكافئك على ثقتك الغالية معنا! \u{1F496}\n` +
+    `وصل إجمالي مشترياتك الرائعة إلى *${formatCurrency(totalSpent)}*.\n\n` +
+    `\u{1F381} *كوبون مكافأة الولاء الحصري:*\n` +
+    `*${couponCode}*\n\n` +
+    `\u{1F48E} *تفاصيل الهدية:*\n` +
+    `• قيمة الخصم: *${formatCurrency(discountAmount)}* (خصم مباشر على مشترياتك القادمة)\n` +
+    `• صالح حتى تاريخ: *${expiresAt}*\n\n` +
+    `ننتظر زيارتك القادمة بكل شوق لنشاركك الجمال والفرح دائماً! \u{1F339}`
   );
 }
 
