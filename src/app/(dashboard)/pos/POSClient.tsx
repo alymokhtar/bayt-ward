@@ -857,8 +857,11 @@ export default function POSClient({
                       : "رصيد نقاط الولاء غير متاح"}
                 </p>
                 {customerCouponEligible && (
-                  <p className="flex items-center gap-1 text-xs font-medium text-gold" role="status">
-                    <Tag className="h-3.5 w-3.5" />
+                  <p
+                    className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-sm font-bold text-red-600"
+                    role="status"
+                  >
+                    <Tag className="h-4 w-4 shrink-0" />
                     العميل مؤهل لكوبون ولاء جديد
                   </p>
                 )}
