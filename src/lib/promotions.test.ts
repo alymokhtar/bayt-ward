@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   calculateCartDiscounts,
   calculateCouponDiscount,
+  getCouponOperationalStatus,
   getPromotionDateRangeBounds,
   isPromotionDateRangeActive,
   type CartItem,
@@ -334,6 +335,47 @@ test("returns a zero result for empty carts and ignores malformed cart rows", ()
     assert.equal(
       calculateCouponDiscount({ type: "PERCENTAGE", discountPercent: 101 }, 230),
       0,
+    );
+  });
+
+  test("shows operational coupon status from expiry and usage before the manual toggle", () => {
+    const now = new Date("2026-10-11T12:00:00.000Z");
+
+    assert.equal(
+      getCouponOperationalStatus({
+        isActive: true,
+        usageCount: 0,
+        usageLimit: 1,
+        expiresAt: new Date("2026-10-12T00:00:00.000Z"),
+      }, now),
+      "active",
+    );
+    assert.equal(
+      getCouponOperationalStatus({
+        isActive: true,
+        usageCount: 1,
+        usageLimit: 1,
+        expiresAt: new Date("2026-10-12T00:00:00.000Z"),
+      }, now),
+      "exhausted",
+    );
+    assert.equal(
+      getCouponOperationalStatus({
+        isActive: true,
+        usageCount: 0,
+        usageLimit: 1,
+        expiresAt: new Date("2026-10-10T23:59:59.999Z"),
+      }, now),
+      "expired",
+    );
+    assert.equal(
+      getCouponOperationalStatus({
+        isActive: false,
+        usageCount: 0,
+        usageLimit: null,
+        expiresAt: null,
+      }, now),
+      "disabled",
     );
   });
 });

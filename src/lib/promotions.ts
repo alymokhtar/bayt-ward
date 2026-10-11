@@ -75,6 +75,28 @@ export function calculateCouponDiscount(
   return roundMoney(Math.min(coupon.discountAmount!, cartSubtotal));
 }
 
+export type CouponOperationalStatus =
+  | "expired"
+  | "exhausted"
+  | "disabled"
+  | "active";
+
+export function getCouponOperationalStatus(
+  coupon: {
+    isActive: boolean;
+    usageCount: number;
+    usageLimit: number | null;
+    expiresAt: Date | null;
+  },
+  now = new Date(),
+): CouponOperationalStatus {
+  if (coupon.expiresAt && coupon.expiresAt < now) return "expired";
+  if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
+    return "exhausted";
+  }
+  return coupon.isActive ? "active" : "disabled";
+}
+
 export interface AppliedPromotion {
   id: string;
   title: string;

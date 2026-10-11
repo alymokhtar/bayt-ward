@@ -23,6 +23,7 @@ import {
 } from "../actions";
 import type { CouponInput, CouponRecord, CouponType } from "../types";
 import { getCairoDateString } from "@/lib/promotion-date";
+import { getCouponOperationalStatus } from "@/lib/promotions";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -239,9 +240,28 @@ export default function CouponsClient({ onBack }: { onBack: () => void }) {
                 <TableCell>{coupon.usageCount}{coupon.usageLimit == null ? " / ∞" : ` / ${coupon.usageLimit}`}</TableCell>
                 <TableCell>{coupon.expiresAt ? dateInputValue(coupon.expiresAt) : "بدون انتهاء"}</TableCell>
                 <TableCell>
-                  <button type="button" disabled={pendingId === coupon.id} onClick={() => void toggle(coupon)}>
-                    <Badge variant={coupon.isActive ? "success" : "default"}>{coupon.isActive ? "مفعل" : "معطل"}</Badge>
-                  </button>
+                  {(() => {
+                    const status = getCouponOperationalStatus(coupon);
+                    const statusPresentation = {
+                      expired: { label: "منتهي", variant: "danger" as const },
+                      exhausted: { label: "مستنفد", variant: "warning" as const },
+                      disabled: { label: "معطل", variant: "default" as const },
+                      active: { label: "مفعل", variant: "success" as const },
+                    }[status];
+
+                    return (
+                      <button
+                        type="button"
+                        disabled={pendingId === coupon.id}
+                        onClick={() => void toggle(coupon)}
+                        aria-label={`${coupon.isActive ? "إيقاف" : "تفعيل"} الكوبون ${coupon.code}`}
+                      >
+                        <Badge variant={statusPresentation.variant}>
+                          {statusPresentation.label}
+                        </Badge>
+                      </button>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
