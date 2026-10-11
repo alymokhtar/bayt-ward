@@ -24,6 +24,31 @@ export interface LoyaltyPointsWhatsAppMessageParams {
   pointsBalance: number;
 }
 
+export interface LoyaltyCouponWhatsAppMessageParams {
+  customerName: string;
+  totalSpent: number;
+  couponCode: string;
+  discountAmount: number;
+  expiresAt: string;
+}
+
+export function buildLoyaltyCouponWhatsAppMessage({
+  customerName,
+  totalSpent,
+  couponCode,
+  discountAmount,
+  expiresAt,
+}: LoyaltyCouponWhatsAppMessageParams): string {
+  return (
+    `\u{1F338} *بيت ورد*\n` +
+    `أهلاً ${customerName}، وصل إجمالي مشترياتك إلى *${formatCurrency(totalSpent)}*.\n` +
+    `كوبونك الحصري: *${couponCode}*\n` +
+    `قيمة الخصم: *${formatCurrency(discountAmount)}*\n` +
+    `صالح حتى: *${expiresAt}*.\n` +
+    `شكراً لثقتك ببيت ورد \u{1F495}`
+  );
+}
+
 export function buildLoyaltyPointsWhatsAppMessage({
   customerName,
   pointsEarned,

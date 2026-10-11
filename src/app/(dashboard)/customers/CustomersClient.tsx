@@ -18,12 +18,22 @@ import {
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  issueLoyaltyCoupon,
 } from "@/lib/actions/customers";
 import CustomerDetailsModal from "@/app/(dashboard)/customers/CustomerDetailsModal";
 import { formatCurrency } from "@/lib/utils";
+import {
+  DEFAULT_LOYALTY_COUPON_THRESHOLD,
+  getLoyaltyCouponEligibility,
+} from "@/lib/loyalty-coupon-utils";
+import {
+  buildLoyaltyCouponWhatsAppMessage,
+  formatPhoneForWhatsApp,
+  getWhatsAppUrl,
+} from "@/lib/whatsapp";
 import CustomerWhatsAppButton from "@/components/whatsapp/CustomerWhatsAppButton";
 import PaginationNav from "@/components/ui/PaginationNav";
-import { Eye, Pencil, Plus, Search, Trash2, Users } from "lucide-react";
+import { Eye, MessageCircle, Pencil, Plus, Search, Tag, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -36,6 +46,8 @@ type CustomerItem = {
   address: string | null;
   notes: string | null;
   totalSpent: number;
+  customThreshold: number | null;
+  loyaltyMilestones: Array<{ level: number }>;
   visitCount: number;
   loyaltyPoints: number;
   _count: { sales: number; returns: number };
@@ -66,12 +78,19 @@ export default function CustomersClient({
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
+  const [customThreshold, setCustomThreshold] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CustomerItem | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [issuingCustomerId, setIssuingCustomerId] = useState<string | null>(null);
+  const [couponFeedback, setCouponFeedback] = useState<{
+    customerId: string;
+    message: string;
+    error: boolean;
+  } | null>(null);
 
   const hasSearch = Boolean(search?.trim());
 
@@ -82,6 +101,7 @@ export default function CustomersClient({
     setEmail("");
     setAddress("");
     setNotes("");
+    setCustomThreshold("");
     setError("");
     setModalOpen(true);
   }
@@ -93,6 +113,7 @@ export default function CustomersClient({
     setEmail(c.email || "");
     setAddress(c.address || "");
     setNotes(c.notes || "");
+    setCustomThreshold(c.customThreshold?.toString() ?? "");
     setError("");
     setModalOpen(true);
   }
@@ -104,8 +125,27 @@ export default function CustomersClient({
     setError("");
 
     try {
+      const parsedCustomThreshold = customThreshold.trim()
+        ? Number(customThreshold)
+        : null;
+      if (
+        editing &&
+        parsedCustomThreshold !== null &&
+        !Number.isFinite(parsedCustomThreshold)
+      ) {
+        setError("الحد المخصص يجب أن يكون رقماً صالحاً");
+        return;
+      }
+
       const result = editing
-        ? await updateCustomer(editing.id, { name, phone, email, address, notes })
+        ? await updateCustomer(editing.id, {
+            name,
+            phone,
+            email,
+            address,
+            notes,
+            customThreshold: parsedCustomThreshold,
+          })
         : await createCustomer({ name, phone, email, address, notes });
 
       if (result.success) {
@@ -118,6 +158,83 @@ export default function CustomersClient({
       setError("تعذر حفظ بيانات العميل بسبب مشكلة في الاتصال. حاول مرة أخرى.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleIssueLoyaltyCoupon(customer: CustomerItem) {
+    if (issuingCustomerId) return;
+    if (!formatPhoneForWhatsApp(customer.phone)) {
+      setCouponFeedback({
+        customerId: customer.id,
+        message: "رقم هاتف العميل غير صالح لفتح واتساب.",
+        error: true,
+      });
+      return;
+    }
+
+    const whatsappWindow = window.open("about:blank", "_blank");
+    if (!whatsappWindow) {
+      setCouponFeedback({
+        customerId: customer.id,
+        message: "اسمح بفتح النوافذ المنبثقة لإصدار الكوبون وفتح رسالة واتساب.",
+        error: true,
+      });
+      return;
+    }
+    whatsappWindow.opener = null;
+    setIssuingCustomerId(customer.id);
+    setCouponFeedback(null);
+
+    try {
+      const result = await issueLoyaltyCoupon(customer.id);
+      if (!result.success) {
+        whatsappWindow.close();
+        setCouponFeedback({
+          customerId: customer.id,
+          message: result.error,
+          error: true,
+        });
+        return;
+      }
+
+      const expiresAt = new Date(result.data.expiresAt).toLocaleDateString(
+        "ar-EG",
+        { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Cairo" }
+      );
+      const message = buildLoyaltyCouponWhatsAppMessage({
+        customerName: result.data.customerName,
+        totalSpent: result.data.totalSpent,
+        couponCode: result.data.code,
+        discountAmount: result.data.discountAmount ?? 0,
+        expiresAt,
+      });
+      const whatsappUrl = getWhatsAppUrl(result.data.customerPhone, message);
+      if (!whatsappUrl) {
+        whatsappWindow.close();
+        setCouponFeedback({
+          customerId: customer.id,
+          message: `تم إصدار الكوبون ${result.data.code}، لكن تعذر تجهيز رابط واتساب لأن رقم الهاتف غير صالح.`,
+          error: true,
+        });
+      } else {
+        whatsappWindow.location.href = whatsappUrl;
+        setCouponFeedback({
+          customerId: customer.id,
+          message: `تم إصدار الكوبون ${result.data.code} وفتح رسالة واتساب جاهزة. أرسلها بعد مراجعتها.`,
+          error: false,
+        });
+      }
+      router.refresh();
+    } catch (issueError) {
+      console.error("Loyalty coupon issuance failed", issueError);
+      whatsappWindow.close();
+      setCouponFeedback({
+        customerId: customer.id,
+        message: "تعذر إصدار الكوبون. حاول مرة أخرى.",
+        error: true,
+      });
+    } finally {
+      setIssuingCustomerId(null);
     }
   }
 
@@ -205,12 +322,19 @@ export default function CustomersClient({
                   <TableHead>إجمالي الإنفاق</TableHead>
                   <TableHead>الزيارات</TableHead>
                   <TableHead>نقاط الولاء</TableHead>
+                  <TableHead>كوبون الولاء</TableHead>
                   <TableHead>الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {customers.map((c) => (
-                  <TableRow key={c.id}>
+                {customers.map((c) => {
+                  const couponEligibility = getLoyaltyCouponEligibility({
+                    totalSpent: c.totalSpent,
+                    customThreshold: c.customThreshold,
+                    lastIssuedLevel: c.loyaltyMilestones[0]?.level ?? 0,
+                  });
+                  return (
+                    <TableRow key={c.id}>
                     <TableCell>
                       {canManage ? (
                         <button
@@ -236,6 +360,47 @@ export default function CustomersClient({
                       <span className="inline-flex min-w-20 items-center justify-center rounded-full bg-gold/10 px-2.5 py-1 text-sm font-semibold text-gold">
                         {c.loyaltyPoints} نقطة
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {couponEligibility.eligible ? (
+                        <div className="space-y-2">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-gold/10 px-2.5 py-1 text-xs font-semibold text-gold">
+                            <Tag className="h-3.5 w-3.5" />
+                            مؤهل — المستوى {couponEligibility.nextLevel}
+                          </span>
+                          {canManage && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              disabled={
+                                issuingCustomerId !== null ||
+                                !formatPhoneForWhatsApp(c.phone)
+                              }
+                              loading={issuingCustomerId === c.id}
+                              onClick={() => void handleIssueLoyaltyCoupon(c)}
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                              إصدار وإرسال واتساب
+                            </Button>
+                          )}
+                          {canManage && !formatPhoneForWhatsApp(c.phone) && (
+                            <p className="text-xs text-danger">
+                              رقم الهاتف غير صالح لواتساب
+                            </p>
+                          )}
+                          {couponFeedback?.customerId === c.id && (
+                            <p
+                              className={`max-w-64 text-xs ${couponFeedback.error ? "text-danger" : "text-green-700"}`}
+                              role={couponFeedback.error ? "alert" : "status"}
+                            >
+                              {couponFeedback.message}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted">غير مؤهل</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -271,8 +436,9 @@ export default function CustomersClient({
                         )}
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -356,6 +522,18 @@ export default function CustomersClient({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
+          {editing && canManage && (
+            <Input
+              label="حد استحقاق كوبون الولاء المخصص (ج.م)"
+              type="number"
+              min={DEFAULT_LOYALTY_COUPON_THRESHOLD + 0.01}
+              step="any"
+              value={customThreshold}
+              onChange={(e) => setCustomThreshold(e.target.value)}
+              placeholder={`اتركه فارغاً لاستخدام الحد العام ${formatCurrency(DEFAULT_LOYALTY_COUPON_THRESHOLD)}`}
+              dir="ltr"
+            />
+          )}
         </form>
       </Modal>
 

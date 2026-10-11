@@ -5,9 +5,30 @@ import { requireAuth, requireRole } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { getCachedCustomersPage } from "@/lib/cached-queries";
 import { invalidateCustomersData } from "@/lib/revalidate-tags";
+import { randomBytes } from "node:crypto";
+import {
+  DEFAULT_LOYALTY_COUPON_THRESHOLD,
+  getLoyaltyCouponEligibility,
+  LOYALTY_COUPON_DISCOUNT_AMOUNT,
+  LOYALTY_COUPON_EXPIRY_DAYS,
+} from "@/lib/loyalty-coupon-utils";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
+  | { success: false; error: string };
+
+type IssueLoyaltyCouponResult =
+  | {
+      success: true;
+      data: {
+        code: string;
+        discountAmount: number | null;
+        expiresAt: string;
+        customerName: string;
+        customerPhone: string;
+        totalSpent: number;
+      };
+    }
   | { success: false; error: string };
 
 function handleActionError(error: unknown): ActionResult<never> {
@@ -125,10 +146,23 @@ export async function updateCustomer(
     email?: string;
     address?: string;
     notes?: string;
+    customThreshold?: number | null;
   }
 ) {
   try {
     await requireRole(["ADMIN", "MANAGER"]);
+
+    if (
+      data.customThreshold !== undefined &&
+      data.customThreshold !== null &&
+      (!Number.isFinite(data.customThreshold) ||
+        data.customThreshold <= DEFAULT_LOYALTY_COUPON_THRESHOLD)
+    ) {
+      return {
+        success: false,
+        error: `الحد المخصص يجب أن يكون أكبر من ${DEFAULT_LOYALTY_COUPON_THRESHOLD.toLocaleString("ar-EG")} ج.م`,
+      };
+    }
 
     const existing = await prisma.customer.findUnique({ where: { id } });
     if (!existing) {
@@ -143,6 +177,7 @@ export async function updateCustomer(
         email: data.email?.trim(),
         address: data.address?.trim(),
         notes: data.notes?.trim(),
+        customThreshold: data.customThreshold,
       },
     });
 
@@ -187,6 +222,113 @@ export async function deleteCustomer(id: string) {
       return {
         success: false,
         error: "لا يمكن حذف العميل لارتباطه بسجل مبيعات أو مرتجعات. حدّث الصفحة وحاول مجددًا.",
+      };
+    }
+    return handleActionError(error);
+  }
+}
+
+export async function issueLoyaltyCoupon(
+  customerId: string
+): Promise<IssueLoyaltyCouponResult> {
+  try {
+    await requireRole(["ADMIN", "MANAGER"]);
+    if (typeof customerId !== "string" || !customerId.trim()) {
+      return { success: false, error: "معرّف العميل غير صالح" };
+    }
+
+    const couponData = await prisma.$transaction(
+      async (tx) => {
+        const customer = await tx.customer.findUnique({
+          where: { id: customerId },
+          select: {
+            id: true,
+            name: true,
+            phone: true,
+            totalSpent: true,
+            customThreshold: true,
+            loyaltyMilestones: {
+              orderBy: { level: "desc" },
+              take: 1,
+              select: { level: true },
+            },
+          },
+        });
+
+        if (!customer) {
+          throw new Error("العميل غير موجود");
+        }
+
+        const lastIssuedLevel = customer.loyaltyMilestones[0]?.level ?? 0;
+        const eligibility = getLoyaltyCouponEligibility({
+          totalSpent: customer.totalSpent,
+          customThreshold: customer.customThreshold,
+          lastIssuedLevel,
+        });
+
+        if (!eligibility.eligible) {
+          throw new Error("العميل غير مؤهل لكوبون ولاء جديد");
+        }
+
+        const expiresAt = new Date(
+          Date.now() + LOYALTY_COUPON_EXPIRY_DAYS * 24 * 60 * 60 * 1000
+        );
+        const code = `BW-${randomBytes(8).toString("hex").toUpperCase()}`;
+        const coupon = await tx.coupon.create({
+          data: {
+            code,
+            customerId: customer.id,
+            type: "FIXED_AMOUNT",
+            discountAmount: LOYALTY_COUPON_DISCOUNT_AMOUNT,
+            minOrderAmount: null,
+            usageLimit: 1,
+            expiresAt,
+            isActive: true,
+            stackable: false,
+          },
+          select: { id: true, code: true, discountAmount: true, expiresAt: true },
+        });
+
+        await tx.customerLoyaltyMilestone.create({
+          data: {
+            customerId: customer.id,
+            level: eligibility.nextLevel,
+            thresholdAmount: eligibility.nextThreshold,
+            couponId: coupon.id,
+          },
+        });
+
+        return {
+          code: coupon.code,
+          discountAmount: coupon.discountAmount,
+          expiresAt: expiresAt.toISOString(),
+          customerName: customer.name,
+          customerPhone: customer.phone,
+          totalSpent: customer.totalSpent,
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    );
+
+    revalidateCustomerPaths();
+    return { success: true, data: couponData };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return {
+        success: false,
+        error: "تعارض إصدار الكوبون؛ حدّث الصفحة للتحقق من الأهلية وحاول مجدداً.",
+      };
+    }
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2034"
+    ) {
+      return {
+        success: false,
+        error: "تغيرت أهلية العميل بالتزامن مع الإصدار. حدّث الصفحة وحاول مجدداً.",
       };
     }
     return handleActionError(error);

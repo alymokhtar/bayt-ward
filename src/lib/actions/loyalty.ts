@@ -9,6 +9,7 @@ import {
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { getLoyaltyCouponEligibility } from "@/lib/loyalty-coupon-utils";
 
 const MAX_ANALYTICS_RANGE_DAYS = 366;
 
@@ -190,6 +191,13 @@ export async function getCustomerLoyaltySummary(customerId: string) {
       id: true,
       name: true,
       loyaltyPoints: true,
+      totalSpent: true,
+      customThreshold: true,
+      loyaltyMilestones: {
+        orderBy: { level: "desc" },
+        take: 1,
+        select: { level: true },
+      },
       loyaltyTransactions: {
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -211,5 +219,17 @@ export async function getCustomerLoyaltySummary(customerId: string) {
     throw new Error("العميل غير موجود");
   }
 
-  return customer;
+  const loyaltyCouponEligibility = getLoyaltyCouponEligibility({
+    totalSpent: customer.totalSpent,
+    customThreshold: customer.customThreshold,
+    lastIssuedLevel: customer.loyaltyMilestones[0]?.level ?? 0,
+  });
+
+  return {
+    id: customer.id,
+    name: customer.name,
+    loyaltyPoints: customer.loyaltyPoints,
+    loyaltyTransactions: customer.loyaltyTransactions,
+    loyaltyCouponEligible: loyaltyCouponEligibility.eligible,
+  };
 }

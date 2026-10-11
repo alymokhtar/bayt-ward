@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildLoyaltyCouponWhatsAppMessage,
   buildLoyaltyPointsWhatsAppMessage,
   formatPhoneForWhatsApp,
   getWhatsAppUrl,
 } from "./whatsapp";
+import { formatCurrency } from "./utils";
 import {
   buildStoreCartOrderMessage,
   buildStoreOrderMessage,
@@ -50,6 +52,23 @@ test("builds a loyalty points message without invoice details", () => {
   );
   assert.match(message, /يمكنك استبدال النقاط بخصم مباشر عند وصول رصيدك إلى 50 نقطة فأكثر/);
   assert.doesNotMatch(message, /فاتورة|الإجمالي|المنتج/);
+});
+
+test("builds a loyalty coupon message with customer, spend, code, discount, and expiry", () => {
+  const message = buildLoyaltyCouponWhatsAppMessage({
+    customerName: "سارة",
+    totalSpent: 10_250,
+    couponCode: "BW-ABC123",
+    discountAmount: 100,
+    expiresAt: "25‏/10‏/2026",
+  });
+
+  assert.match(message, /سارة/);
+  assert.ok(message.includes(formatCurrency(10_250)));
+  assert.match(message, /BW-ABC123/);
+  assert.ok(message.includes(formatCurrency(100)));
+  assert.match(message, /25/);
+  assert.doesNotMatch(message, /فاتورة|الأصناف/);
 });
 
 test("encodes line breaks, symbols, and emoji in WhatsApp messages", () => {

@@ -25,6 +25,7 @@ import {
   Trash2,
   User,
   UserPlus,
+  Tag,
   Wallet,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -118,6 +119,7 @@ export default function POSClient({
   const [customerResults, setCustomerResults] = useState<CustomerResult[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerResult | null>(null);
   const [customerLoyaltyPoints, setCustomerLoyaltyPoints] = useState<number | null>(null);
+  const [customerCouponEligible, setCustomerCouponEligible] = useState<boolean | null>(null);
   const [loyaltyLoading, setLoyaltyLoading] = useState(false);
   const [loyaltyError, setLoyaltyError] = useState("");
   const [loyaltyPointsInput, setLoyaltyPointsInput] = useState("");
@@ -202,6 +204,7 @@ export default function POSClient({
     const requestId = ++loyaltyRequestRef.current;
     setSelectedCustomer(customer);
     setCustomerLoyaltyPoints(null);
+    setCustomerCouponEligible(null);
     setLoyaltyPointsInput("");
     setLoyaltyError("");
     setLoyaltyLoading(true);
@@ -209,6 +212,7 @@ export default function POSClient({
       const summary = await getCustomerLoyaltySummary(customer.id);
       if (requestId === loyaltyRequestRef.current) {
         setCustomerLoyaltyPoints(summary.loyaltyPoints);
+        setCustomerCouponEligible(summary.loyaltyCouponEligible);
       }
     } catch (summaryError) {
       console.error("POS customer loyalty lookup failed", summaryError);
@@ -226,6 +230,7 @@ export default function POSClient({
     loyaltyRequestRef.current += 1;
     setSelectedCustomer(null);
     setCustomerLoyaltyPoints(null);
+    setCustomerCouponEligible(null);
     setLoyaltyPointsInput("");
     setLoyaltyError("");
     setLoyaltyLoading(false);
@@ -633,6 +638,7 @@ export default function POSClient({
       setNotes("");
       setSelectedCustomer(null);
       setCustomerLoyaltyPoints(null);
+      setCustomerCouponEligible(null);
       setLoyaltyPointsInput("");
       setLoyaltyError("");
       setLoyaltyLoading(false);
@@ -850,6 +856,12 @@ export default function POSClient({
                       ? `رصيد نقاط الولاء: ${customerLoyaltyPoints}`
                       : "رصيد نقاط الولاء غير متاح"}
                 </p>
+                {customerCouponEligible && (
+                  <p className="flex items-center gap-1 text-xs font-medium text-gold" role="status">
+                    <Tag className="h-3.5 w-3.5" />
+                    العميل مؤهل لكوبون ولاء جديد
+                  </p>
+                )}
                 {loyaltyError && <p className="text-xs text-danger" role="alert">{loyaltyError}</p>}
               </div>
             ) : showNewCustomer ? (

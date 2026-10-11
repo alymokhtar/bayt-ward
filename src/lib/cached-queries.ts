@@ -352,8 +352,14 @@ export const getCachedCustomersPage = unstable_cache(
           address: true,
           notes: true,
           totalSpent: true,
+          customThreshold: true,
           visitCount: true,
           loyaltyPoints: true,
+          loyaltyMilestones: {
+            orderBy: { level: "desc" },
+            take: 1,
+            select: { level: true },
+          },
           _count: {
             select: {
               sales: { where: { status: { not: "CANCELLED" } } },
