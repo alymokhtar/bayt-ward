@@ -5,15 +5,7 @@ import StoreHeader from "@/components/store/StoreHeader";
 import { StorefrontStateProvider } from "@/components/store/StorefrontStateProvider";
 import { getCachedStoreSettingsPublic, getCachedStoreCategories } from "@/lib/store/cached-queries";
 import { getActivePromotionsData } from "@/lib/promotions-data";
-import { Cairo } from "next/font/google";
 import "../store.css";
-
-const cairo = Cairo({
-  subsets: ["arabic"],
-  variable: "--font-cairo",
-  weight: ["300", "400", "500", "600", "700"],
-  display: "swap",
-});
 
 export const viewport: Viewport = {
   themeColor: "#FDFBF7",
@@ -31,7 +23,7 @@ export default async function StoreLayout({
   ]);
 
   return (
-    <div className={`store-root store-layout ${cairo.variable} ${cairo.className} flex min-h-screen min-h-dvh flex-col bg-[#FDFBF7]`}>
+    <div className="store-root store-layout flex min-h-screen min-h-dvh flex-col bg-[#FDFBF7]">
       <StorefrontStateProvider activePromotions={activePromotions}>
         <Suspense fallback={<div className="h-16 border-b border-[var(--store-border)] bg-[var(--store-surface)]" />}>
           <StoreHeader settings={settings} categories={categories} />
