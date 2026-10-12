@@ -56,28 +56,31 @@ export default function BarcodePrintSheet({ labels }: BarcodePrintSheetProps) {
         </Button>
       </div>
 
-      <div className="barcode-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="barcode-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         {expandedLabels.map((label) => (
           <div
             key={label.key}
-            className="barcode-label border border-border rounded-lg p-3 bg-white text-center break-inside-avoid"
+            className="barcode-label border border-border rounded-lg p-1 bg-white text-center break-inside-avoid"
           >
-            <p className="text-xs font-bold text-brown truncate mb-1">
+            <p className="text-[9px] font-bold text-brown truncate mb-0.5">
               {label.productName}
             </p>
             {label.brand?.trim() && (
-              <p className="truncate text-[9px] text-muted mb-1">
+              <p className="truncate text-[7px] text-muted mb-0.5">
                 {label.brand.trim()}
               </p>
             )}
-            <p className="text-[10px] text-muted mb-2">
+            <p className="text-[7px] text-muted mb-0.5">
               {label.size} · {label.color}
             </p>
-            <div className="flex justify-center mb-1">
-              <BarcodeLabel value={label.barcode || label.sku} />
+            <div className="flex min-h-0 justify-center">
+              <BarcodeLabel
+                value={label.barcode || label.sku}
+                className="barcode-svg"
+              />
             </div>
             <p
-              className="text-sm font-bold text-brown font-mono tracking-wider"
+              className="text-[9px] font-bold text-brown font-mono tracking-wider"
               dir="ltr"
             >
               {label.priceDisplay}

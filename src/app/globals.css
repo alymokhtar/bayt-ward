@@ -249,13 +249,34 @@ select {
 
   .barcode-grid {
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(auto-fill, 45mm) !important;
+    align-content: start !important;
+    justify-content: start !important;
+    gap: 2mm !important;
   }
 
   .barcode-label {
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    width: 45mm !important;
+    height: 28mm !important;
     page-break-inside: avoid;
-    border: 1px solid #ccc !important;
-    padding: 8px !important;
+    overflow: hidden !important;
+    border: 0.2mm solid #ccc !important;
+    border-radius: 0 !important;
+    padding: 1mm !important;
+  }
+
+  .barcode-label p {
+    line-height: 1.1 !important;
+  }
+
+  .barcode-label .barcode-svg {
+    display: block;
+    max-width: 100%;
+    max-height: 9mm;
+    height: auto;
   }
 }

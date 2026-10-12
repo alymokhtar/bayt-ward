@@ -8,14 +8,20 @@ interface BarcodeLabelProps {
   value: string;
   width?: number;
   height?: number;
+  fontSize?: number;
+  margin?: number;
+  textMargin?: number;
   displayValue?: boolean;
   className?: string;
 }
 
 export default function BarcodeLabel({
   value,
-  width = 1.5,
-  height = 40,
+  width = 1.1,
+  height = 25,
+  fontSize = 8,
+  margin = 1,
+  textMargin = 1,
   displayValue = true,
   className,
 }: BarcodeLabelProps) {
@@ -30,17 +36,17 @@ export default function BarcodeLabel({
         width,
         height,
         displayValue,
-        fontSize: 12,
-        margin: 4,
+        fontSize,
+        margin,
         textAlign: "center",
-        textMargin: 2,
+        textMargin,
         fontOptions: "bold",
         lineColor: "#4B3621",
       });
     } catch {
       // invalid barcode value
     }
-  }, [value, width, height, displayValue, valid]);
+  }, [value, width, height, fontSize, margin, textMargin, displayValue, valid]);
 
   if (!valid) {
     return (

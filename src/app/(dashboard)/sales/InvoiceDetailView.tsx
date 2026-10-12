@@ -210,6 +210,9 @@ export default function InvoiceDetailView({
               value={sale.invoiceNumber}
               width={1.3}
               height={40}
+              fontSize={12}
+              margin={4}
+              textMargin={2}
               className="mx-auto mt-3 h-auto w-full max-w-[280px]"
             />
           </div>
