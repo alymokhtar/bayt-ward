@@ -317,8 +317,8 @@ export async function getPromotions(view: PromotionView = "current"): Promise<Pr
       : { OR: [{ endDate: null }, { endDate: { gte: dayStart } }] },
     orderBy: { createdAt: "desc" },
     include: {
-      categories: { select: { id: true, name: true } },
-      products: { select: { id: true, name: true } },
+      categories: { select: { id: true, name: true, nameAr: true } },
+      products: { select: { id: true, name: true, nameAr: true } },
     },
   });
 }
@@ -329,13 +329,14 @@ export async function getPromotionFormOptions() {
   const [categories, products] = await Promise.all([
     prisma.category.findMany({
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, nameAr: true },
     }),
     prisma.product.findMany({
       orderBy: { name: "asc" },
       select: {
         id: true,
         name: true,
+        nameAr: true,
         categoryId: true,
         variants: {
           select: { sku: true },

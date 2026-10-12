@@ -74,6 +74,7 @@ export default function PromotionForm({
       selectedCategoryIds.length === 0 || selectedCategoryIds.includes(product.categoryId);
     const matchesSearch =
       !normalizedProductSearch ||
+      product.nameAr?.toLocaleLowerCase().includes(normalizedProductSearch) ||
       product.name.toLocaleLowerCase().includes(normalizedProductSearch) ||
       product.skus.some((sku) => sku.toLocaleLowerCase().includes(normalizedProductSearch));
 
@@ -352,7 +353,9 @@ export default function PromotionForm({
                       onChange={() => toggleSelection(selectedCategoryIds, setSelectedCategoryIds, category.id)}
                       className="h-4 w-4 shrink-0 rounded border-border accent-gold focus:ring-gold"
                     />
-                    <span className="min-w-0 truncate">{category.name}</span>
+                    <span className="min-w-0 truncate">
+                      {category.nameAr?.trim() || category.name}
+                    </span>
                   </label>
                 );
               })}
@@ -414,7 +417,9 @@ export default function PromotionForm({
                       onChange={() => toggleSelection(selectedProductIds, setSelectedProductIds, product.id)}
                       className="h-4 w-4 shrink-0 rounded border-border accent-gold focus:ring-gold"
                     />
-                    <span className="min-w-0 flex-1 truncate">{product.name}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {product.nameAr?.trim() || product.name}
+                    </span>
                     {product.skus.length > 0 && (
                       <span className="max-w-28 shrink-0 truncate text-[11px] text-muted" dir="ltr">
                         {product.skus.slice(0, 2).join(" · ")}

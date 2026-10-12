@@ -40,13 +40,19 @@ export interface PromotionRecord {
   isStoreOnly: boolean;
   createdAt: Date;
   updatedAt: Date;
-  categories: { id: string; name: string }[];
-  products: { id: string; name: string }[];
+  categories: { id: string; name: string; nameAr: string | null }[];
+  products: { id: string; name: string; nameAr: string | null }[];
 }
 
 export interface PromotionFormOptions {
-  categories: { id: string; name: string }[];
-  products: { id: string; name: string; categoryId: string; skus: string[] }[];
+  categories: { id: string; name: string; nameAr: string | null }[];
+  products: {
+    id: string;
+    name: string;
+    nameAr: string | null;
+    categoryId: string;
+    skus: string[];
+  }[];
 }
 
 export type CouponType = "PERCENTAGE" | "FIXED_AMOUNT";
