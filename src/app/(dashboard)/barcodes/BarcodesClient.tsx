@@ -153,6 +153,11 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
                       <p className="text-sm font-medium truncate">
                         {variant.product.nameAr || variant.product.name}
                       </p>
+                      {variant.product.brand?.trim() && (
+                        <p className="truncate text-xs text-muted">
+                          {variant.product.brand.trim()}
+                        </p>
+                      )}
                       <p className="break-words text-xs text-muted">
                         <span dir="ltr">{variant.sku}</span> · {variant.size} · {variant.color}
                       </p>
