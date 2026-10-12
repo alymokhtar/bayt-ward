@@ -10,6 +10,7 @@ export type ReceiptPayment = {
 
 export type ReceiptItem = {
   name: string;
+  brand?: string | null;
   size: string;
   color: string;
   quantity: number;
@@ -148,6 +149,11 @@ export default function ReceiptInvoice({ data }: { data: ReceiptData }) {
         {data.items.map((item, index) => (
           <div key={index}>
             <p className="font-semibold break-words">{item.name}</p>
+            {item.brand?.trim() && (
+              <p className="text-[10px] text-black/70 break-words">
+                {item.brand.trim()}
+              </p>
+            )}
             {(item.size || item.color) && (
               <p className="text-[10px] text-black/70">
                 {[item.size, item.color].filter(Boolean).join(" / ")}

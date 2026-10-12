@@ -73,7 +73,7 @@ const saleResponseSelect = {
           sku: true,
           size: true,
           color: true,
-          product: { select: { name: true, nameAr: true } },
+          product: { select: { name: true, nameAr: true, brand: true } },
         },
       },
     },
@@ -130,7 +130,7 @@ function formatSaleTelegramMessage(sale: {
     variant: {
       size: string;
       color: string;
-      product: { name: string; nameAr: string | null };
+      product: { name: string; nameAr: string | null; brand: string | null };
     };
   }[];
 }) {
@@ -379,7 +379,9 @@ export async function getSale(id: string) {
               id: true,
               size: true,
               color: true,
-              product: { select: { id: true, name: true, nameAr: true } },
+              product: {
+                select: { id: true, name: true, nameAr: true, brand: true },
+              },
             },
           },
         },
@@ -406,7 +408,9 @@ export async function getSale(id: string) {
                   id: true,
                   size: true,
                   color: true,
-                  product: { select: { name: true, nameAr: true } },
+                  product: {
+                    select: { name: true, nameAr: true, brand: true },
+                  },
                 },
               },
             },
@@ -437,7 +441,9 @@ export async function getSale(id: string) {
                     select: {
                       size: true,
                       color: true,
-                      product: { select: { name: true, nameAr: true } },
+                      product: {
+                        select: { name: true, nameAr: true, brand: true },
+                      },
                     },
                   },
                 },
@@ -458,7 +464,9 @@ export async function getSale(id: string) {
                     select: {
                       size: true,
                       color: true,
-                      product: { select: { name: true, nameAr: true } },
+                      product: {
+                        select: { name: true, nameAr: true, brand: true },
+                      },
                     },
                   },
                 },
@@ -492,7 +500,9 @@ export async function getSale(id: string) {
                     select: {
                       size: true,
                       color: true,
-                      product: { select: { name: true, nameAr: true } },
+                      product: {
+                        select: { name: true, nameAr: true, brand: true },
+                      },
                     },
                   },
                 },
@@ -512,7 +522,9 @@ export async function getSale(id: string) {
                     select: {
                       size: true,
                       color: true,
-                      product: { select: { name: true, nameAr: true } },
+                      product: {
+                        select: { name: true, nameAr: true, brand: true },
+                      },
                     },
                   },
                 },

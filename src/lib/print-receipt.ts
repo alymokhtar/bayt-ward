@@ -37,10 +37,14 @@ export function buildReceiptPrintHtml(
         item.size || item.color
           ? `<div class="variant">${escapeHtml([item.size, item.color].filter(Boolean).join(" / "))}</div>`
           : "";
+      const brand = item.brand?.trim()
+        ? `<div class="brand">${escapeHtml(item.brand.trim())}</div>`
+        : "";
 
       return `
         <div class="item">
           <div class="item-name">${escapeHtml(item.name)}</div>
+          ${brand}
           ${variant}
           <div class="item-row">
             <span></span>
@@ -95,6 +99,7 @@ export function buildReceiptPrintHtml(
     .head-row span:nth-child(4) { text-align: left; direction: ltr; }
     .item { margin-bottom: 8px; }
     .item-name { font-weight: 700; word-break: break-word; }
+    .brand { font-size: 10px; color: #444; word-break: break-word; }
     .variant { font-size: 10px; color: #444; }
     .item-row {
       display: grid;

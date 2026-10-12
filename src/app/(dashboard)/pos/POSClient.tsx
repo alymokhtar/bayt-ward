@@ -608,6 +608,7 @@ export default function POSClient({
         })),
         items: result.data.items.map((item) => ({
           name: item.variant.product.nameAr || item.variant.product.name,
+          brand: item.variant.product.brand,
           size: item.variant.size,
           color: item.variant.color,
           quantity: item.quantity,
@@ -722,6 +723,9 @@ export default function POSClient({
                       <p className="font-medium text-brown">
                         {v.product.nameAr || v.product.name}
                       </p>
+                      {v.product.brand?.trim() && (
+                        <p className="text-xs text-muted">{v.product.brand}</p>
+                      )}
                       <p className="text-xs text-muted mt-0.5">
                         {v.sku} · {v.size} · {v.color}
                       </p>
@@ -784,9 +788,16 @@ export default function POSClient({
                 className="rounded-lg border border-border p-3 space-y-2"
               >
                 <div className="flex justify-between gap-2">
-                  <p className="text-sm font-medium text-brown leading-snug">
-                    {item.variant.product.nameAr || item.variant.product.name}
-                  </p>
+                  <div>
+                    <p className="text-sm font-medium text-brown leading-snug">
+                      {item.variant.product.nameAr || item.variant.product.name}
+                    </p>
+                    {item.variant.product.brand?.trim() && (
+                      <p className="text-xs text-muted">
+                        {item.variant.product.brand}
+                      </p>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeItem(item.variant.id)}

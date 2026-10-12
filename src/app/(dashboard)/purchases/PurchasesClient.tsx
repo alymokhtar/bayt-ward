@@ -525,6 +525,9 @@ export default function PurchasesClient({
                       <p className="font-medium text-brown">
                         {v.product.nameAr || v.product.name}
                       </p>
+                      {v.product.brand?.trim() && (
+                        <p className="text-xs text-muted">{v.product.brand}</p>
+                      )}
                       <p className="text-xs text-muted mt-0.5">
                         {v.sku}
                         {v.barcode ? ` · ${v.barcode}` : ""} · {v.size} · {v.color}
@@ -560,6 +563,9 @@ export default function PurchasesClient({
                       <p className="text-sm font-medium text-brown">
                         {item.variant.product.nameAr || item.variant.product.name}
                       </p>
+                      {item.variant.product.brand?.trim() && (
+                        <p className="text-xs text-muted">{item.variant.product.brand}</p>
+                      )}
                       <p className="text-xs text-muted">
                         {item.variant.sku} · {item.variant.size} · {item.variant.color}
                       </p>

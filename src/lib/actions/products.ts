@@ -906,6 +906,7 @@ export async function searchVariants(query: string) {
         id: variant.product.id,
         name: variant.product.name,
         nameAr: variant.product.nameAr,
+        brand: variant.product.brand,
         categoryId: variant.product.categoryId,
       },
     }));
@@ -950,7 +951,13 @@ const variantSearchSelect = {
   sellingPrice: true,
   stockQuantity: true,
   product: {
-    select: { id: true, name: true, nameAr: true, categoryId: true },
+    select: {
+      id: true,
+      name: true,
+      nameAr: true,
+      brand: true,
+      categoryId: true,
+    },
   },
 } as const;
 
@@ -1030,7 +1037,7 @@ export async function getAllVariantsForBarcodes(options?: {
         size: true,
         color: true,
         sellingPrice: true,
-        product: { select: { name: true, nameAr: true } },
+        product: { select: { name: true, nameAr: true, brand: true } },
       },
       orderBy: [{ product: { name: "asc" } }, { sku: "asc" }],
     }),

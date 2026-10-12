@@ -11,6 +11,7 @@ export interface LabelData {
   sku: string;
   barcode: string;
   productName: string;
+  brand?: string | null;
   size: string;
   color: string;
   price: number;
@@ -64,6 +65,11 @@ export default function BarcodePrintSheet({ labels }: BarcodePrintSheetProps) {
             <p className="text-xs font-bold text-brown truncate mb-1">
               {label.productName}
             </p>
+            {label.brand?.trim() && (
+              <p className="truncate text-[9px] text-muted mb-1">
+                {label.brand.trim()}
+              </p>
+            )}
             <p className="text-[10px] text-muted mb-2">
               {label.size} · {label.color}
             </p>

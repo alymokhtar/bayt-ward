@@ -21,6 +21,7 @@ type Variant = {
   product: {
     name: string;
     nameAr: string | null;
+    brand: string | null;
   };
 };
 
@@ -41,7 +42,8 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
         v.sku.toLowerCase().includes(q) ||
         v.barcode?.toLowerCase().includes(q) ||
         v.product.name.toLowerCase().includes(q) ||
-        v.product.nameAr?.includes(q)
+        v.product.nameAr?.includes(q) ||
+        v.product.brand?.toLowerCase().includes(q)
     );
   }, [variants, search]);
 
@@ -55,6 +57,7 @@ export default function BarcodesClient({ variants }: BarcodesClientProps) {
           sku: variant.sku,
           barcode: getBarcodeValue(variant.barcode, variant.sku),
           productName: variant.product.nameAr || variant.product.name,
+          brand: variant.product.brand,
           size: variant.size,
           color: variant.color,
           price: variant.sellingPrice,

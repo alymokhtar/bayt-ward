@@ -34,6 +34,7 @@ test("prints an online order at full price without store-only discounts", () => 
     paymentMethod: "CASH",
     items: [{
       name: item.name,
+      brand: "بيت الأناقة",
       size: "M",
       color: "أحمر",
       quantity: item.quantity,
@@ -53,6 +54,7 @@ test("prints an online order at full price without store-only discounts", () => 
   assert.equal(calculation.discountAmount, 0);
   assert.equal(calculation.finalTotal, 200);
   assert.match(html, /طلب متجر \/ أونلاين/);
+  assert.match(html, /بيت الأناقة/);
   assert.match(html, /الإجمالي/);
   assert.match(html, /200 ج\.م/);
   assert.doesNotMatch(html, /<span>الخصم<\/span>/);

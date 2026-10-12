@@ -36,7 +36,7 @@ type ExchangeItem = {
   variant: {
     size: string;
     color: string;
-    product: { name: string; nameAr: string | null };
+    product: { name: string; nameAr: string | null; brand: string | null };
   };
 };
 
@@ -70,7 +70,7 @@ export default function InvoiceDetailView({
   const itemsText = sale.items
     .map(
       (item) =>
-        `• ${item.variant.product.nameAr || item.variant.product.name} (${item.variant.size}/${item.variant.color}) × ${item.quantity}`,
+        `• ${item.variant.product.nameAr || item.variant.product.name}${item.variant.product.brand?.trim() ? ` — ${item.variant.product.brand.trim()}` : ""} (${item.variant.size}/${item.variant.color}) × ${item.quantity}`,
     )
     .join("\n");
   const returnedQtyBySaleItem = new Map<string, number>();
@@ -146,6 +146,7 @@ export default function InvoiceDetailView({
         payments: salePaymentSummary.normalizedPayments,
         items: sale.items.map((item) => ({
           name: item.variant.product.nameAr || item.variant.product.name,
+          brand: item.variant.product.brand,
           size: item.variant.size,
           color: item.variant.color,
           quantity: item.quantity,
@@ -259,7 +260,14 @@ export default function InvoiceDetailView({
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
-                      {item.variant.product.nameAr || item.variant.product.name}
+                      <div>
+                        <p>{item.variant.product.nameAr || item.variant.product.name}</p>
+                        {item.variant.product.brand?.trim() && (
+                          <p className="text-xs text-muted">
+                            {item.variant.product.brand.trim()}
+                          </p>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {item.variant.size} / {item.variant.color}
@@ -475,8 +483,17 @@ export default function InvoiceDetailView({
                               className="border-b border-red-100 last:border-0"
                             >
                               <td className="py-1">
-                                {item.variant.product.nameAr ||
-                                  item.variant.product.name}
+                                <div>
+                                  <p>
+                                    {item.variant.product.nameAr ||
+                                      item.variant.product.name}
+                                  </p>
+                                  {item.variant.product.brand?.trim() && (
+                                    <p className="text-xs text-muted">
+                                      {item.variant.product.brand.trim()}
+                                    </p>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-1">
                                 {item.variant.size} / {item.variant.color}
@@ -585,7 +602,16 @@ function ExchangeItemsTable({
                 className="border-b border-gold/10 last:border-0"
               >
                 <td className="py-1">
-                  {item.variant.product.nameAr || item.variant.product.name}
+                  <div>
+                    <p>
+                      {item.variant.product.nameAr || item.variant.product.name}
+                    </p>
+                    {item.variant.product.brand?.trim() && (
+                      <p className="text-xs text-muted">
+                        {item.variant.product.brand.trim()}
+                      </p>
+                    )}
+                  </div>
                 </td>
                 <td className="py-1">
                   {item.variant.size} / {item.variant.color}
