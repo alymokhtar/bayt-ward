@@ -710,7 +710,8 @@ export async function createSale(data: {
       return { success: false, error: "قيمة الخصم غير صالحة" };
     }
 
-    const maximumDiscountPercent = user.role === "CASHIER" ? 10 : 100;
+    const maximumDiscountPercent =
+      user.role === "CASHIER" || user.role === "SELLER" ? 10 : 100;
     if (submittedDiscountPercent > maximumDiscountPercent) {
       return {
         success: false,

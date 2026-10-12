@@ -29,7 +29,7 @@ function revalidateSettingsPaths() {
 }
 
 export async function getSettings() {
-  const session = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
 
   const settings = await prisma.setting.findMany({
     where:
@@ -50,7 +50,7 @@ export async function getSettings() {
 }
 
 export async function getStoreSettings() {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
   return getCachedStoreSettings();
 }
 

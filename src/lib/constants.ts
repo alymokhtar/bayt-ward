@@ -38,13 +38,13 @@ export const NAV_ITEMS = [
     title: "لوحة التحكم",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER", "SELLER"],
   },
   {
     title: "نقطة البيع",
     href: "/pos",
     icon: Store,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER", "SELLER"],
   },
   {
     title: "المنتجات",
@@ -80,25 +80,25 @@ export const NAV_ITEMS = [
     title: "المبيعات",
     href: "/sales",
     icon: ShoppingCart,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER", "SELLER"],
   },
   {
     title: "مراجعة الخزنة",
     href: "/sales/cash-register",
     icon: Wallet,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER", "SELLER"],
   },
   {
     title: "المرتجعات",
     href: "/returns",
     icon: RotateCcw,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER", "SELLER"],
   },
   {
     title: "العملاء",
     href: "/customers",
     icon: Users,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER", "SELLER"],
   },
   {
     title: "واتساب",
@@ -122,7 +122,7 @@ export const NAV_ITEMS = [
     title: "المصروفات",
     href: "/expenses",
     icon: Wallet,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER", "SELLER"],
   },
   {
     title: "التقارير",
@@ -146,7 +146,7 @@ export const NAV_ITEMS = [
     title: "الإعدادات",
     href: "/settings",
     icon: Settings,
-    roles: ["ADMIN", "MANAGER", "CASHIER"],
+    roles: ["ADMIN", "MANAGER", "CASHIER", "SELLER"],
   },
 ];
 
@@ -187,6 +187,7 @@ export const USER_ROLES = [
   { value: "ADMIN", label: "مدير" },
   { value: "MANAGER", label: "مدير فرع" },
   { value: "CASHIER", label: "كاشير" },
+  { value: "SELLER", label: "بائع" },
 ];
 
 export const EMPLOYEE_ADJUSTMENT_TYPES = [

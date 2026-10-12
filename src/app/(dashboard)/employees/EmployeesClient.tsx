@@ -27,6 +27,7 @@ import {
 } from "@/lib/business-day";
 import { USER_ROLES } from "@/lib/constants";
 import { formatCurrency, formatDate, getRoleLabel } from "@/lib/utils";
+import type { UserRole } from "@prisma/client";
 import { Banknote, Pencil, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -36,7 +37,7 @@ type Employee = {
   name: string;
   email: string;
   phone: string | null;
-  role: string;
+  role: UserRole;
   salary: number;
   startDate: Date | null;
   pendingDeductions: number;
@@ -67,7 +68,7 @@ export default function EmployeesClient({
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("CASHIER");
+  const [role, setRole] = useState<UserRole>("CASHIER");
   const [salary, setSalary] = useState("");
   const [startDate, setStartDate] = useState(getEgyptCalendarDateKey);
   const [loading, setLoading] = useState(false);
@@ -115,7 +116,7 @@ export default function EmployeesClient({
           name,
           email,
           phone,
-          role: role as "ADMIN" | "MANAGER" | "CASHIER",
+          role,
           salary: salaryValue,
           startDate: startDateValue ?? null,
           ...(password ? { password } : {}),
@@ -125,7 +126,7 @@ export default function EmployeesClient({
           email,
           password,
           phone,
-          role: role as "ADMIN" | "MANAGER" | "CASHIER",
+          role,
           salary: salaryValue,
           startDate: startDateValue,
         });
@@ -340,7 +341,7 @@ export default function EmployeesClient({
               (option) => option.value !== "ADMIN" || canAssignAdmin || role === "ADMIN"
             )}
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onChange={(e) => setRole(e.target.value as UserRole)}
           />
         </form>
       </Modal>

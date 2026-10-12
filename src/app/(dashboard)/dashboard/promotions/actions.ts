@@ -268,7 +268,7 @@ export async function getCouponQuote(
   success: true;
   data: { code: string; discountAmount: number; stackable: boolean };
 } | { success: false; error: string }> {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
   const code = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : "";
   if (!code || !Number.isFinite(subtotal) || subtotal <= 0) {
     return { success: false, error: "رمز الكوبون أو قيمة الطلب غير صالحة" };

@@ -130,6 +130,7 @@ export function getRoleLabel(role: string): string {
     ADMIN: "مدير",
     MANAGER: "مدير فرع",
     CASHIER: "كاشير",
+    SELLER: "بائع",
   };
   return labels[role] || role;
 }

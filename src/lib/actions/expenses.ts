@@ -76,7 +76,7 @@ export async function getExpenses(options?: {
   page?: number;
   pageSize?: number;
 }) {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
   const page = Math.max(1, Math.trunc(options?.page ?? 1));
   const pageSize = Math.min(100, Math.max(1, Math.trunc(options?.pageSize ?? 50)));
   return getCachedExpensesList(
@@ -91,7 +91,7 @@ export async function getExpenses(options?: {
 }
 
 export async function getExpense(id: string) {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
 
   const expense = await prisma.expense.findUnique({
     where: { id },
@@ -132,7 +132,7 @@ export async function createExpense(data: {
   let userId: string | undefined;
   let idempotencyKey: string | undefined;
   try {
-    const user = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+    const user = await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
     userId = user.id;
     idempotencyKey = data.idempotencyKey;
 

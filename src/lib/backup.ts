@@ -284,7 +284,7 @@ export async function restoreBackupSnapshot(
       email,
       password,
       phone: toNullableString(row.phone),
-      role: row.role as "ADMIN" | "MANAGER" | "CASHIER",
+      role: row.role as "ADMIN" | "MANAGER" | "CASHIER" | "SELLER",
       salary: Number(row.salary ?? 0),
       startDate: toNullableDate(row.startDate),
       isActive: Boolean(row.isActive),

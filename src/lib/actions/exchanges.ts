@@ -158,7 +158,7 @@ export async function createExchange(data: {
   notes?: string;
 }) {
   try {
-    const user = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+    const user = await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
     const validItems = (items: ExchangeItemInput[]) =>
       Array.isArray(items) &&
       items.length > 0 &&

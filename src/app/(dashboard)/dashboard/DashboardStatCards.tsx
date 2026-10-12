@@ -11,8 +11,19 @@ export default async function DashboardStatCards() {
     return <DashboardDataError message={result.error.message} />;
   }
 
-  const { role, kpis } = result.data;
-  const isCashier = role === "CASHIER";
+  const { kpis } = result.data;
+  const monthSalesCards =
+    "monthSales" in kpis
+      ? [
+          {
+            title: "مبيعات الشهر",
+            value: formatCurrency(kpis.monthSales),
+            sub: `${kpis.monthSalesCount} فاتورة`,
+            icon: TrendingUp,
+            color: "bg-blue-100 text-blue-700",
+          },
+        ]
+      : [];
 
   const statCards: {
     title: string;
@@ -51,17 +62,7 @@ export default async function DashboardStatCards() {
       color: "bg-green-100 text-green-700",
       isPrimary: true,
     },
-    ...(!isCashier
-      ? [
-          {
-            title: "مبيعات الشهر",
-            value: formatCurrency(kpis.monthSales),
-            sub: `${kpis.monthSalesCount} فاتورة`,
-            icon: TrendingUp,
-            color: "bg-blue-100 text-blue-700",
-          },
-        ]
-      : []),
+    ...monthSalesCards,
     {
       title: "المنتجات النشطة",
       value: kpis.totalProducts.toString(),

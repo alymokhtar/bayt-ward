@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requireRole, hashPassword } from "@/lib/auth";
-import type { EmployeeAdjustmentType, UserRole } from "@prisma/client";
+import { UserRole, type EmployeeAdjustmentType } from "@prisma/client";
 import { invalidateEmployeesData } from "@/lib/revalidate-tags";
 
 type ActionResult<T = void> =
@@ -64,12 +64,14 @@ export async function getEmployees() {
 }
 
 export async function getPayrollEmployees() {
-  const session = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
 
   return prisma.user.findMany({
     where: {
       isActive: true,
-      ...(session.role === "CASHIER" ? { id: session.id } : {}),
+      ...(session.role === "CASHIER" || session.role === "SELLER"
+        ? { id: session.id }
+        : {}),
     },
     orderBy: { name: "asc" },
     select: { id: true, name: true, salary: true, role: true },
@@ -77,9 +79,12 @@ export async function getPayrollEmployees() {
 }
 
 export async function getEmployeePayrollSummary(employeeId: string) {
-  const session = await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  const session = await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
 
-  if (session.role === "CASHIER" && employeeId !== session.id) {
+  if (
+    (session.role === "CASHIER" || session.role === "SELLER") &&
+    employeeId !== session.id
+  ) {
     throw new Error("FORBIDDEN");
   }
 
@@ -209,6 +214,10 @@ export async function createEmployee(data: {
 }) {
   try {
     const session = await requireRole(["ADMIN", "MANAGER"]);
+
+    if (data.role && !Object.values(UserRole).includes(data.role)) {
+      return { success: false, error: "دور الموظف غير صالح" };
+    }
 
     if (data.role === "ADMIN" && session.role !== "ADMIN") {
       return { success: false, error: "إنشاء حساب مدير النظام متاح للمدير فقط" };

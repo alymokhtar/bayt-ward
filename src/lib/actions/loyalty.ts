@@ -180,7 +180,7 @@ export async function getLoyaltyAnalytics(dateRange?: LoyaltyAnalyticsRange) {
 }
 
 export async function getCustomerLoyaltySummary(customerId: string) {
-  await requireRole(["ADMIN", "MANAGER", "CASHIER"]);
+  await requireRole(["ADMIN", "MANAGER", "CASHIER", "SELLER"]);
   if (!customerId?.trim()) {
     throw new Error("معرّف العميل غير صالح");
   }

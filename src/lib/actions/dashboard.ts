@@ -13,11 +13,11 @@ import type { DashboardResult } from "@/lib/dashboard-result";
 type DashboardKpis = Awaited<ReturnType<typeof getCachedDashboardKpis>>;
 type DashboardKpisForRole =
   | {
-      role: "CASHIER";
+      role: "CASHIER" | "SELLER";
       kpis: Omit<DashboardKpis, "monthSales" | "monthSalesCount">;
     }
   | {
-      role: Exclude<UserRole, "CASHIER">;
+      role: Exclude<UserRole, "CASHIER" | "SELLER">;
       kpis: DashboardKpis;
     };
 
@@ -25,7 +25,7 @@ function filterDashboardKpis(
   role: UserRole,
   kpis: DashboardKpis
 ): DashboardKpisForRole {
-  if (role === "CASHIER") {
+  if (role === "CASHIER" || role === "SELLER") {
     return {
       role,
       kpis: {

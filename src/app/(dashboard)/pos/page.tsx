@@ -46,7 +46,9 @@ export default async function POSPage() {
         storePhone={settings.store_phone}
         currencySymbol={settings.currency_symbol || "ج.م"}
         dailyDiscountPercent={dailyDiscountActive ? discountPercent : 0}
-        cashierDiscountLimit={user.role === "CASHIER" ? 10 : null}
+        cashierDiscountLimit={
+          user.role === "CASHIER" || user.role === "SELLER" ? 10 : null
+        }
         activePromotions={activePromotions}
       />
     </div>

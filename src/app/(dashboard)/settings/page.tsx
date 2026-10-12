@@ -23,7 +23,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const settings = await getSettings();
   const themeAccent = settings.theme_accent;
   const canManageStoreSettings = session.role === "ADMIN";
-  const canChangeAppearance = session.role !== "CASHIER";
+  const canChangeAppearance =
+    session.role !== "CASHIER" && session.role !== "SELLER";
 
   return (
     <div className="space-y-6">

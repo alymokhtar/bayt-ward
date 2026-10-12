@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import type { UserRole } from "@prisma/client";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { cache } from "react";
@@ -14,7 +15,7 @@ export interface SessionUser {
   id: string;
   name: string;
   email: string;
-  role: "ADMIN" | "MANAGER" | "CASHIER";
+  role: UserRole;
 }
 
 export async function hashPassword(password: string): Promise<string> {
